@@ -1,4 +1,4 @@
-import { Map as MapLibreMap, NavigationControl, ScaleControl, setWorkerUrl, type ErrorEvent, type GeoJSONSource } from "maplibre-gl";
+import { GeolocateControl, Map as MapLibreMap, NavigationControl, ScaleControl, setWorkerUrl, type ErrorEvent, type GeoJSONSource } from "maplibre-gl";
 // MapLibre 6 ships its worker as a separate module; Vite must bundle it via ?worker&url (MapLibre docs, "ESM > Vite").
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 
@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import type { TrafficClosure } from "../../../shared/api/closures.ts";
 import type { Junction } from "../../../shared/api/junctions.ts";
 import { addMapImages } from "./images.ts";
+import { GEOLOCATE_OPTIONS, locationErrorMessage, stopFollowingOnZoom } from "./location.ts";
 import { closureBounds, closureLines, closureMarkers, confirmedJunctionNames, diversionEnds, ENGLAND_BOUNDS, junctionPoints, selectedRouteLines } from "./layers.ts";
 import { baseLabelAdjustments, confirmedJunctionFilter, overlayLayers, roadEmphasisBeforeId, roadEmphasisLayers, selectedFilter, type Theme } from "./style.ts";
 
@@ -33,6 +34,9 @@ export function MapView(props: Props) {
     latest.current = props;
   });
   const [baseMapError, setBaseMapError] = useState(false);
+  // Location UI state only: whether the map is following the user, and the last error. Never the coordinates (see location.ts).
+  const [following, setFollowing] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
 
   // Create the map once.
   useEffect(() => {
@@ -47,6 +51,33 @@ export function MapView(props: Props) {
     });
     map.addControl(new NavigationControl({ visualizePitch: false }), "top-right");
     map.addControl(new ScaleControl({ unit: "imperial" }), "bottom-right");
+    // "Show my location": stacks under the zoom/compass buttons. Asks for location only when pressed.
+    const geolocate = new GeolocateControl(GEOLOCATE_OPTIONS);
+    map.addControl(geolocate, "top-right");
+    // Mirrors MapLibre's follow lock for the map's own handlers; React state drives the indicator.
+    let isFollowing = false;
+    const follow = (on: boolean) => {
+      isFollowing = on;
+      setFollowing(on);
+    };
+    geolocate.on("trackuserlocationstart", () => {
+      setLocationError(null);
+      follow(true);
+      // Zoom in to the user's area on the first fix only if the map is zoomed out; otherwise keep the user's zoom.
+      geolocate.options.zoomToUserAccuracy = map.getZoom() < 10;
+    });
+    // After the first fix, position updates only re-centre: they never undo a zoom the user chose. (The event's position is
+    // deliberately not read.)
+    geolocate.on("geolocate", () => (geolocate.options.zoomToUserAccuracy = false));
+    geolocate.on("userlocationfocus", () => follow(true));
+    // A manual pan or zoom stops following (MapLibre's "background" state); pressing the button again re-centres and follows.
+    geolocate.on("userlocationlostfocus", () => follow(false));
+    geolocate.on("trackuserlocationend", () => follow(false));
+    geolocate.on("error", (e) => {
+      follow(false);
+      setLocationError(locationErrorMessage(e.code));
+    });
+    stopFollowingOnZoom(map, () => isFollowing);
     map.on("style.load", () => installLayers(map, latest));
     // MapLibre opens compact attribution at first; on phones start it closed (still one tap away on the (i) button).
     map.once("load", () => container.current?.querySelector(".maplibregl-compact-show")?.classList.remove("maplibregl-compact-show"));
@@ -59,7 +90,8 @@ export function MapView(props: Props) {
     });
     mapRef.current = map;
     // MapLibre only listens for window resizes; layout changes (panels, breakpoints) also resize the container.
-    const observer = new ResizeObserver(() => map.resize());
+    // The entries are passed on so a resize isn't mistaken for the user moving the map (which would stop location follow).
+    const observer = new ResizeObserver((entries) => map.resize(entries));
     observer.observe(container.current);
     return () => {
       observer.disconnect();
@@ -101,11 +133,23 @@ export function MapView(props: Props) {
   return (
     <div className="relative h-full w-full">
       <div ref={container} className="h-full w-full" aria-label="Map of closures" role="region" />
-      {baseMapError && (
-        <p className="absolute left-3 top-3 rounded-[4px] bg-surface px-3 py-2 text-[14px] shadow">
-          The base map couldn't load. The closures list still works.
-        </p>
-      )}
+      <div className="pointer-events-none absolute left-3 right-14 top-3 flex flex-col items-start gap-2">
+        {baseMapError && <p className="rounded-[4px] bg-surface px-3 py-2 text-[14px] shadow">The base map couldn't load. The closures list still works.</p>}
+        {following && (
+          <p role="status" className="rounded-[4px] border-2 border-[#1a73e8] bg-surface px-3 py-2 text-[14px] shadow">
+            <span className="font-bold">Following your location.</span> Move or zoom the map to stop.
+            <span className="block text-[13px]">For planning only. Do not use while driving.</span>
+          </p>
+        )}
+        {locationError && (
+          <div role="alert" className="pointer-events-auto flex max-w-md items-start gap-2 rounded-[4px] bg-surface py-1 pl-3 pr-1 text-[14px] shadow">
+            <p className="py-2">{locationError}</p>
+            <button type="button" onClick={() => setLocationError(null)} className="min-h-12 min-w-12 shrink-0 rounded-[4px] px-2 font-bold underline">
+              Dismiss
+            </button>
+          </div>
+        )}
+      </div>
       <Legend />
     </div>
   );
