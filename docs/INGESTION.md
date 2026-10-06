@@ -1,7 +1,7 @@
 # Ingestion: National Highways → R2 → Worker
 
-How a National Highways capture becomes the snapshot the Worker serves. Status (2026-10-05): **implemented and tested locally;
-automated scheduling NOT enabled; nothing deployed.** The Day-1 development snapshot remains the served data.
+How a National Highways capture becomes the snapshot the Worker serves. Status (2026-10-06): **live.** GitHub Actions runs the
+ingestion every 15 minutes (cron `7,22,37,52 * * * *`, UTC) and publishes to R2; manual runs remain available.
 
 ## Flow
 
@@ -67,7 +67,9 @@ version, and `wrangler dev` kept serving it (565 minutes old, so stale).
 
 ## Scheduler: GitHub Actions (decided 2026-10-05)
 
-`.github/workflows/ingest.yml`, manual dispatch only; **the schedule is commented out until the owner approves it.**
+`.github/workflows/ingest.yml`: scheduled every 15 minutes (owner-approved 2026-10-06) plus manual dispatch. Scheduled runs take the
+remote (publish) path; manual runs default to a dry run and publish only with the explicit `remote` choice. If the `ingest`
+environment requires a reviewer, scheduled runs wait for approval, so the schedule needs that protection rule off.
 
 | | GitHub Actions | Cloudflare Worker Cron |
 |---|---|---|
@@ -84,7 +86,7 @@ version, and `wrangler dev` kept serving it (565 minutes old, so stale).
 
 The Worker stays the read-only API and static host; Actions is the only writer to the bucket.
 
-### Cadence calculation (no schedule chosen; the schedule stays disabled)
+### Cadence calculation (chosen 2026-10-06: every 15 minutes, offset from the hour)
 
 Measured run time per stage (2026-10-05, from the capture manifests and local runs):
 
@@ -123,6 +125,7 @@ decision changes that, and the spec should be updated once approved.
    (`https://<account id>.r2.cloudflarestorage.com`), `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` from a bucket-scoped R2 API
    token (Object Read & Write on `traffic-advanced-snapshots`); optional required reviewer.
 3. The bucket exists and the Worker is deployed (first deployment).
-4. One manual `remote` run, checked end to end, then uncomment the schedule.
+4. One manual `remote` run, checked end to end, then enable the schedule. (Done 2026-10-06: Stage B run 37441365934 published
+   `20261006T091355Z-8f96890859a7`; schedule enabled the same day.)
 5. Decide when published snapshots may be labelled live: the provenance kind is still `development-snapshot`, by design, until the
    owner signs off live operation (and the held-out P0 evaluation).

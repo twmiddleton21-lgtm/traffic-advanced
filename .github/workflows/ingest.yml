@@ -1,8 +1,9 @@
 # Live ingestion runner (docs/INGESTION.md): National Highways capture → pin → FROZEN matcher → publish → upload to R2.
 # The Cloudflare Worker stays a read-only API/static host; this job is the only writer of the snapshot bucket.
 #
-# SCHEDULE DISABLED until the owner explicitly approves automated live ingestion. Until then the job only runs when started by
-# hand (Actions → Ingest → Run workflow), and the default target is a dry run that uploads nothing.
+# Scheduled every 15 minutes (owner-approved 2026-10-06): each scheduled run captures, publishes and uploads to R2 through every
+# safeguard; a failed run never replaces the snapshot being served. Manual runs (Actions → Ingest → Run workflow) default to a
+# dry run that uploads nothing; "remote" uploads.
 name: Ingest
 
 on:
@@ -13,8 +14,10 @@ on:
         type: choice
         options: [dry-run, remote]
         default: dry-run
-  # schedule:
-  #   - cron: "*/15 * * * *"   # NOT ENABLED. Needs owner approval of the cadence (and GitHub Actions minutes) first.
+  # Every 15 minutes, offset from the top of the hour (when GitHub delays scheduled runs most). The concurrency group below
+  # prevents overlapping runs. Free for public repositories on standard runners.
+  schedule:
+    - cron: "7,22,37,52 * * * *"
 
 permissions:
   contents: read
@@ -39,16 +42,16 @@ jobs:
       - run: npm ci
       - name: Check the frozen matcher before touching any data
         run: npx vitest run shared/diversion/rules-freeze.test.ts
-      # Exactly one of the next two steps runs. Only the explicit "remote" choice gets the R2 credentials; every other run
-      # publishes inside the runner only and never sees them (and never touches R2).
+      # Exactly one of the next two steps runs. Only scheduled runs and the explicit "remote" choice get the R2 credentials;
+      # every other manual run publishes inside the runner only and never sees them (and never touches R2).
       - name: Ingest once (no upload)
-        if: ${{ inputs.target != 'remote' }}
+        if: ${{ github.event_name != 'schedule' && inputs.target != 'remote' }}
         env:
           TARGET: ${{ inputs.target }}
           NH_API_KEY: ${{ secrets.NH_API_KEY }}
         run: npm run ingest:once -- --no-upload
       - name: Ingest once and publish to R2
-        if: ${{ inputs.target == 'remote' }}
+        if: ${{ github.event_name == 'schedule' || inputs.target == 'remote' }}
         env:
           NH_API_KEY: ${{ secrets.NH_API_KEY }}
           # Bucket-scoped R2 API token (Object Read & Write on traffic-advanced-snapshots), used through R2's S3 API.

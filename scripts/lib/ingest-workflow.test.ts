@@ -9,10 +9,10 @@ const active = workflow
   .join("\n");
 
 describe("ingest workflow", () => {
-  it("has NO active schedule: it runs only when started by hand, until the owner approves automated ingestion", () => {
-    expect(active).not.toMatch(/^\s*schedule:/m);
-    expect(active).not.toMatch(/cron:/);
+  it("runs every 15 minutes (owner-approved) and can still be started by hand", () => {
     expect(active).toMatch(/^\s*workflow_dispatch:/m);
+    expect(active).toMatch(/^\s*schedule:\s*\n\s*- cron: "7,22,37,52 \* \* \* \*"$/m);
+    expect(active.match(/cron:/g)).toHaveLength(1);
   });
 
   /** The text of one step, from its "- name:" line up to the next step. */
@@ -27,9 +27,11 @@ describe("ingest workflow", () => {
     expect(active).toMatch(/default: dry-run/);
     const noUpload = step("Ingest once (no upload)");
     const remote = step("Ingest once and publish to R2");
-    expect(noUpload).toMatch(/if: \$\{\{ inputs\.target != 'remote' \}\}/);
+    // Scheduled runs (no inputs) publish; manual runs publish only with the explicit "remote" choice. The two conditions are exact
+    // complements, so exactly one ingest step runs.
+    expect(noUpload).toMatch(/if: \$\{\{ github\.event_name != 'schedule' && inputs\.target != 'remote' \}\}/);
     expect(noUpload).toMatch(/run: npm run ingest:once -- --no-upload$/m);
-    expect(remote).toMatch(/if: \$\{\{ inputs\.target == 'remote' \}\}/);
+    expect(remote).toMatch(/if: \$\{\{ github\.event_name == 'schedule' \|\| inputs\.target == 'remote' \}\}/);
     expect(remote).toMatch(/run: npm run ingest:once -- --remote$/m);
     // --remote appears in exactly one place: the step gated on the explicit choice.
     expect(active.match(/--remote/g)).toHaveLength(1);
