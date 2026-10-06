@@ -2,10 +2,16 @@
 <html lang="en-GB" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover lets the shell use the whole screen (safe areas are padded in CSS). Page zoom stays available for people
+         who need it: pinches on the map zoom the map (MapLibre), and double-tap zoom is off (touch-action in styles.css). -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="description" content="Road closures and official HGV diversions on England's motorways and major A roads." />
     <meta name="theme-color" content="#15191d" />
     <title>Traffic Advanced</title>
+    <!-- Square derivatives of the owner's icon artwork (master: web/brand/appicon.jpg, not published), centred on its white
+         background, never cropped. -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <script>
       // Apply the saved or system theme before first paint (no flash of the wrong theme).
       try {
@@ -18,7 +24,16 @@
     </script>
   </head>
   <body>
-    <div id="root"></div>
+    <!-- Splash: painted with the first frame (styled by the bundled stylesheet, no inline CSS), so the map and data never assemble in
+         view. The app removes it as soon as the closures and the first map render are ready (web/src/splash.ts). -->
+    <div id="splash" class="ta-splash" role="status">
+      <div class="ta-splash-inner">
+        <img class="ta-splash-banner" src="/banner.jpg" width="1168" height="784" alt="Traffic Advanced" fetchpriority="high" />
+        <div class="ta-splash-progress" aria-hidden="true"></div>
+        <p class="ta-splash-text">Loading closures and map</p>
+      </div>
+    </div>
+    <div id="root" inert></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

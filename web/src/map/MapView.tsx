@@ -6,6 +6,7 @@ setWorkerUrl(workerUrl);
 import { useEffect, useRef, useState } from "react";
 import type { TrafficClosure } from "../../../shared/api/closures.ts";
 import type { Junction } from "../../../shared/api/junctions.ts";
+import { WIDE_QUERY } from "../hooks/useWideLayout.ts";
 import { addMapImages } from "./images.ts";
 import { GEOLOCATE_OPTIONS, locationErrorMessage, stopFollowingOnZoom } from "./location.ts";
 import { closureBounds, closureLines, closureMarkers, confirmedJunctionNames, diversionEnds, ENGLAND_BOUNDS, junctionPoints, selectedRouteLines } from "./layers.ts";
@@ -19,6 +20,8 @@ interface Props {
   selected: TrafficClosure | null;
   junctions: Junction[];
   onSelect: (id: string) => void;
+  /** Called whenever the map has finished rendering (MapLibre "idle"): the app's signal that the first view is ready. */
+  onIdle?: () => void;
   theme: Theme;
 }
 type Latest = { current: Props };
@@ -46,8 +49,8 @@ export function MapView(props: Props) {
       style: STYLE_URL[theme],
       bounds: ENGLAND_BOUNDS,
       fitBoundsOptions: { padding: 24 },
-      // Phones: the attribution collapses to an (i) button so it doesn't cover the bottom of the small map.
-      attributionControl: { compact: !window.matchMedia("(min-width: 768px)").matches, customAttribution: "Closures, diversions and junctions: National Highways, Open Government Licence v3.0" },
+      // Phones and tablets: the attribution collapses to an (i) button so it doesn't cover the bottom of the map.
+      attributionControl: { compact: !window.matchMedia(WIDE_QUERY).matches, customAttribution: "Closures, diversions and junctions: National Highways, Open Government Licence v3.0" },
     });
     map.addControl(new NavigationControl({ visualizePitch: false }), "top-right");
     map.addControl(new ScaleControl({ unit: "imperial" }), "bottom-right");
@@ -82,6 +85,7 @@ export function MapView(props: Props) {
     // MapLibre opens compact attribution at first; on phones start it closed (still one tap away on the (i) button).
     map.once("load", () => container.current?.querySelector(".maplibregl-compact-show")?.classList.remove("maplibregl-compact-show"));
     registerInteractions(map, latest);
+    map.on("idle", () => latest.current.onIdle?.());
     map.on("error", (e: ErrorEvent) => {
       // Tile/style failures leave the list usable; tell the user rather than failing silently.
       if (/style|tile|source/i.test(e.error.message)) setBaseMapError(true);
@@ -122,18 +126,13 @@ export function MapView(props: Props) {
     const map = mapRef.current;
     if (!map || !selected) return;
     const bounds = closureBounds(selected);
-    // On wide screens the detail panel (440px) covers the right of the map, so frame the closure in the visible part.
-    // On phones the panel sits below the map instead, so the map needs no allowance for it.
-    const panel = window.matchMedia("(min-width: 768px)").matches ? 440 : 0;
-    const edge = panel ? 60 : 32;
-    // Extra room at the bottom for the map key and attribution.
-    if (bounds) map.fitBounds(bounds, { padding: { top: edge, bottom: edge + 24, left: edge, right: edge + panel }, maxZoom: 12, duration: 600 });
+    if (bounds) map.fitBounds(bounds, { padding: detailPadding(map.getContainer()), maxZoom: 12, duration: 600 });
   }, [selected]);
 
   return (
     <div className="relative h-full w-full">
       <div ref={container} className="h-full w-full" aria-label="Map of closures" role="region" />
-      <div className="pointer-events-none absolute left-3 right-14 top-3 flex flex-col items-start gap-2">
+      <div className="pointer-events-none absolute left-[max(0.75rem,env(safe-area-inset-left))] right-14 top-[calc(0.75rem+var(--ta-map-top-inset,0px))] flex flex-col items-start gap-2">
         {baseMapError && <p className="rounded-[4px] bg-surface px-3 py-2 text-[14px] shadow">The base map couldn't load. The closures list still works.</p>}
         {following && (
           <p role="status" className="rounded-[4px] border-2 border-[#1a73e8] bg-surface px-3 py-2 text-[14px] shadow">
@@ -153,6 +152,19 @@ export function MapView(props: Props) {
       <Legend />
     </div>
   );
+}
+
+/**
+ * Map padding that frames a selected closure in the part of the map its details panel leaves visible (App.tsx positions the panel):
+ * desktop, a 440px panel on the right; phone or tablet held sideways, a panel on the right; held upright, a sheet over the lower 58%.
+ */
+function detailPadding(container: HTMLElement) {
+  const { clientWidth: width, clientHeight: height } = container;
+  // Extra room at the bottom for the map key and attribution.
+  if (window.matchMedia(WIDE_QUERY).matches) return { top: 60, bottom: 84, left: 60, right: 60 + 440 };
+  if (window.matchMedia("(orientation: landscape)").matches) return { top: 32, bottom: 56, left: 32, right: 32 + Math.min(440, width * 0.58) };
+  // Clear of the Closures button above and the map buttons on the right.
+  return { top: 76, bottom: 24 + height * 0.58, left: 32, right: 56 };
 }
 
 function installLayers(map: MapLibreMap, latest: Latest) {
@@ -192,7 +204,7 @@ function registerInteractions(map: MapLibreMap, latest: Latest) {
 
 function applySelection(map: MapLibreMap, selected: TrafficClosure | null) {
   const filter = selectedFilter(selected?.id ?? null);
-  for (const id of ["selected-closure-halo", "selected-closure-line", "selected-marker", "selected-marker-label"]) map.setFilter(id, filter);
+  for (const id of ["selected-closure-casing", "selected-closure-line", "selected-marker", "selected-marker-label"]) map.setFilter(id, filter);
   map.setFilter("ta-junction-confirmed", confirmedJunctionFilter(confirmedJunctionNames(selected)));
 }
 
@@ -206,14 +218,17 @@ function updateData(map: MapLibreMap, closures: TrafficClosure[], selected: Traf
 }
 
 function Legend() {
-  // Open by default where there's room; on phones the key starts closed so it doesn't cover the map.
-  const [open] = useState(() => window.matchMedia("(min-width: 768px)").matches);
+  // Open by default where there's room; on phones and tablets the key starts closed so it doesn't cover the map.
+  const [open] = useState(() => window.matchMedia(WIDE_QUERY).matches);
   return (
-    <details open={open} className="absolute bottom-8 left-3 max-w-[calc(100%-1.5rem)] rounded-[4px] border border-line bg-surface/95 text-[13px] shadow-sm">
-      <summary className="cursor-pointer select-none px-3 py-2 font-bold">Map key</summary>
+    <details
+      open={open}
+      className="absolute bottom-[calc(2rem+env(safe-area-inset-bottom))] left-[max(0.75rem,env(safe-area-inset-left))] max-w-[calc(100%-1.5rem)] rounded-[4px] border border-line bg-surface/95 text-[13px] shadow-sm"
+    >
+      <summary className="flex min-h-11 cursor-pointer select-none items-center px-3 font-bold lg:min-h-0 lg:py-2">Map key</summary>
       <ul className="space-y-1.5 px-3 pb-2.5">
         <li className="flex items-center gap-2">
-          <span className="h-1 w-7 rounded bg-closure" aria-hidden="true" /> Closed carriageway
+          <ClosureGlyph /> Closed carriageway
         </li>
         <li className="flex items-center gap-2">
           <RouteGlyph /> Official diversion route, arrows show the way to drive
@@ -249,6 +264,16 @@ function Legend() {
         </li>
       </ul>
     </details>
+  );
+}
+
+/** Matches the closure line on the map: red with a dark casing (style.ts closureLayers). */
+function ClosureGlyph() {
+  return (
+    <svg viewBox="0 0 28 10" className="h-2.5 w-7 shrink-0" aria-hidden="true">
+      <path d="M2 5 H26" stroke="#14191e" strokeWidth="6" strokeLinecap="round" />
+      <path d="M2 5 H26" stroke="#c8102e" strokeWidth="3.5" strokeLinecap="round" />
+    </svg>
   );
 }
 

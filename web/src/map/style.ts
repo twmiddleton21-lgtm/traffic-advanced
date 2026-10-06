@@ -120,13 +120,20 @@ export const junctionLayer: LayerSpecification = {
   paint: { "text-color": "#ffffff" },
 };
 
-/** Closures, markers and the selected closure. `selectedId` is applied with setFilter/setPaintProperty on selection change. */
+/** Line width that grows with zoom: firm at country scale, never a thick tube close in. Stops at zoom 5, 9, 12 and 15. */
+const zoomWidth = (z5: number, z9: number, z12: number, z15: number): ExpressionSpecification => ["interpolate", ["linear"], ["zoom"], 5, z5, 9, z9, 12, z12, 15, z15];
+const roundLine = { "line-cap": "round", "line-join": "round" } as const;
+
+/**
+ * Closures, markers and the selected closure. `selectedId` is applied with setFilter/setPaintProperty on selection change.
+ * A closed carriageway is a red line on a dark casing, so it reads crisply on either base map; the selected one is wider.
+ */
 export function closureLayers(): { base: LayerSpecification[]; selected: LayerSpecification[] } {
   const isSelected = (id: string): FilterSpecification => ["==", ["get", "id"], id];
   return {
     base: [
-      { id: "closure-halo", type: "line", source: "closures", layout: { "line-cap": "round" }, paint: { "line-color": "#ffffff", "line-width": 7, "line-opacity": 0.9 } },
-      { id: "closure-line", type: "line", source: "closures", layout: { "line-cap": "round" }, paint: { "line-color": COLOURS.closure, "line-width": 4 } },
+      { id: "closure-casing", type: "line", source: "closures", layout: roundLine, paint: { "line-color": COLOURS.ink, "line-width": zoomWidth(4, 5, 6.5, 10) } },
+      { id: "closure-line", type: "line", source: "closures", layout: roundLine, paint: { "line-color": COLOURS.closure, "line-width": zoomWidth(2.25, 3, 4, 6.5) } },
       {
         id: "marker",
         type: "circle",
@@ -142,8 +149,8 @@ export function closureLayers(): { base: LayerSpecification[]; selected: LayerSp
       },
     ],
     selected: [
-      { id: "selected-closure-halo", type: "line", source: "closures", filter: isSelected(NONE), layout: { "line-cap": "round" }, paint: { "line-color": "#ffffff", "line-width": 13 } },
-      { id: "selected-closure-line", type: "line", source: "closures", filter: isSelected(NONE), layout: { "line-cap": "round" }, paint: { "line-color": COLOURS.closure, "line-width": 8 } },
+      { id: "selected-closure-casing", type: "line", source: "closures", filter: isSelected(NONE), layout: roundLine, paint: { "line-color": COLOURS.ink, "line-width": zoomWidth(7, 8.5, 10.5, 15) } },
+      { id: "selected-closure-line", type: "line", source: "closures", filter: isSelected(NONE), layout: roundLine, paint: { "line-color": COLOURS.closure, "line-width": zoomWidth(4, 5, 6.5, 10) } },
       {
         id: "selected-marker",
         type: "circle",

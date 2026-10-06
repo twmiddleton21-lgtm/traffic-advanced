@@ -10,33 +10,42 @@ interface Props {
   onQueryChange: (q: string) => void;
   theme: ThemeChoice;
   onToggleTheme: () => void;
+  /** Set while the closures drawer is open as a modal on phones and tablets. */
+  inert?: boolean;
 }
 
-export function AppHeader({ data, now, query, onQueryChange, theme, onToggleTheme }: Props) {
+export function AppHeader({ data, now, query, onQueryChange, theme, onToggleTheme, inert }: Props) {
+  // Phones and tablets: brand and theme on one row, data status (always visible) below; the search box moves into the closures
+  // drawer. Desktop keeps one row. Safe-area padding keeps it clear of notches and rounded corners.
   return (
-    <header className="flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-line bg-surface px-4 py-2.5">
+    <header
+      inert={inert}
+      className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-b border-line bg-surface pb-2 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-[max(0.5rem,env(safe-area-inset-top))] lg:gap-x-5 lg:gap-y-2 lg:py-2.5"
+    >
       <div className="flex items-center gap-2.5">
         <BrandMark />
-        <h1 className="text-[19px] font-bold tracking-tight">Traffic Advanced</h1>
+        <h1 className="text-[17px] font-bold tracking-tight lg:text-[19px]">Traffic Advanced</h1>
       </div>
 
-      <DataStatus data={data} now={now} />
+      <div className="order-last basis-full lg:order-none lg:basis-auto">
+        <DataStatus data={data} now={now} />
+      </div>
 
-      <label className="ml-auto flex min-w-0 flex-1 items-center gap-2 sm:max-w-xs">
+      <label className="ml-auto hidden min-w-0 flex-1 items-center gap-2 lg:flex lg:max-w-xs">
         <span className="sr-only">Find a road</span>
         <input
           type="search"
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
           placeholder="Find a road, e.g. M6 or A14"
-          className="h-10 w-full rounded-[4px] border border-line bg-bg px-3 text-[15px] text-ink placeholder:text-muted"
+          className="h-10 w-full rounded-[4px] border border-line bg-bg px-3 text-[16px] text-ink placeholder:text-muted"
         />
       </label>
 
       <button
         type="button"
         onClick={onToggleTheme}
-        className="h-10 rounded-[4px] border border-line px-3 text-[14px] font-bold hover:bg-raised"
+        className="h-10 rounded-[4px] border border-line px-3 text-[14px] font-bold hover:bg-raised max-lg:ml-auto"
         aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
       >
         {theme === "dark" ? "Light map" : "Dark map"}
@@ -56,10 +65,11 @@ function DataStatus({ data, now }: { data: ClosuresState; now: Date }) {
   if (!provenance) return <span className="text-[14px] text-muted">{data.loadError ? "No data loaded" : "Loading data status"}</span>;
   const live = provenance.kind === "live";
   const { freshness, text } = freshnessLine(provenance.capturedAt, now);
+  // Phones and tablets: status and an icon-only Refresh share one row; the "Checked" time shows on desktop only.
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex items-center gap-2 lg:flex-wrap">
       <div
-        className={`flex items-stretch overflow-hidden rounded-[4px] border ${live ? "border-line" : "border-sign"}`}
+        className={`flex min-w-0 items-stretch overflow-hidden rounded-[4px] border max-lg:flex-1 ${live ? "border-line" : "border-sign"}`}
         role="status"
         aria-label={`${live ? "Live data" : `${provenance.label}, not live data`}. ${text}`}
       >
@@ -76,12 +86,12 @@ function DataStatus({ data, now }: { data: ClosuresState; now: Date }) {
         onClick={data.refresh}
         disabled={data.isRefreshing}
         aria-busy={data.isRefreshing}
-        className="flex h-10 items-center gap-1.5 rounded-[4px] border border-line px-3 text-[14px] font-bold hover:bg-raised disabled:cursor-progress disabled:opacity-70"
+        className="flex h-11 shrink-0 items-center gap-1.5 rounded-[4px] border border-line px-3 text-[14px] font-bold hover:bg-raised disabled:cursor-progress disabled:opacity-70 lg:h-10"
       >
         <RefreshIcon spinning={data.isRefreshing} />
-        {data.isRefreshing ? "Refreshing…" : "Refresh"}
+        <span className="max-lg:sr-only">{data.isRefreshing ? "Refreshing…" : "Refresh"}</span>
       </button>
-      {data.lastSuccessAt !== null && <span className="text-[13px] text-muted">Checked {formatTime(data.lastSuccessAt)}</span>}
+      {data.lastSuccessAt !== null && <span className="text-[13px] text-muted max-lg:hidden">Checked {formatTime(data.lastSuccessAt)}</span>}
     </div>
   );
 }
