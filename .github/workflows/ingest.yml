@@ -15,7 +15,8 @@ on:
         options: [dry-run, remote]
         default: dry-run
   # Hourly at :17, offset from the top of the hour (when GitHub delays scheduled runs most). The concurrency group below
-  # prevents overlapping runs. Free for public repositories on standard runners.
+  # prevents overlapping runs. Free for public repositories on standard runners. Cron times are UTC; GitHub registers the
+  # schedule from the copy of this file on main.
   schedule:
     - cron: "17 * * * *"
 
