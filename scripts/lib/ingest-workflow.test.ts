@@ -35,14 +35,15 @@ describe("ingest workflow", () => {
     expect(active.match(/--remote/g)).toHaveLength(1);
   });
 
-  it("gives Cloudflare credentials only to the remote step; the no-upload step gets just the NH key", () => {
+  it("gives R2 credentials only to the remote step; the no-upload step gets just the NH key", () => {
     const noUpload = step("Ingest once (no upload)");
     const remote = step("Ingest once and publish to R2");
     expect(noUpload).toMatch(/NH_API_KEY: \$\{\{ secrets\.NH_API_KEY \}\}/);
-    expect(noUpload).not.toMatch(/CLOUDFLARE_API_TOKEN|CLOUDFLARE_ACCOUNT_ID/);
+    expect(noUpload).not.toMatch(/R2_|CLOUDFLARE_/);
     expect(remote).toMatch(/NH_API_KEY: \$\{\{ secrets\.NH_API_KEY \}\}/);
-    expect(remote).toMatch(/CLOUDFLARE_API_TOKEN: \$\{\{ secrets\.CLOUDFLARE_API_TOKEN \}\}/);
-    expect(remote).toMatch(/CLOUDFLARE_ACCOUNT_ID: \$\{\{ secrets\.CLOUDFLARE_ACCOUNT_ID \}\}/);
+    for (const name of ["R2_ENDPOINT", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY"]) expect(remote).toContain(`${name}: \${{ secrets.${name} }}`);
+    // The REST-API credentials Wrangler needed are no longer used anywhere.
+    expect(active).not.toMatch(/CLOUDFLARE_API_TOKEN|CLOUDFLARE_ACCOUNT_ID/);
     // No other step (checkout, install, freeze test, artifacts) receives any secret.
     const others = active.split("\n      - ").filter((s) => !s.startsWith("name: Ingest once"));
     for (const s of others) expect(s).not.toMatch(/secrets\./);
@@ -62,7 +63,7 @@ describe("ingest workflow", () => {
     expect(active).toMatch(/concurrency:\s*\n\s*group: ingest\s*\n\s*cancel-in-progress: false/);
     expect(active.indexOf("rules-freeze.test.ts")).toBeLessThan(active.indexOf("npm run ingest:once"));
     // Secrets appear only as env values, never interpolated into a shell command.
-    for (const line of active.split("\n").filter((l) => l.includes("secrets."))) expect(line).toMatch(/^\s+[A-Z_]+: \$\{\{ secrets\.[A-Z_]+ \}\}$/);
+    for (const line of active.split("\n").filter((l) => l.includes("secrets."))) expect(line).toMatch(/^\s+[A-Z][A-Z0-9_]*: \$\{\{ secrets\.[A-Z][A-Z0-9_]* \}\}$/);
     expect(active).not.toMatch(/run:.*\$\{\{/);
   });
 

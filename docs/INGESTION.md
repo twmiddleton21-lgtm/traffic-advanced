@@ -38,11 +38,14 @@ It runs on the publish path and again against the bucket's current snapshot befo
 | Run once from existing captures (no NH requests) | `npm run ingest:once -- --open data/raw/<open> --api data/raw/<nh-api>` | nothing |
 | Dry run (temporary copy of the store, no upload) | add `--dry-run` | |
 | Publish only, upload later | add `--no-upload` (or `npm run api:publish -- <open> <nh-api>`) | |
-| Upload a previously validated snapshot | `npm run api:upload` (local bucket) / `npm run api:upload -- --remote` (real bucket) | `--remote`: Cloudflare credentials |
+| Upload a previously validated snapshot | `npm run api:upload` (local bucket) / `npm run api:upload -- --remote` (real bucket) | `--remote`: `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` |
 | Serve it locally like production | `npm run worker:dev` | nothing |
 
 Without `--remote`, every command works with **no Cloudflare credentials**: the local bucket is Wrangler's simulation used by
-`wrangler dev`. `--remote` is never a default anywhere.
+`wrangler dev`. `--remote` is never a default anywhere. The real bucket is reached through R2's S3-compatible API with a
+bucket-scoped R2 API token ("Object Read & Write" on `traffic-advanced-snapshots`), signed with AWS Signature V4
+(`scripts/lib/r2-upload.ts`). Wrangler's own `r2 object --remote` uses Cloudflare's REST API, which rejects bucket-scoped R2
+tokens (401, code 9109: seen on the first Stage B run, 2026-10-06), so it is used only for the local bucket.
 
 ## Provenance
 
@@ -116,8 +119,9 @@ decision changes that, and the spec should be updated once approved.
 ## Before enabling automated ingestion
 
 1. Owner approval of the cadence (and the GitHub repository/plan it runs on).
-2. GitHub repository with environment `ingest` holding `NH_API_KEY`, `CLOUDFLARE_API_TOKEN` (R2 write only, scoped to the bucket),
-   `CLOUDFLARE_ACCOUNT_ID`; optional required reviewer.
+2. GitHub repository with environment `ingest` holding `NH_API_KEY` and, for remote runs only, `R2_ENDPOINT`
+   (`https://<account id>.r2.cloudflarestorage.com`), `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` from a bucket-scoped R2 API
+   token (Object Read & Write on `traffic-advanced-snapshots`); optional required reviewer.
 3. The bucket exists and the Worker is deployed (first deployment).
 4. One manual `remote` run, checked end to end, then uncomment the schedule.
 5. Decide when published snapshots may be labelled live: the provenance kind is still `development-snapshot`, by design, until the

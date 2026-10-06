@@ -6,7 +6,8 @@
  *   npm run ingest:once -- --open <dir> --api <dir>       reuse existing captures (no new NH requests)
  *   npm run ingest:once -- --dry-run                      everything up to publish, in a temporary copy of the store; no upload
  *   npm run ingest:once -- --no-upload                    publish into data/published only (upload later with npm run api:upload)
- *   npm run ingest:once -- --remote                       upload to the REAL bucket (needs Cloudflare credentials; deployment only)
+ *   npm run ingest:once -- --remote                       upload to the REAL bucket through R2's S3 API (needs R2_ENDPOINT,
+ *                                                         R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY; checked before any capture)
  * A new capture needs NH_API_KEY (.dev.vars locally, or the environment in CI). The key is never printed or saved.
  */
 import { spawn } from "node:child_process";
@@ -16,7 +17,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { DEFAULT_PUBLISHED_DIR, fileStore } from "../../worker/dev/file-store.ts";
 import { ingestOnce, type CaptureKind, type CaptureManifestSummary } from "../lib/ingest.ts";
-import { uploadPublished, wranglerBucket } from "../lib/r2-upload.ts";
+import { r2S3BucketFromEnv, uploadPublished, wranglerBucket } from "../lib/r2-upload.ts";
 import { assertCompleteCapture, buildApiSnapshots } from "../lib/snapshot-builder.ts";
 import { snapshotBucketName } from "../lib/wrangler-config.ts";
 import { assertRulesFrozen, hashCapture } from "../p0/heldout-lib.ts";
@@ -34,6 +35,8 @@ if (noUpload && remote) throw new Error("--remote can't be combined with --dry-r
 const openDir = value("--open");
 const apiDir = value("--api");
 if (Boolean(openDir) !== Boolean(apiDir)) throw new Error("Give both --open and --api to reuse captures, or neither to capture now");
+// The upload target is resolved before anything else runs, so missing R2 credentials fail now, not after a capture.
+const bucket = noUpload ? null : remote ? r2S3BucketFromEnv(snapshotBucketName()) : wranglerBucket(snapshotBucketName());
 
 /** Runs an existing capture script unchanged and returns the folder named by its "Manifest:" line. Any problem fails the run. */
 function capture(kind: CaptureKind): Promise<string> {
@@ -91,7 +94,7 @@ const result = await ingestOnce(
   },
   {
     ...(openDir && apiDir ? { captures: { openDir, apiDir } } : {}),
-    bucket: noUpload ? null : wranglerBucket(snapshotBucketName(), remote ? "remote" : "local"),
+    bucket,
   },
 );
 if (dryRun) console.log(`Dry run: published into ${storeDir}; nothing was uploaded.`);
