@@ -1,7 +1,7 @@
 # Ingestion: National Highways → R2 → Worker
 
 How a National Highways capture becomes the snapshot the Worker serves. Status (2026-10-06): **live.** GitHub Actions runs the
-ingestion every 15 minutes (cron `7,22,37,52 * * * *`, UTC) and publishes to R2; manual runs remain available.
+ingestion hourly (cron `17 * * * *`, UTC) and publishes to R2; manual runs remain available.
 
 ## Flow
 
@@ -67,7 +67,8 @@ version, and `wrangler dev` kept serving it (565 minutes old, so stale).
 
 ## Scheduler: GitHub Actions (decided 2026-10-05)
 
-`.github/workflows/ingest.yml`: scheduled every 15 minutes (owner-approved 2026-10-06) plus manual dispatch. Scheduled runs take the
+`.github/workflows/ingest.yml`: scheduled hourly at :17 (owner-approved 2026-10-06; every 15 minutes earlier the same day) plus
+manual dispatch. Scheduled runs take the
 remote (publish) path; manual runs default to a dry run and publish only with the explicit `remote` choice. If the `ingest`
 environment requires a reviewer, scheduled runs wait for approval, so the schedule needs that protection rule off.
 
@@ -86,7 +87,7 @@ environment requires a reviewer, scheduled runs wait for approval, so the schedu
 
 The Worker stays the read-only API and static host; Actions is the only writer to the bucket.
 
-### Cadence calculation (chosen 2026-10-06: every 15 minutes, offset from the hour)
+### Cadence calculation (chosen 2026-10-06: hourly at :17, offset from the hour)
 
 Measured run time per stage (2026-10-05, from the capture manifests and local runs):
 

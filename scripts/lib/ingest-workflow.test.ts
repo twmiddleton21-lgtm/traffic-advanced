@@ -9,9 +9,9 @@ const active = workflow
   .join("\n");
 
 describe("ingest workflow", () => {
-  it("runs every 15 minutes (owner-approved) and can still be started by hand", () => {
+  it("runs hourly (owner-approved) and can still be started by hand", () => {
     expect(active).toMatch(/^\s*workflow_dispatch:/m);
-    expect(active).toMatch(/^\s*schedule:\s*\n\s*- cron: "7,22,37,52 \* \* \* \*"$/m);
+    expect(active).toMatch(/^\s*schedule:\s*\n\s*- cron: "17 \* \* \* \*"$/m);
     expect(active.match(/cron:/g)).toHaveLength(1);
   });
 

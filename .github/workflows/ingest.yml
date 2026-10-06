@@ -1,7 +1,7 @@
 # Live ingestion runner (docs/INGESTION.md): National Highways capture → pin → FROZEN matcher → publish → upload to R2.
 # The Cloudflare Worker stays a read-only API/static host; this job is the only writer of the snapshot bucket.
 #
-# Scheduled every 15 minutes (owner-approved 2026-10-06): each scheduled run captures, publishes and uploads to R2 through every
+# Scheduled hourly (owner-approved 2026-10-06): each scheduled run captures, publishes and uploads to R2 through every
 # safeguard; a failed run never replaces the snapshot being served. Manual runs (Actions → Ingest → Run workflow) default to a
 # dry run that uploads nothing; "remote" uploads.
 name: Ingest
@@ -14,10 +14,10 @@ on:
         type: choice
         options: [dry-run, remote]
         default: dry-run
-  # Every 15 minutes, offset from the top of the hour (when GitHub delays scheduled runs most). The concurrency group below
+  # Hourly at :17, offset from the top of the hour (when GitHub delays scheduled runs most). The concurrency group below
   # prevents overlapping runs. Free for public repositories on standard runners.
   schedule:
-    - cron: "7,22,37,52 * * * *"
+    - cron: "17 * * * *"
 
 permissions:
   contents: read
