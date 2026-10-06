@@ -1,6 +1,6 @@
-import type { LayerSpecification, SymbolLayerSpecification } from "maplibre-gl";
+import type { LayerSpecification, LineLayerSpecification, SymbolLayerSpecification } from "maplibre-gl";
 import { describe, expect, it } from "vitest";
-import { baseLabelAdjustments, overlayLayers, roadEmphasisBeforeId, roadEmphasisLayers } from "./style.ts";
+import { baseLabelAdjustments, COLOURS, overlayLayers, roadEmphasisBeforeId, roadEmphasisLayers } from "./style.ts";
 
 const layers = overlayLayers();
 const byId = (id: string): LayerSpecification => {
@@ -39,6 +39,36 @@ describe("label priority (later layers win label collisions and draw on top)", (
 
   it("every layer id is unique", () => {
     expect(new Set(layers.map((l) => l.id)).size).toBe(layers.length);
+  });
+});
+
+describe("closure lines", () => {
+  /** The width stops of a zoom-interpolated line width: [zoom, width, zoom, width, ...]. */
+  const stops = (id: string): number[] => {
+    const width = (byId(id) as LineLayerSpecification).paint?.["line-width"];
+    expect(width, `${id} width follows zoom`).toEqual(expect.arrayContaining(["interpolate", ["zoom"]]));
+    return (width as unknown[]).slice(3) as number[];
+  };
+
+  it("draw red on a wider dark casing, from the same features, for every closure and the selected one", () => {
+    for (const [casing, line] of [
+      ["closure-casing", "closure-line"],
+      ["selected-closure-casing", "selected-closure-line"],
+    ] as const) {
+      const [c, l] = [byId(casing) as LineLayerSpecification, byId(line) as LineLayerSpecification];
+      expect(order(casing), `${casing} under ${line}`).toBeLessThan(order(line));
+      expect([c.source, c.filter]).toEqual([l.source, l.filter]);
+      expect(c.paint?.["line-color"]).toBe(COLOURS.ink);
+      expect(l.paint?.["line-color"]).toBe(COLOURS.closure);
+      const [cw, lw] = [stops(casing), stops(line)];
+      for (let i = 1; i < lw.length; i += 2) expect(cw[i]!, `${casing} wider at zoom ${lw[i - 1]}`).toBeGreaterThan(lw[i]!);
+    }
+  });
+
+  it("keep the clickable closure-line id the map's handlers use, and stay below every marker and label", () => {
+    expect((byId("closure-line") as LineLayerSpecification).source).toBe("closures");
+    expect(order("selected-closure-line")).toBeLessThan(order("selected-marker"));
+    expect(order("closure-line")).toBeLessThan(order("marker"));
   });
 });
 

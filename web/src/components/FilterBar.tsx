@@ -24,7 +24,7 @@ export function FilterBar({ closures, query, active, onChange }: Props) {
             aria-checked={selected}
             title={f.description}
             onClick={() => onChange(f.id)}
-            className={`h-8 rounded-[4px] border px-2.5 text-[14px] font-bold tabular-nums ${
+            className={`h-11 rounded-[4px] border px-2.5 text-[14px] font-bold tabular-nums lg:h-8 ${
               selected ? "border-ink bg-ink text-bg" : "border-line text-ink hover:bg-raised"
             }`}
           >

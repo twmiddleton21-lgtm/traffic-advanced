@@ -58,10 +58,23 @@
   --color-stale: var(--ta-stale);
 }
 
+/* The app shell fills the screen and never scrolls as a page: lists and panels scroll inside it. 100dvh follows mobile browser
+   toolbars as they show and hide (100vh is the fallback for older browsers). */
 html,
-body,
-#root {
+body {
   height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  /* No double-tap zoom of the page, so quick taps on buttons and the map never enlarge the app by accident. A deliberate pinch on
+     the header or panels still zooms the page (accessibility). The map canvas sets touch-action: none (MapLibre), so a pinch or
+     double-tap on the map always zooms the map, never the page. */
+  touch-action: manipulation;
+}
+#root {
+  height: 100vh;
+  height: 100dvh;
 }
 
 body {
@@ -91,6 +104,92 @@ body {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
   }
+}
+
+/* Splash (web/index.html, removed by web/src/splash.ts): the banner as a sign plate on the theme background, with a quiet progress
+   line. The banner's white margin outside its frame is what the rounded corners trim, never the logo. */
+.ta-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  background: var(--ta-bg);
+  transition:
+    opacity 220ms ease-out,
+    visibility 220ms;
+}
+.ta-splash[data-state="done"] {
+  opacity: 0;
+  visibility: hidden;
+}
+.ta-splash-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  padding: 24px;
+}
+.ta-splash-banner {
+  display: block;
+  /* Never wider than the screen allows, nor taller than 55% of it in landscape; height follows the image's own 1168:784 ratio. */
+  width: min(80vw, 420px);
+  width: min(80vw, 420px, calc(55dvh * 1168 / 784));
+  height: auto;
+  border-radius: 14px;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.12);
+}
+.ta-splash-progress {
+  position: relative;
+  width: 144px;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--ta-line);
+}
+.ta-splash-progress::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  border-radius: 2px;
+  background: var(--ta-focus);
+  animation: ta-splash-progress 1.1s ease-in-out infinite;
+}
+@keyframes ta-splash-progress {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
+}
+.ta-splash-text {
+  margin: 0;
+  color: var(--ta-muted);
+  font-size: 14px;
+}
+@media (prefers-reduced-motion: reduce) {
+  /* A still line instead of a moving one. */
+  .ta-splash-progress::after {
+    width: 100%;
+    opacity: 0.6;
+    animation: none;
+  }
+}
+
+/* Map controls stay clear of notches, rounded corners and the home indicator. (The header covers the top inset.) */
+.maplibregl-ctrl-top-right {
+  padding-right: env(safe-area-inset-right);
+}
+.maplibregl-ctrl-bottom-right {
+  padding-right: env(safe-area-inset-right);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.maplibregl-ctrl-bottom-left {
+  padding-left: env(safe-area-inset-left);
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 /* MapLibre controls follow the theme. */

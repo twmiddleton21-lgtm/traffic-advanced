@@ -30,7 +30,7 @@ export function ClosureDetail({ closure: c, provenance, onClose }: Props) {
           </h2>
           <p className="text-muted">{formatWindow(c.window)}</p>
         </div>
-        <button type="button" onClick={onClose} className="rounded-[4px] border border-line px-2.5 py-1 font-bold hover:bg-raised" aria-label="Close details">
+        <button type="button" onClick={onClose} className="min-h-12 rounded-[4px] border border-line px-3.5 font-bold hover:bg-raised lg:min-h-0 lg:px-2.5 lg:py-1" aria-label="Close details">
           Close
         </button>
       </header>
