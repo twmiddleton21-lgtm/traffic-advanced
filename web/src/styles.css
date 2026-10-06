@@ -101,6 +101,21 @@ body {
 [data-theme="dark"] .maplibregl-ctrl-group button .maplibregl-ctrl-icon {
   filter: invert(1);
 }
+/* The location button's blue "on" states are already coloured: inverting them would turn them orange. */
+[data-theme="dark"] .maplibregl-ctrl-group button.maplibregl-ctrl-geolocate-active .maplibregl-ctrl-icon,
+[data-theme="dark"] .maplibregl-ctrl-group button.maplibregl-ctrl-geolocate-background .maplibregl-ctrl-icon {
+  filter: none;
+}
+/* The location button looks like the other map buttons (29px) but takes taps across 49px (CLAUDE.md: touch targets of at least
+   48px). The invisible extension stays inside the 10px gap above it, so it never covers the compass. */
+.maplibregl-ctrl-group button.maplibregl-ctrl-geolocate {
+  position: relative;
+}
+.maplibregl-ctrl-group button.maplibregl-ctrl-geolocate::after {
+  content: "";
+  position: absolute;
+  inset: -10px;
+}
 .maplibregl-ctrl-attrib {
   font-family: var(--font-sans);
 }
