@@ -74,8 +74,9 @@ incident). Meanwhile the live data went stale and the app labelled it so.
   would read the schedule again; merged 2026-10-06 17:14:09 UTC as `32b7a9e`. No scheduled run appeared for the 17:17 slot.
 - **First scheduled run:** Ingest run #5 (event `schedule`, run 37510604015, `main` `32b7a9e`) started 18:20:55 UTC for the 18:17 slot,
   succeeded, and published `20261006T182255Z-41d107fdb363` (the current snapshot above).
-- **To watch:** as of 19:35 UTC no run had appeared yet for the 19:17 slot. GitHub can delay scheduled runs; if slots keep being missed,
-  disabling and re-enabling the workflow in the Actions UI is the next step (a settings change, owner's decision).
+- **To watch (not a confirmed failure):** as of 19:35 UTC no run had appeared yet for the 19:17 slot (still none when rechecked at
+  19:40 UTC). GitHub can delay scheduled runs, so this may still start late. If slots keep being missed, disabling and re-enabling the
+  workflow in the Actions UI is the next step (a settings change, owner's decision).
 
 ## First live state (recorded 2026-10-06, post-live review)
 
