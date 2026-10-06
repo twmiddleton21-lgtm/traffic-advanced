@@ -1,0 +1,106 @@
+@import "@fontsource/atkinson-hyperlegible/400.css";
+@import "@fontsource/atkinson-hyperlegible/700.css";
+@import "tailwindcss";
+
+/* Theme: system by default, overridable with <html data-theme="light|dark">. Dark is designed first (night use). */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+:root {
+  /* UK road vernacular, identical in both themes */
+  --ta-motorway: #0b4f9c; /* motorway sign blue */
+  --ta-primary: #00703c; /* primary-route green */
+  --ta-primary-text: #ffd200; /* primary-route yellow lettering */
+  --ta-sign: #ffd200; /* temporary diversion sign yellow */
+  --ta-closure: #c8102e; /* closed carriageway */
+  --ta-unmatched: #5b6770; /* no reliable diversion */
+
+  --ta-bg: #f3f5f6;
+  --ta-surface: #ffffff;
+  --ta-raised: #e8ecee;
+  --ta-ink: #14191e;
+  --ta-muted: #4a555e;
+  --ta-line: #cdd4d9;
+  --ta-focus: #0b4f9c;
+  --ta-delayed: #8a4b00; /* data freshness: delayed (amber, 7:1 on white) */
+  --ta-stale: #b00d27; /* data freshness: stale (red, 6.8:1 on white) */
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --ta-bg: #15191d;
+  --ta-surface: #1c2126;
+  --ta-raised: #262c32;
+  --ta-ink: #eef1f3;
+  --ta-muted: #a7b0b7;
+  --ta-line: #353d44;
+  --ta-focus: #ffd200;
+  --ta-delayed: #ffd200;
+  --ta-stale: #ff7a7a;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --font-sans: "Atkinson Hyperlegible", system-ui, sans-serif;
+  --color-motorway: var(--ta-motorway);
+  --color-primary-route: var(--ta-primary);
+  --color-primary-text: var(--ta-primary-text);
+  --color-sign: var(--ta-sign);
+  --color-closure: var(--ta-closure);
+  --color-unmatched: var(--ta-unmatched);
+  --color-bg: var(--ta-bg);
+  --color-surface: var(--ta-surface);
+  --color-raised: var(--ta-raised);
+  --color-ink: var(--ta-ink);
+  --color-muted: var(--ta-muted);
+  --color-line: var(--ta-line);
+  --color-focus: var(--ta-focus);
+  --color-delayed: var(--ta-delayed);
+  --color-stale: var(--ta-stale);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--ta-bg);
+  color: var(--ta-ink);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 3px solid var(--ta-focus);
+  outline-offset: 2px;
+}
+
+/* Roadworks hazard stripe, used only for the not-live data warning. */
+.hazard-stripe {
+  background-image: repeating-linear-gradient(-45deg, #ffd200 0 10px, #14191e 10px 20px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+/* MapLibre controls follow the theme. */
+.maplibregl-ctrl-group {
+  background: var(--ta-surface) !important;
+  border: 1px solid var(--ta-line);
+}
+[data-theme="dark"] .maplibregl-ctrl-group button .maplibregl-ctrl-icon {
+  filter: invert(1);
+}
+.maplibregl-ctrl-attrib {
+  font-family: var(--font-sans);
+}

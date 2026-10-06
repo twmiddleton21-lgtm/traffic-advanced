@@ -17,6 +17,8 @@ test-results/
 
 # raw data dumps (commit trimmed fixtures only)
 data/raw/
+# locally published API snapshots (npm run api:publish)
+data/published/
 *.xlsx
 
 # OS / editor

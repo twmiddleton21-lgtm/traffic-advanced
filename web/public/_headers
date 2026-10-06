@@ -1,0 +1,16 @@
+# Security headers for the static web app, applied by Cloudflare Workers Static Assets (copied to web/dist by Vite).
+# They don't apply to /api/*: those responses come from Worker code, which sets its own headers (worker/src/index.ts).
+# CSP sources, verified 2026-10-05 (web/src/map/MapView.tsx and the OpenFreeMap positron/dark styles):
+#   - every map style, vector tile, raster tile, sprite and font comes from https://tiles.openfreemap.org;
+#   - MapLibre's worker is self-hosted (setWorkerUrl, same origin), so workers need 'self' only and no blob: (MapLibre v6 docs);
+#   - MapLibre decodes images from data:/blob: URLs (MapLibre v6 docs: img-src data: blob: 'self');
+#   - the one inline script is the no-flash theme setter in web/index.html, allowed by its SHA-256 only
+#     (web/src/security-headers.test.ts fails if the script changes without this hash being updated).
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'sha256-LR1UfMeXcmQzvn1qaiaszv1lqMAxx4P0DRFCG89L23c='; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://tiles.openfreemap.org; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+  Permissions-Policy: camera=(), microphone=(), payment=(), usb=(), geolocation=(self)
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  X-Frame-Options: DENY
+  Cross-Origin-Opener-Policy: same-origin

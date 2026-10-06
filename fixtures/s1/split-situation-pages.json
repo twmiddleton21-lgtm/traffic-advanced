@@ -1,0 +1,1508 @@
+{
+ "description": "Real S1 planned capture: one situation split across pages with disjoint record subsets.",
+ "capturedFrom": "2026-10-05T1208Z-nh-api",
+ "situationId": "523394",
+ "expectedRecordCount": 3,
+ "pages": [
+  {
+   "D2Payload": {
+    "version": "3.4",
+    "modelBaseVersion": "3",
+    "lang": "en",
+    "feedDescription": "Road and Lane Closures",
+    "feedType": "SituationPublication",
+    "publicationTime": "2026-10-05T12:08:28.28Z",
+    "publicationCreator": {
+     "country": "gb",
+     "nationalIdentifier": "NationalHighways"
+    },
+    "situation": [
+     {
+      "idG": "523394",
+      "situationVersionTime": "2026-10-05T11:28:33.33Z",
+      "headerInformation": {
+       "confidentiality": "noRestriction",
+       "informationStatus": "real"
+      },
+      "situationRecord": [
+       {
+        "sitRoadOrCarriagewayOrLaneManagement": {
+         "idG": "1-1790673982-ed11fdd6-b2b3-4c9f-b298-ef46167b3acd",
+         "versionG": "1",
+         "situationRecordCreationTime": "2026-09-29T09:21:44.44Z",
+         "situationRecordVersionTime": "2026-10-05T11:28:33.33Z",
+         "probabilityOfOccurrence": "probable",
+         "complianceOption": "mandatory",
+         "roadOrCarriagewayOrLaneManagementType": {
+          "value": "other"
+         },
+         "source": {
+          "sourceIdentification": "roadworks"
+         },
+         "validity": {
+          "validityStatus": "planned",
+          "validityTimeSpecification": {
+           "overallStartTime": "2026-10-16T22:00:00.00Z",
+           "overallEndTime": "2026-10-17T04:30:00.00Z"
+          }
+         },
+         "cause": {
+          "causeType": "constructionWork",
+          "detailedCauseType": {
+           "constructionWorkType": "constructionWork"
+          }
+         },
+         "generalPublicComment": [
+          {
+           "comment": "A13 Eastbound Stifford Interchange to Baker Street lane 1,2 closure "
+          }
+         ],
+         "locationReference": {
+          "locLocationGroupByList": {
+           "locationContainedInGroup": [
+            {
+             "locLinearLocation": {
+              "gmlLineString": {
+               "locGmlLineString": {
+                "srsDimension": 2,
+                "srsName": "EPSG::4326",
+                "posList": "51.504795 0.328204 51.504808 0.32827 51.504978 0.329229 51.505098 0.329971"
+               }
+              },
+              "supplementaryPositionalDescription": {
+               "locationDescription": "A13 eastbound between A1012 and A1089",
+               "carriageway": [
+                {
+                 "carriageway": {
+                  "value": "extendedG",
+                  "extendedValueG": "dualCarriageway"
+                 },
+                 "lane": [
+                  {
+                   "laneUsage": {
+                    "value": "extendedG",
+                    "extendedValueG": "cl1"
+                   },
+                   "laneNumber": 1,
+                   "laneExtensionG": {
+                    "impactOnLanes": {
+                     "impactExtensionG": {
+                      "lanesStatus": "closed",
+                      "laneImpactDirection": "aligned"
+                     }
+                    }
+                   }
+                  },
+                  {
+                   "laneUsage": {
+                    "value": "extendedG",
+                    "extendedValueG": "cl2"
+                   },
+                   "laneNumber": 2,
+                   "laneExtensionG": {
+                    "impactOnLanes": {
+                     "impactExtensionG": {
+                      "lanesStatus": "closed",
+                      "laneImpactDirection": "aligned"
+                     }
+                    }
+                   }
+                  },
+                  {
+                   "laneUsage": {
+                    "value": "extendedG",
+                    "extendedValueG": "lh"
+                   },
+                   "laneNumber": 0,
+                   "laneExtensionG": {
+                    "impactOnLanes": {
+                     "impactExtensionG": {
+                      "lanesStatus": "closed",
+                      "laneImpactDirection": "aligned"
+                     }
+                    }
+                   }
+                  }
+                 ],
+                 "carriagewayExtensionG": {
+                  "impactOnCarriageway": {
+                   "numberOfLanesRestricted": 2,
+                   "numberOfOperationalLanes": 1
+                  }
+                 }
+                }
+               ]
+              }
+             },
+             "locSingleRoadLinearLocation": {
+              "linearWithinLinearElement": [
+               {
+                "directionOnLinearSection": "eastBound",
+                "directionRelativeOnLinearSection": "aligned",
+                "heightGradeOfLinearSection": {
+                 "value": "extendedG",
+                 "extendedValueG": "start1End2"
+                },
+                "linearElement": {
+                 "locLinearElementByCode": {
+                  "roadName": "A13",
+                  "linearElementReferenceModel": "The Network Model",
+                  "linearElementIdentifier": "{75E572D4-F8DE-4345-8BD8-9C71F94F98A7}",
+                  "linearElementByCodeExtensionG": {
+                   "linearElementType": "aCarriageway"
+                  }
+                 }
+                },
+                "fromPoint": {
+                 "locDistanceFromLinearElementStart": {
+                  "distanceAlong": 796
+                 }
+                },
+                "toPoint": {
+                 "locDistanceFromLinearElementStart": {
+                  "distanceAlong": 923
+                 }
+                }
+               }
+              ]
+             }
+            },
+            {
+             "locLinearLocation": {
+              "gmlLineString": {
+               "locGmlLineString": {
+                "srsDimension": 2,
+                "srsName": "EPSG::4326",
+                "posList": "51.505365 0.33891 51.505327 0.339219 51.505221 0.340021 51.50514 0.340507 51.505099 0.34075 51.504918 0.341691 51.504888 0.341834"
+               }
+              },
+              "supplementaryPositionalDescription": {
+               "locationDescription": "A13 eastbound between A1012 and A1089",
+               "carriageway": [
+                {
+                 "carriageway": {
+                  "value": "extendedG",
+                  "extendedValueG": "dualCarriageway"
+                 },
+                 "lane": [
+                  {
+                   "laneUsage": {
+                    "value": "extendedG",
+                    "extendedValueG": "cl1"
+                   },
+                   "laneNumber": 1,
+                   "laneExtensionG": {
+                    "impactOnLanes": {
+                     "impactExtensionG": {
+                      "lanesStatus": "closed",
+                      "laneImpactDirection": "aligned"
+                     }
+                    }
+                   }
+                  },
+                  {
+                   "laneUsage": {
+                    "value": "extendedG",
+                    "extendedValueG": "cl2"
+                   },
+                   "laneNumber": 2,
+                   "laneExtensionG": {
+                    "impactOnLanes": {
+                     "impactExtensionG": {
+                      "lanesStatus": "closed",
+                      "laneImpactDirection": "aligned"
+                     }
+                    }
+                   }
+                  },
+                  {
+                   "laneUsage": {
+                    "value": "extendedG",
+                    "extendedValueG": "lh"
+                   },
+                   "laneNumber": 0,
+                   "laneExtensionG": {
+                    "impactOnLanes": {
+                     "impactExtensionG": {
+                      "lanesStatus": "closed",
+                      "laneImpactDirection": "aligned"
+                     }
+                    }
+                   }
+                  }
+                 ],
+                 "carriagewayExtensionG": {
+                  "impactOnCarriageway": {
+                   "numberOfLanesRestricted": 2,
+                   "numberOfOperationalLanes": 1
+                  }
+                 }
+                }
+               ]
+              }
+             },
+             "locSingleRoadLinearLocation": {
+              "linearWithinLinearElement": [
+               {
+                "directionOnLinearSection": "eastBound",
+                "directionRelativeOnLinearSection": "aligned",
+                "heightGradeOfLinearSection": {
+                 "value": "extendedG",
+                 "extendedValueG": "start2End1"
+                },
+                "linearElement": {
+                 "locLinearElementByCode": {
+                  "roadName": "A13",
+                  "linearElementReferenceModel": "The Network Model",
+                  "linearElementIdentifier": "{45EABB5C-FC45-42DD-AFD1-F42F375292F1}",
+                  "linearElementByCodeExtensionG": {
+                   "linearElementType": "aCarriageway"
+                  }
+                 }
+                },
+                "fromPoint": {
+                 "locDistanceFromLinearElementStart": {
+                  "distanceAlong": 626
+                 }
+                },
+                "toPoint": {
+                 "locDistanceFromLinearElementStart": {
+                  "distanceAlong": 836
+                 }
+                }
+               }
+              ]
+             }
+            },
+            {
+             "locLinearLocation": {
+              "gmlLineString": {
+               "locGmlLineString": {
+                "srsDimension": 2,
+                "srsName": "EPSG::4326",
+                "posList": "51.505098 0.329971 51.505246 0.331117 51.505325 0.331841 51.505436 0.332856 51.505498 0.333824 51.505531 0.334402 51.505533 0.334446 51.505568 0.335269 51.505565 0.335427 51.505568 0.336148 51.505554 0.336407 51.505534 0.336953 51.505507 0.337442 51.505437 0.338231 51.505424 0.338417 51.505366 0.338902"
+               }
+              },
+              "supplementaryPositionalDescription": {
+               "locationDescription": "A13 eastbound between A1012 and A1089",
+               "carriageway": [
+                {
+                 "carriageway": {
+                  "value": "extendedG",
+                  "extendedValueG": "dualCarriageway"
+                 },
+                 "lane": [
+                  {
+                   "laneUsage": {
+                    "value": "extendedG",
+                    "extendedValueG": "cl1"
+                   },
+                   "laneNumber": 1,
+                   "laneExtensionG": {
+                    "impactOnLanes": {
+                     "impactExtensionG": {
+                      "lanesStatus": "closed",
+                      "laneImpactDirection": "aligned"
+                     }
+                    }
+                   }
+                  },
+                  {
+                   "laneUsage": {
+                    "value": "extendedG",
+                    "extendedValueG": "cl2"
+                   },
+                   "laneNumber": 2,
+                   "laneExtensionG": {
+                    "impactOnLanes": {
+                     "impactExtensionG": {
+                      "lanesStatus": "closed",
+                      "laneImpactDirection": "aligned"
+                     }
+                    }
+                   }
+                  },
+                  {
+                   "laneUsage": {
+                    "value": "extendedG",
+                    "extendedValueG": "lh"
+                   },
+                   "laneNumber": 0,
+                   "laneExtensionG": {
+                    "impactOnLanes": {
+                     "impactExtensionG": {
+                      "lanesStatus": "closed",
+                      "laneImpactDirection": "aligned"
+                     }
+                    }
+                   }
+                  }
+                 ],
+                 "carriagewayExtensionG": {
+                  "impactOnCarriageway": {
+                   "numberOfLanesRestricted": 2,
+                   "numberOfOperationalLanes": 1
+                  }
+                 }
+                }
+               ]
+              }
+             },
+             "locSingleRoadLinearLocation": {
+              "linearWithinLinearElement": [
+               {
+                "directionOnLinearSection": "eastBound",
+                "directionRelativeOnLinearSection": "aligned",
+                "heightGradeOfLinearSection": {
+                 "value": "extendedG",
+                 "extendedValueG": "start2End1"
+                },
+                "linearElement": {
+                 "locLinearElementByCode": {
+                  "roadName": "A13",
+                  "linearElementReferenceModel": "The Network Model",
+                  "linearElementIdentifier": "{45EABB5C-FC45-42DD-AFD1-F42F375292F1}",
+                  "linearElementByCodeExtensionG": {
+                   "linearElementType": "aCarriageway"
+                  }
+                 }
+                },
+                "fromPoint": {
+                 "locDistanceFromLinearElementStart": {
+                  "distanceAlong": 0
+                 }
+                },
+                "toPoint": {
+                 "locDistanceFromLinearElementStart": {
+                  "distanceAlong": 625
+                 }
+                }
+               }
+              ]
+             }
+            },
+            {
+             "locLinearLocation": {
+              "gmlLineString": {
+               "locGmlLineString": {
+                "srsDimension": 2,
+                "srsName": "EPSG::4326",
+                "posList": "51.504888 0.341834 51.504779 0.342362 51.504683 0.342731"
+               }
+              },
+              "supplementaryPositionalDescription": {
+               "locationDescription": "A13 eastbound within the A1089 junction",
+               "carriageway": [
+                {
+                 "carriageway": {
+                  "value": "extendedG",
+                  "extendedValueG": "dualCarriageway"
+                 },
+                 "lane": [
+                  {
+                   "laneUsage": {
+                    "value": "extendedG",
+                    "extendedValueG": "cl1"
+                   },
+                   "laneNumber": 1,
+                   "laneExtensionG": {
+                    "impactOnLanes": {
+                     "impactExtensionG": {
+                      "lanesStatus": "closed",
+                      "laneImpactDirection": "aligned"
+                     }
+                    }
+                   }
+                  },
+                  {
+                   "laneUsage": {
+                    "value": "extendedG",
+                    "extendedValueG": "cl2"
+                   },
+                   "laneNumber": 2,
+                   "laneExtensionG": {
+                    "impactOnLanes": {
+                     "impactExtensionG": {
+                      "lanesStatus": "closed",
+                      "laneImpactDirection": "aligned"
+                     }
+                    }
+                   }
+                  },
+                  {
+                   "laneUsage": {
+                    "value": "extendedG",
+                    "extendedValueG": "lh"
+                   },
+                   "laneNumber": 0,
+                   "laneExtensionG": {
+                    "impactOnLanes": {
+                     "impactExtensionG": {
+                      "lanesStatus": "closed",
+                      "laneImpactDirection": "aligned"
+                     }
+                    }
+                   }
+                  }
+                 ],
+                 "carriagewayExtensionG": {
+                  "impactOnCarriageway": {
+                   "numberOfLanesRestricted": 2,
+                   "numberOfOperationalLanes": 1
+                  }
+                 }
+                }
+               ]
+              }
+             },
+             "locSingleRoadLinearLocation": {
+              "linearWithinLinearElement": [
+               {
+                "directionOnLinearSection": "eastBound",
+                "directionRelativeOnLinearSection": "aligned",
+                "heightGradeOfLinearSection": {
+                 "value": "extendedG",
+                 "extendedValueG": "start1End1"
+                },
+                "linearElement": {
+                 "locLinearElementByCode": {
+                  "roadName": "A13",
+                  "linearElementReferenceModel": "The Network Model",
+                  "linearElementIdentifier": "{F9A6755E-7D06-42EF-B9DB-932D3FFEB610}",
+                  "linearElementByCodeExtensionG": {
+                   "linearElementType": "aCarriageway"
+                  }
+                 }
+                },
+                "fromPoint": {
+                 "locDistanceFromLinearElementStart": {
+                  "distanceAlong": 0
+                 }
+                },
+                "toPoint": {
+                 "locDistanceFromLinearElementStart": {
+                  "distanceAlong": 66
+                 }
+                }
+               }
+              ]
+             }
+            }
+           ]
+          }
+         },
+         "roadOrCarriagewayOrLaneManagementExtensionG": {
+          "hasWidthRestrictionFlag": false,
+          "hasHeightRestrictionFlag": false,
+          "hasWeightRestrictionFlag": false,
+          "hasContraFlow": false
+         }
+        }
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "D2Payload": {
+    "version": "3.4",
+    "modelBaseVersion": "3",
+    "lang": "en",
+    "feedDescription": "Road and Lane Closures",
+    "feedType": "SituationPublication",
+    "publicationTime": "2026-10-05T12:08:56.56Z",
+    "publicationCreator": {
+     "country": "gb",
+     "nationalIdentifier": "NationalHighways"
+    },
+    "situation": [
+     {
+      "idG": "523394",
+      "situationVersionTime": "2026-10-05T11:28:33.33Z",
+      "headerInformation": {
+       "confidentiality": "noRestriction",
+       "informationStatus": "real"
+      },
+      "situationRecord": [
+       {
+        "sitRoadOrCarriagewayOrLaneManagement": {
+         "idG": "1-1790673982-0c13a30e-574d-43a8-b12c-899a99ba1f63",
+         "versionG": "1",
+         "situationRecordCreationTime": "2026-09-29T09:21:44.44Z",
+         "situationRecordVersionTime": "2026-10-05T11:28:33.33Z",
+         "probabilityOfOccurrence": "probable",
+         "complianceOption": "mandatory",
+         "roadOrCarriagewayOrLaneManagementType": {
+          "value": "other"
+         },
+         "source": {
+          "sourceIdentification": "roadworks"
+         },
+         "validity": {
+          "validityStatus": "planned",
+          "validityTimeSpecification": {
+           "overallStartTime": "2026-10-12T21:00:00.00Z",
+           "overallEndTime": "2026-10-13T04:30:00.00Z"
+          }
+         },
+         "cause": {
+          "causeType": "constructionWork",
+          "detailedCauseType": {
+           "constructionWorkType": "constructionWork"
+          }
+         },
+         "generalPublicComment": [
+          {
+           "comment": "A13 Eastbound Stifford Interchange to Baker Street lane 1,2 closure "
+          }
+         ],
+         "locationReference": {
+          "locLocationGroupByList": {
+           "locationContainedInGroup": [
+            {
+             "locLinearLocation": {
+              "gmlLineString": {
+               "locGmlLineString": {
+                "srsDimension": 2,
+                "srsName": "EPSG::4326",
+                "posList": "51.504795 0.328204 51.504808 0.32827 51.504978 0.329229 51.505098 0.329971"
+               }
+              },
+              "supplementaryPositionalDescription": {
+               "locationDescription": "A13 eastbound between A1012 and A1089",
+               "carriageway": [
+                {
+                 "carriageway": {
+                  "value": "extendedG",
+                  "extendedValueG": "dualCarriageway"
+                 },
+                 "lane": [
+                  {
+                   "laneUsage": {
+                    "value": "extendedG",
+                    "extendedValueG": "cl1"
+                   },
+                   "laneNumber": 1,
+                   "laneExtensionG": {
+                    "impactOnLanes": {
+                     "impactExtensionG": {
+                      "lanesStatus": "closed",
+                      "laneImpactDirection": "aligned"
+                     }
+                    }
+                   }
+                  },
+                  {
+                   "laneUsage": {
+                    "value": "extendedG",
+                    "extendedValueG": "cl2"
+                   },
+                   "laneNumber": 2,
+                   "laneExtensionG": {
+                    "impactOnLanes": {
+                     "impactExtensionG": {
+                      "lanesStatus": "closed",
+                      "laneImpactDirection": "aligned"
+                     }
+                    }
+                   }
+                  },
+                  {
+                   "laneUsage": {
+                    "value": "extendedG",
+                    "extendedValueG": "lh"
+                   },
+                   "laneNumber": 0,
+                   "laneExtensionG": {
+                    "impactOnLanes": {
+                     "impactExtensionG": {
+                      "lanesStatus": "closed",
+                      "laneImpactDirection": "aligned"
+                     }
+                    }
+                   }
+                  }
+                 ],
+                 "carriagewayExtensionG": {
+                  "impactOnCarriageway": {
+                   "numberOfLanesRestricted": 2,
+                   "numberOfOperationalLanes": 1
+                  }
+                 }
+                }
+               ]
+              }
+             },
+             "locSingleRoadLinearLocation": {
+              "linearWithinLinearElement": [
+               {
+                "directionOnLinearSection": "eastBound",
+                "directionRelativeOnLinearSection": "aligned",
+                "heightGradeOfLinearSection": {
+                 "value": "extendedG",
+                 "extendedValueG": "start1End2"
+                },
+                "linearElement": {
+                 "locLinearElementByCode": {
+                  "roadName": "A13",
+                  "linearElementReferenceModel": "The Network Model",
+                  "linearElementIdentifier": "{75E572D4-F8DE-4345-8BD8-9C71F94F98A7}",
+                  "linearElementByCodeExtensionG": {
+                   "linearElementType": "aCarriageway"
+                  }
+                 }
+                },
+                "fromPoint": {
+                 "locDistanceFromLinearElementStart": {
+                  "distanceAlong": 796
+                 }
+                },
+                "toPoint": {
+                 "locDistanceFromLinearElementStart": {
+                  "distanceAlong": 923
+                 }
+                }
+               }
+              ]
+             }
+            },
+            {
+             "locLinearLocation": {
+              "gmlLineString": {
+               "locGmlLineString": {
+                "srsDimension": 2,
+                "srsName": "EPSG::4326",
+                "posList": "51.505365 0.33891 51.505327 0.339219 51.505221 0.340021 51.50514 0.340507 51.505099 0.34075 51.504918 0.341691 51.504888 0.341834"
+               }
+              },
+              "supplementaryPositionalDescription": {
+               "locationDescription": "A13 eastbound between A1012 and A1089",
+               "carriageway": [
+                {
+                 "carriageway": {
+                  "value": "extendedG",
+                  "extendedValueG": "dualCarriageway"
+                 },
+                 "lane": [
+                  {
+                   "laneUsage": {
+                    "value": "extendedG",
+                    "extendedValueG": "cl1"
+                   },
+                   "laneNumber": 1,
+                   "laneExtensionG": {
+                    "impactOnLanes": {
+                     "impactExtensionG": {
+                      "lanesStatus": "closed",
+                      "laneImpactDirection": "aligned"
+                     }
+                    }
+                   }
+                  },
+                  {
+                   "laneUsage": {
+                    "value": "extendedG",
+                    "extendedValueG": "cl2"
+                   },
+                   "laneNumber": 2,
+                   "laneExtensionG": {
+                    "impactOnLanes": {
+                     "impactExtensionG": {
+                      "lanesStatus": "closed",
+                      "laneImpactDirection": "aligned"
+                     }
+                    }
+                   }
+                  },
+                  {
+                   "laneUsage": {
+                    "value": "extendedG",
+                    "extendedValueG": "lh"
+                   },
+                   "laneNumber": 0,
+                   "laneExtensionG": {
+                    "impactOnLanes": {
+                     "impactExtensionG": {
+                      "lanesStatus": "closed",
+                      "laneImpactDirection": "aligned"
+                     }
+                    }
+                   }
+                  }
+                 ],
+                 "carriagewayExtensionG": {
+                  "impactOnCarriageway": {
+                   "numberOfLanesRestricted": 2,
+                   "numberOfOperationalLanes": 1
+                  }
+                 }
+                }
+               ]
+              }
+             },
+             "locSingleRoadLinearLocation": {
+              "linearWithinLinearElement": [
+               {
+                "directionOnLinearSection": "eastBound",
+                "directionRelativeOnLinearSection": "aligned",
+                "heightGradeOfLinearSection": {
+                 "value": "extendedG",
+                 "extendedValueG": "start2End1"
+                },
+                "linearElement": {
+                 "locLinearElementByCode": {
+                  "roadName": "A13",
+                  "linearElementReferenceModel": "The Network Model",
+                  "linearElementIdentifier": "{45EABB5C-FC45-42DD-AFD1-F42F375292F1}",
+                  "linearElementByCodeExtensionG": {
+                   "linearElementType": "aCarriageway"
+                  }
+                 }
+                },
+                "fromPoint": {
+                 "locDistanceFromLinearElementStart": {
+                  "distanceAlong": 626
+                 }
+                },
+                "toPoint": {
+                 "locDistanceFromLinearElementStart": {
+                  "distanceAlong": 836
+                 }
+                }
+               }
+              ]
+             }
+            },
+            {
+             "locLinearLocation": {
+              "gmlLineString": {
+               "locGmlLineString": {
+                "srsDimension": 2,
+                "srsName": "EPSG::4326",
+                "posList": "51.505098 0.329971 51.505246 0.331117 51.505325 0.331841 51.505436 0.332856 51.505498 0.333824 51.505531 0.334402 51.505533 0.334446 51.505568 0.335269 51.505565 0.335427 51.505568 0.336148 51.505554 0.336407 51.505534 0.336953 51.505507 0.337442 51.505437 0.338231 51.505424 0.338417 51.505366 0.338902"
+               }
+              },
+              "supplementaryPositionalDescription": {
+               "locationDescription": "A13 eastbound between A1012 and A1089",
+               "carriageway": [
+                {
+                 "carriageway": {
+                  "value": "extendedG",
+                  "extendedValueG": "dualCarriageway"
+                 },
+                 "lane": [
+                  {
+                   "laneUsage": {
+                    "value": "extendedG",
+                    "extendedValueG": "cl1"
+                   },
+                   "laneNumber": 1,
+                   "laneExtensionG": {
+                    "impactOnLanes": {
+                     "impactExtensionG": {
+                      "lanesStatus": "closed",
+                      "laneImpactDirection": "aligned"
+                     }
+                    }
+                   }
+                  },
+                  {
+                   "laneUsage": {
+                    "value": "extendedG",
+                    "extendedValueG": "cl2"
+                   },
+                   "laneNumber": 2,
+                   "laneExtensionG": {
+                    "impactOnLanes": {
+                     "impactExtensionG": {
+                      "lanesStatus": "closed",
+                      "laneImpactDirection": "aligned"
+                     }
+                    }
+                   }
+                  },
+                  {
+                   "laneUsage": {
+                    "value": "extendedG",
+                    "extendedValueG": "lh"
+                   },
+                   "laneNumber": 0,
+                   "laneExtensionG": {
+                    "impactOnLanes": {
+                     "impactExtensionG": {
+                      "lanesStatus": "closed",
+                      "laneImpactDirection": "aligned"
+                     }
+                    }
+                   }
+                  }
+                 ],
+                 "carriagewayExtensionG": {
+                  "impactOnCarriageway": {
+                   "numberOfLanesRestricted": 2,
+                   "numberOfOperationalLanes": 1
+                  }
+                 }
+                }
+               ]
+              }
+             },
+             "locSingleRoadLinearLocation": {
+              "linearWithinLinearElement": [
+               {
+                "directionOnLinearSection": "eastBound",
+                "directionRelativeOnLinearSection": "aligned",
+                "heightGradeOfLinearSection": {
+                 "value": "extendedG",
+                 "extendedValueG": "start2End1"
+                },
+                "linearElement": {
+                 "locLinearElementByCode": {
+                  "roadName": "A13",
+                  "linearElementReferenceModel": "The Network Model",
+                  "linearElementIdentifier": "{45EABB5C-FC45-42DD-AFD1-F42F375292F1}",
+                  "linearElementByCodeExtensionG": {
+                   "linearElementType": "aCarriageway"
+                  }
+                 }
+                },
+                "fromPoint": {
+                 "locDistanceFromLinearElementStart": {
+                  "distanceAlong": 0
+                 }
+                },
+                "toPoint": {
+                 "locDistanceFromLinearElementStart": {
+                  "distanceAlong": 625
+                 }
+                }
+               }
+              ]
+             }
+            },
+            {
+             "locLinearLocation": {
+              "gmlLineString": {
+               "locGmlLineString": {
+                "srsDimension": 2,
+                "srsName": "EPSG::4326",
+                "posList": "51.504888 0.341834 51.504779 0.342362 51.504683 0.342731"
+               }
+              },
+              "supplementaryPositionalDescription": {
+               "locationDescription": "A13 eastbound within the A1089 junction",
+               "carriageway": [
+                {
+                 "carriageway": {
+                  "value": "extendedG",
+                  "extendedValueG": "dualCarriageway"
+                 },
+                 "lane": [
+                  {
+                   "laneUsage": {
+                    "value": "extendedG",
+                    "extendedValueG": "cl1"
+                   },
+                   "laneNumber": 1,
+                   "laneExtensionG": {
+                    "impactOnLanes": {
+                     "impactExtensionG": {
+                      "lanesStatus": "closed",
+                      "laneImpactDirection": "aligned"
+                     }
+                    }
+                   }
+                  },
+                  {
+                   "laneUsage": {
+                    "value": "extendedG",
+                    "extendedValueG": "cl2"
+                   },
+                   "laneNumber": 2,
+                   "laneExtensionG": {
+                    "impactOnLanes": {
+                     "impactExtensionG": {
+                      "lanesStatus": "closed",
+                      "laneImpactDirection": "aligned"
+                     }
+                    }
+                   }
+                  },
+                  {
+                   "laneUsage": {
+                    "value": "extendedG",
+                    "extendedValueG": "lh"
+                   },
+                   "laneNumber": 0,
+                   "laneExtensionG": {
+                    "impactOnLanes": {
+                     "impactExtensionG": {
+                      "lanesStatus": "closed",
+                      "laneImpactDirection": "aligned"
+                     }
+                    }
+                   }
+                  }
+                 ],
+                 "carriagewayExtensionG": {
+                  "impactOnCarriageway": {
+                   "numberOfLanesRestricted": 2,
+                   "numberOfOperationalLanes": 1
+                  }
+                 }
+                }
+               ]
+              }
+             },
+             "locSingleRoadLinearLocation": {
+              "linearWithinLinearElement": [
+               {
+                "directionOnLinearSection": "eastBound",
+                "directionRelativeOnLinearSection": "aligned",
+                "heightGradeOfLinearSection": {
+                 "value": "extendedG",
+                 "extendedValueG": "start1End1"
+                },
+                "linearElement": {
+                 "locLinearElementByCode": {
+                  "roadName": "A13",
+                  "linearElementReferenceModel": "The Network Model",
+                  "linearElementIdentifier": "{F9A6755E-7D06-42EF-B9DB-932D3FFEB610}",
+                  "linearElementByCodeExtensionG": {
+                   "linearElementType": "aCarriageway"
+                  }
+                 }
+                },
+                "fromPoint": {
+                 "locDistanceFromLinearElementStart": {
+                  "distanceAlong": 0
+                 }
+                },
+                "toPoint": {
+                 "locDistanceFromLinearElementStart": {
+                  "distanceAlong": 66
+                 }
+                }
+               }
+              ]
+             }
+            }
+           ]
+          }
+         },
+         "roadOrCarriagewayOrLaneManagementExtensionG": {
+          "hasWidthRestrictionFlag": false,
+          "hasHeightRestrictionFlag": false,
+          "hasWeightRestrictionFlag": false,
+          "hasContraFlow": false
+         }
+        }
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "D2Payload": {
+    "version": "3.4",
+    "modelBaseVersion": "3",
+    "lang": "en",
+    "feedDescription": "Road and Lane Closures",
+    "feedType": "SituationPublication",
+    "publicationTime": "2026-10-05T12:09:51.51Z",
+    "publicationCreator": {
+     "country": "gb",
+     "nationalIdentifier": "NationalHighways"
+    },
+    "situation": [
+     {
+      "idG": "523394",
+      "situationVersionTime": "2026-10-05T11:28:33.33Z",
+      "headerInformation": {
+       "confidentiality": "noRestriction",
+       "informationStatus": "real"
+      },
+      "situationRecord": [
+       {
+        "sitRoadOrCarriagewayOrLaneManagement": {
+         "idG": "1-1790673982-2efba582-d43d-414f-a90f-d160adf8793d",
+         "versionG": "1",
+         "situationRecordCreationTime": "2026-09-29T09:21:44.44Z",
+         "situationRecordVersionTime": "2026-10-05T11:28:33.33Z",
+         "probabilityOfOccurrence": "probable",
+         "complianceOption": "mandatory",
+         "roadOrCarriagewayOrLaneManagementType": {
+          "value": "other"
+         },
+         "source": {
+          "sourceIdentification": "roadworks"
+         },
+         "validity": {
+          "validityStatus": "planned",
+          "validityTimeSpecification": {
+           "overallStartTime": "2026-10-13T21:00:00.00Z",
+           "overallEndTime": "2026-10-14T04:30:00.00Z"
+          }
+         },
+         "cause": {
+          "causeType": "constructionWork",
+          "detailedCauseType": {
+           "constructionWorkType": "constructionWork"
+          }
+         },
+         "generalPublicComment": [
+          {
+           "comment": "A13 Eastbound Stifford Interchange to Baker Street lane 1,2 closure "
+          }
+         ],
+         "locationReference": {
+          "locLocationGroupByList": {
+           "locationContainedInGroup": [
+            {
+             "locLinearLocation": {
+              "gmlLineString": {
+               "locGmlLineString": {
+                "srsDimension": 2,
+                "srsName": "EPSG::4326",
+                "posList": "51.504795 0.328204 51.504808 0.32827 51.504978 0.329229 51.505098 0.329971"
+               }
+              },
+              "supplementaryPositionalDescription": {
+               "locationDescription": "A13 eastbound between A1012 and A1089",
+               "carriageway": [
+                {
+                 "carriageway": {
+                  "value": "extendedG",
+                  "extendedValueG": "dualCarriageway"
+                 },
+                 "lane": [
+                  {
+                   "laneUsage": {
+                    "value": "extendedG",
+                    "extendedValueG": "cl1"
+                   },
+                   "laneNumber": 1,
+                   "laneExtensionG": {
+                    "impactOnLanes": {
+                     "impactExtensionG": {
+                      "lanesStatus": "closed",
+                      "laneImpactDirection": "aligned"
+                     }
+                    }
+                   }
+                  },
+                  {
+                   "laneUsage": {
+                    "value": "extendedG",
+                    "extendedValueG": "cl2"
+                   },
+                   "laneNumber": 2,
+                   "laneExtensionG": {
+                    "impactOnLanes": {
+                     "impactExtensionG": {
+                      "lanesStatus": "closed",
+                      "laneImpactDirection": "aligned"
+                     }
+                    }
+                   }
+                  },
+                  {
+                   "laneUsage": {
+                    "value": "extendedG",
+                    "extendedValueG": "lh"
+                   },
+                   "laneNumber": 0,
+                   "laneExtensionG": {
+                    "impactOnLanes": {
+                     "impactExtensionG": {
+                      "lanesStatus": "closed",
+                      "laneImpactDirection": "aligned"
+                     }
+                    }
+                   }
+                  }
+                 ],
+                 "carriagewayExtensionG": {
+                  "impactOnCarriageway": {
+                   "numberOfLanesRestricted": 2,
+                   "numberOfOperationalLanes": 1
+                  }
+                 }
+                }
+               ]
+              }
+             },
+             "locSingleRoadLinearLocation": {
+              "linearWithinLinearElement": [
+               {
+                "directionOnLinearSection": "eastBound",
+                "directionRelativeOnLinearSection": "aligned",
+                "heightGradeOfLinearSection": {
+                 "value": "extendedG",
+                 "extendedValueG": "start1End2"
+                },
+                "linearElement": {
+                 "locLinearElementByCode": {
+                  "roadName": "A13",
+                  "linearElementReferenceModel": "The Network Model",
+                  "linearElementIdentifier": "{75E572D4-F8DE-4345-8BD8-9C71F94F98A7}",
+                  "linearElementByCodeExtensionG": {
+                   "linearElementType": "aCarriageway"
+                  }
+                 }
+                },
+                "fromPoint": {
+                 "locDistanceFromLinearElementStart": {
+                  "distanceAlong": 796
+                 }
+                },
+                "toPoint": {
+                 "locDistanceFromLinearElementStart": {
+                  "distanceAlong": 923
+                 }
+                }
+               }
+              ]
+             }
+            },
+            {
+             "locLinearLocation": {
+              "gmlLineString": {
+               "locGmlLineString": {
+                "srsDimension": 2,
+                "srsName": "EPSG::4326",
+                "posList": "51.505365 0.33891 51.505327 0.339219 51.505221 0.340021 51.50514 0.340507 51.505099 0.34075 51.504918 0.341691 51.504888 0.341834"
+               }
+              },
+              "supplementaryPositionalDescription": {
+               "locationDescription": "A13 eastbound between A1012 and A1089",
+               "carriageway": [
+                {
+                 "carriageway": {
+                  "value": "extendedG",
+                  "extendedValueG": "dualCarriageway"
+                 },
+                 "lane": [
+                  {
+                   "laneUsage": {
+                    "value": "extendedG",
+                    "extendedValueG": "cl1"
+                   },
+                   "laneNumber": 1,
+                   "laneExtensionG": {
+                    "impactOnLanes": {
+                     "impactExtensionG": {
+                      "lanesStatus": "closed",
+                      "laneImpactDirection": "aligned"
+                     }
+                    }
+                   }
+                  },
+                  {
+                   "laneUsage": {
+                    "value": "extendedG",
+                    "extendedValueG": "cl2"
+                   },
+                   "laneNumber": 2,
+                   "laneExtensionG": {
+                    "impactOnLanes": {
+                     "impactExtensionG": {
+                      "lanesStatus": "closed",
+                      "laneImpactDirection": "aligned"
+                     }
+                    }
+                   }
+                  },
+                  {
+                   "laneUsage": {
+                    "value": "extendedG",
+                    "extendedValueG": "lh"
+                   },
+                   "laneNumber": 0,
+                   "laneExtensionG": {
+                    "impactOnLanes": {
+                     "impactExtensionG": {
+                      "lanesStatus": "closed",
+                      "laneImpactDirection": "aligned"
+                     }
+                    }
+                   }
+                  }
+                 ],
+                 "carriagewayExtensionG": {
+                  "impactOnCarriageway": {
+                   "numberOfLanesRestricted": 2,
+                   "numberOfOperationalLanes": 1
+                  }
+                 }
+                }
+               ]
+              }
+             },
+             "locSingleRoadLinearLocation": {
+              "linearWithinLinearElement": [
+               {
+                "directionOnLinearSection": "eastBound",
+                "directionRelativeOnLinearSection": "aligned",
+                "heightGradeOfLinearSection": {
+                 "value": "extendedG",
+                 "extendedValueG": "start2End1"
+                },
+                "linearElement": {
+                 "locLinearElementByCode": {
+                  "roadName": "A13",
+                  "linearElementReferenceModel": "The Network Model",
+                  "linearElementIdentifier": "{45EABB5C-FC45-42DD-AFD1-F42F375292F1}",
+                  "linearElementByCodeExtensionG": {
+                   "linearElementType": "aCarriageway"
+                  }
+                 }
+                },
+                "fromPoint": {
+                 "locDistanceFromLinearElementStart": {
+                  "distanceAlong": 626
+                 }
+                },
+                "toPoint": {
+                 "locDistanceFromLinearElementStart": {
+                  "distanceAlong": 836
+                 }
+                }
+               }
+              ]
+             }
+            },
+            {
+             "locLinearLocation": {
+              "gmlLineString": {
+               "locGmlLineString": {
+                "srsDimension": 2,
+                "srsName": "EPSG::4326",
+                "posList": "51.505098 0.329971 51.505246 0.331117 51.505325 0.331841 51.505436 0.332856 51.505498 0.333824 51.505531 0.334402 51.505533 0.334446 51.505568 0.335269 51.505565 0.335427 51.505568 0.336148 51.505554 0.336407 51.505534 0.336953 51.505507 0.337442 51.505437 0.338231 51.505424 0.338417 51.505366 0.338902"
+               }
+              },
+              "supplementaryPositionalDescription": {
+               "locationDescription": "A13 eastbound between A1012 and A1089",
+               "carriageway": [
+                {
+                 "carriageway": {
+                  "value": "extendedG",
+                  "extendedValueG": "dualCarriageway"
+                 },
+                 "lane": [
+                  {
+                   "laneUsage": {
+                    "value": "extendedG",
+                    "extendedValueG": "cl1"
+                   },
+                   "laneNumber": 1,
+                   "laneExtensionG": {
+                    "impactOnLanes": {
+                     "impactExtensionG": {
+                      "lanesStatus": "closed",
+                      "laneImpactDirection": "aligned"
+                     }
+                    }
+                   }
+                  },
+                  {
+                   "laneUsage": {
+                    "value": "extendedG",
+                    "extendedValueG": "cl2"
+                   },
+                   "laneNumber": 2,
+                   "laneExtensionG": {
+                    "impactOnLanes": {
+                     "impactExtensionG": {
+                      "lanesStatus": "closed",
+                      "laneImpactDirection": "aligned"
+                     }
+                    }
+                   }
+                  },
+                  {
+                   "laneUsage": {
+                    "value": "extendedG",
+                    "extendedValueG": "lh"
+                   },
+                   "laneNumber": 0,
+                   "laneExtensionG": {
+                    "impactOnLanes": {
+                     "impactExtensionG": {
+                      "lanesStatus": "closed",
+                      "laneImpactDirection": "aligned"
+                     }
+                    }
+                   }
+                  }
+                 ],
+                 "carriagewayExtensionG": {
+                  "impactOnCarriageway": {
+                   "numberOfLanesRestricted": 2,
+                   "numberOfOperationalLanes": 1
+                  }
+                 }
+                }
+               ]
+              }
+             },
+             "locSingleRoadLinearLocation": {
+              "linearWithinLinearElement": [
+               {
+                "directionOnLinearSection": "eastBound",
+                "directionRelativeOnLinearSection": "aligned",
+                "heightGradeOfLinearSection": {
+                 "value": "extendedG",
+                 "extendedValueG": "start2End1"
+                },
+                "linearElement": {
+                 "locLinearElementByCode": {
+                  "roadName": "A13",
+                  "linearElementReferenceModel": "The Network Model",
+                  "linearElementIdentifier": "{45EABB5C-FC45-42DD-AFD1-F42F375292F1}",
+                  "linearElementByCodeExtensionG": {
+                   "linearElementType": "aCarriageway"
+                  }
+                 }
+                },
+                "fromPoint": {
+                 "locDistanceFromLinearElementStart": {
+                  "distanceAlong": 0
+                 }
+                },
+                "toPoint": {
+                 "locDistanceFromLinearElementStart": {
+                  "distanceAlong": 625
+                 }
+                }
+               }
+              ]
+             }
+            },
+            {
+             "locLinearLocation": {
+              "gmlLineString": {
+               "locGmlLineString": {
+                "srsDimension": 2,
+                "srsName": "EPSG::4326",
+                "posList": "51.504888 0.341834 51.504779 0.342362 51.504683 0.342731"
+               }
+              },
+              "supplementaryPositionalDescription": {
+               "locationDescription": "A13 eastbound within the A1089 junction",
+               "carriageway": [
+                {
+                 "carriageway": {
+                  "value": "extendedG",
+                  "extendedValueG": "dualCarriageway"
+                 },
+                 "lane": [
+                  {
+                   "laneUsage": {
+                    "value": "extendedG",
+                    "extendedValueG": "cl1"
+                   },
+                   "laneNumber": 1,
+                   "laneExtensionG": {
+                    "impactOnLanes": {
+                     "impactExtensionG": {
+                      "lanesStatus": "closed",
+                      "laneImpactDirection": "aligned"
+                     }
+                    }
+                   }
+                  },
+                  {
+                   "laneUsage": {
+                    "value": "extendedG",
+                    "extendedValueG": "cl2"
+                   },
+                   "laneNumber": 2,
+                   "laneExtensionG": {
+                    "impactOnLanes": {
+                     "impactExtensionG": {
+                      "lanesStatus": "closed",
+                      "laneImpactDirection": "aligned"
+                     }
+                    }
+                   }
+                  },
+                  {
+                   "laneUsage": {
+                    "value": "extendedG",
+                    "extendedValueG": "lh"
+                   },
+                   "laneNumber": 0,
+                   "laneExtensionG": {
+                    "impactOnLanes": {
+                     "impactExtensionG": {
+                      "lanesStatus": "closed",
+                      "laneImpactDirection": "aligned"
+                     }
+                    }
+                   }
+                  }
+                 ],
+                 "carriagewayExtensionG": {
+                  "impactOnCarriageway": {
+                   "numberOfLanesRestricted": 2,
+                   "numberOfOperationalLanes": 1
+                  }
+                 }
+                }
+               ]
+              }
+             },
+             "locSingleRoadLinearLocation": {
+              "linearWithinLinearElement": [
+               {
+                "directionOnLinearSection": "eastBound",
+                "directionRelativeOnLinearSection": "aligned",
+                "heightGradeOfLinearSection": {
+                 "value": "extendedG",
+                 "extendedValueG": "start1End1"
+                },
+                "linearElement": {
+                 "locLinearElementByCode": {
+                  "roadName": "A13",
+                  "linearElementReferenceModel": "The Network Model",
+                  "linearElementIdentifier": "{F9A6755E-7D06-42EF-B9DB-932D3FFEB610}",
+                  "linearElementByCodeExtensionG": {
+                   "linearElementType": "aCarriageway"
+                  }
+                 }
+                },
+                "fromPoint": {
+                 "locDistanceFromLinearElementStart": {
+                  "distanceAlong": 0
+                 }
+                },
+                "toPoint": {
+                 "locDistanceFromLinearElementStart": {
+                  "distanceAlong": 66
+                 }
+                }
+               }
+              ]
+             }
+            }
+           ]
+          }
+         },
+         "roadOrCarriagewayOrLaneManagementExtensionG": {
+          "hasWidthRestrictionFlag": false,
+          "hasHeightRestrictionFlag": false,
+          "hasWeightRestrictionFlag": false,
+          "hasContraFlow": false
+         }
+        }
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

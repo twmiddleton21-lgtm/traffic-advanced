@@ -15,8 +15,8 @@ the roads they use, before and between journeys (not while driving).
 ### Success criteria (V1)
 1. Installs to an iPhone home screen (and Android/desktop), opens, and works, including with no signal (last known data, clearly marked).
 2. All current and upcoming NH closures and incidents load onto the map, with "Last updated" always visible.
-3. Every closure shows an honest diversion classification (A/B/D); any route drawn is official NH geometry, with
-   HGV classification and restrictions checked against the user's vehicle.
+3. Every closure shows an honest diversion classification: A, B or D (C is reserved and not implemented in V1). Any
+   route drawn is official NH geometry, with HGV classification and restrictions checked against the user's vehicle.
 4. Usable on phone, tablet, desktop, large touchscreen; TV/dashboard mode works with a remote (bonus).
 
 ## 2. Users and context
@@ -60,21 +60,99 @@ Freshness rules (shown everywhere data appears):
 
 ## 5. Diversion classification (the core accuracy rule)
 
-Computed server-side in one module, returned in the API, rendered with this exact wording.
+Computed server-side in one deterministic module (`shared/`), returned in the API with its evidence, and rendered
+with this exact wording.
 
-| Class | Rule | UI label | Map |
+**Objective:** maximise useful matches while keeping the false-positive rate extremely low. The objective is **not**
+to maximise the share of B matches. A closure without sufficient evidence stays **D**.
+
+### 5.1 Classes
+
+| Class | Meaning | UI label | Map |
 |---|---|---|---|
-| **A** | The NH closure record **itself** contains closure-specific diversion information (named roads / symbol) in its official text. | **"Official diversion"**, then the NH text verbatim, "Source: National Highways, <timestamp>" | No line drawn (text has no geometry). Never auto-geocode or route the text. |
-| **B** | An official NH diversion route (S4, `RecordState=Complete`) whose closure stretch matches the closure on **all** of: same road; same direction (per-direction split for "both directions"); **and** network match (closure links within the stretch between `SRNStartNode`/`SRNEndNode`, via S5) **or** geometric match (≥ 80% mutual overlap within 30 m); **and** no competing candidate with an equal score. | **"Official NH diversion — match based on available data"**, plus confidence (High = network match; Medium = geometry only) and the reasons ("Same road, same direction, closure covers M6 J41–J42 stretch"), plus "Pre-agreed emergency route. The signed route on the day may differ: follow signs." | Official route line + closed stretch |
-| **C** | A route from our routing provider using the vehicle profile. **Not in V1.** Interface reserved. | **"Calculated HGV route — not an official diversion"** | Different colour + dashed + "Calculated" watermark |
-| **D** | Anything else (no candidate, partial overlap, ambiguous, direction unknown, matched route is discontinued). | **"No reliable diversion available"**, plus the reason, plus "Follow signed diversions and official instructions." | Closure only |
+| **A** | The NH closure record **itself** contains closure-specific diversion information in its official text (§5.3). | **"Official diversion"**, then the NH text verbatim, "Source: National Highways, <timestamp>" | No line drawn: the text has no geometry. Never geocode or route the text. |
+| **B** | An official NH diversion route (S4) whose closure stretch is matched to the closure by the **required evidence set** in §5.2. | **"Official NH diversion — match based on available data"**, plus confidence, plus the evidence list, plus "Pre-agreed emergency diversion route. The signed route on the day may differ: follow road signs." | Official route line + closed stretch |
+| **C** | A route from our routing provider using the vehicle profile. **Not in V1.** Interface reserved. | **"Calculated HGV route — not an official diversion"** | Different colour, dashed, "Calculated" label |
+| **D** | Anything that doesn't meet A or B. | **"No reliable diversion available"**, plus the specific reason, plus "Follow signed diversions and official instructions." | Closure only |
 
-Notes:
-- A and B can both apply. Show the A text and the B map, each labelled. They are never merged into one claim.
-- Partial overlaps are **D**, never "probably". Thresholds can only be loosened with new evidence and user sign-off.
-- A user can still browse "Official NH emergency diversion routes on this road" as a **reference layer** that makes no claim
-  about any closure. It's labelled exactly so.
+A and B can both apply to one closure. They're shown as two separate, labelled items, never merged into one claim.
+
+### 5.2 Evidence required for B
+
+"Same road + same direction" is **never** sufficient on its own. B requires **every** item below. If any item fails,
+cannot be evaluated, or is ambiguous, the result is D, with that item named as the reason.
+
+| # | Evidence | Rule | Why it's required |
+|---|---|---|---|
+| E1 | Eligible closure type | Closure is a full carriageway closure (`carriagewayClosures` / `roadClosed` or equivalent) with main-carriageway links at zero operational lanes. Lane-only and slip-road-only closures are not eligible. **Text gate (approved decision D4):** at least one contributing NH comment must state a carriageway/road closure, and any contributing comment describing slip-road, layby, access-road, depot, services, traffic-light, lane-only, hard-shoulder, link or narrow-lane work disqualifies it. NH text can only disqualify, never qualify on its own. | NH diversion routes exist for full closures; a lane closure leaves the road open, so offering a diversion would mislead. P0 found layby, slip-road, access-road and traffic-light works encoded with the main carriageway "closed". |
+| E2 | Current record | Closure is current or upcoming (not past its end time, not `suspended`). Diversion route `RecordState = Complete` and not decommissioned. | Avoids matching to cancelled works or retired routes. |
+| E3 | Road identity | Normalised road number of closure = stretch `RoadName` (e.g. `A1(M)` ≡ `A1M`). | Basic identity. Necessary, not sufficient. |
+| E4 | Direction / carriageway | One explicit direction for the closure (a "both directions" closure is split and each direction evaluated separately) = stretch `Direction`, on the same carriageway. Unknown or unparseable direction fails. | Each emergency route serves one carriageway. The opposite carriageway's route is a dangerous false match. |
+| E5 | Network position | The closure's affected Network Model links (S1 `linearElementIdentifier` → S5 `Link`) lie on the SRN path between the route's `SRNStartNode` and `SRNEndNode`, on that carriageway. | Strongest structural evidence. Uses NH's own network identifiers rather than map proximity. |
+| E6 | Junction extent | Evaluated over the **whole closure** (all records of the situation for that direction and occurrence). The junction nodes bounding the closure (last junction before it, first after it, along the network) are the stretch's start and end nodes. A closure spanning more than one stretch fails. **A closure shorter than the stretch fails** (approved decision D2) unless separate evidence supports that specific shorter closure. **Position-precise** (approved decision D9): closure ends are taken from S1 `fromPoint`/`toPoint` `distanceAlong` against the link's geometric length (not `SHAPE__Length`); a closed section within the measured 10 m tolerance of a link end counts as reaching that end's node. | Ensures the diversion leaves and rejoins at the right junctions. A closure across J40–J42 isn't answered by the J41–J42 route, and the official route for a whole stretch may not be the signed diversion for a shorter closure inside it. |
+| E7 | Spatial corroboration | Closure geometry lies within the stretch geometry's buffer to at least the P0-agreed threshold. | Independent cross-check that catches identifier or data errors in E5/E6. |
+| E8 | Uniqueness | Exactly one stretch satisfies E3–E7. Any competing candidate means D. | Ambiguity must never be resolved by guessing. |
+
+**Stretch eligibility (approved decision D7):** a stretch can establish B only if its own S4 labels (`JunctionNumberFrom/To`)
+reconcile with the S5 junctions at the ends of its traced route path. Labels that disagree, or that aren't a road + junction number
+(e.g. "A4130"), mean that stretch can't establish B. Labels are never inferred or repaired. This adds no way to qualify, leaves the S4 data
+untouched, and doesn't affect A. S4 rows sharing one stretch GUID are merged when they agree; if they disagree, that stretch can't establish B.
+
+**Geometry-only matching** (E5 unavailable, e.g. a closure from the fallback source S2, which has no link IDs) is **not
+allowed for B by default**. It may be enabled only if P0 shows a measured false-positive rate that you accept, and then
+only with confidence shown as "Medium — location match only".
+
+**Several official routes for one stretch:** 104 stretches have 2–4 complete routes (e.g. `M65/J1/J2/1` and `/2`).
+Choosing the stretch (E1–E8) and listing its routes are separate steps. When the stretch matches, all its complete
+routes are shown, each labelled with its route number and NH classification, with HGV-unsuitable (2a/2b) routes flagged
+as such. The app never claims which one is in use. P0 confirms what the route number signifies.
+
+**Confidence shown to users:** "High — matched by National Highways network position (E1–E8)". The API returns the
+evaluated evidence list so the UI can show the reasons in plain English.
+
+### 5.3 Evidence required for A
+
+Approved decision D1 (2026-10-05). P0 found that S1 closure records carry no diversion text. The official text is in S2,
+which is joined to S1 by National Highways' own shared event identifier (S1 situation `idG` = S2 `formattedeventnumber` base).
+
+A requires **both**:
+1. **Explicit link:** the S2 record is joined to the S1 closure's situation by that shared identifier (and agrees on road).
+   No other joining (text, location, time similarity) may produce A.
+2. **Specific text:** the S2 description contains a diversion statement naming at least one specific road, place, junction or
+   signage symbol (e.g. "Diversion via A30 to Chard, A358 to rejoin A303"). Generic statements ("Diversion via National Highways
+   network") are **not** A. They're shown verbatim as an NH note, and the classification stays D.
+
+Label: **"Official diversion information for this roadworks event"**, followed by the NH text verbatim. When the event contains
+more than one closure, the UI must not imply the text applies uniquely to the selected closure (e.g. "This roadworks event includes
+N closures"). Recognition rules are deterministic and tested against captured real text, including near-misses.
+
+**S2-only closures** (approved decision D3, 2026-10-05). P0 found closures listed in S2 with no S1 situation. They are shown as
+official NH closure records, marked with their source (`nh-s2`) in the data model. For them:
+- A is allowed only when the S2 record's **own** text contains a specific diversion statement (rule 2 above). Rule 1 is not needed
+  because the text belongs to the closure's own official record. The same label and multi-closure caveat apply.
+- **B is never allowed:** S2 records lack the S1 Network Model link evidence that E5/E6 require.
+- Otherwise the result is D.
+
+**S3-only closures** (approved decision D8, 2026-10-05). Closures that appear only in the 7-day closure report (S3) have no coordinates
+and no reliable event or network join. They are **not shown on the map**, can **never** establish A or B, and are D for diversion
+classification. S3 remains a cross-check and a source of textual closure information only.
+
+### 5.4 Other rules
+- **A closure, planned or unplanned, does not by itself mean that a pre-agreed emergency diversion route is in use.**
+  NH's routes (S4) are designed for unplanned full closures and aren't linked to any closure record. Planned works may be
+  signed with a different diversion. B therefore claims only an evidence-based match to an official route, never that
+  the route is active, and always carries the "signed route on the day may differ" caveat.
+- Partial overlaps, adjacent-junction candidates and opposite-direction candidates are **D**, never "probably".
+- Thresholds and evidence rules can change only with new fixture evidence and your sign-off.
+- A user can still browse "Official NH emergency diversion routes on this road" as a **reference layer** that makes no
+  claim about any closure. It's labelled exactly so.
 - Abnormal loads: always show "Emergency diversion routes are not designed for abnormal loads" (GG 903).
+
+### 5.5 Initial experiment (context, not a target)
+
+Initial real-data experiment (2026-10-05): approximately 10% of tested planned closures produced a clean single
+diversion candidate using the initial matching approach (geometry, road and direction only, without network IDs).
+This is not a target or a forecast. P0 establishes the real figure under the §5.2 evidence rules.
 
 ## 6. Diversion screen
 
@@ -87,6 +165,13 @@ classification label and confidence, and the HGV compatibility panel (§7). Safe
 
 - **Vehicle profile** (stored on device): height, width, gross weight, length. Height accepted and shown in **m and ft-in**,
   weight in tonnes, width/length in m. Optional quick-fill presets that the user must confirm.
+- **HGV status of every official route** (approved decision D5): exactly one of `not-suitable`, `check-vehicle` or
+  `no-restrictions-recorded`. **There is no "suitable" status, and the app never outputs "HGV suitable".**
+  - `not-suitable`: Class 2a/2b, no recognised classification, or NH's description says not for HGVs ("Non HGV", "Cars only", …).
+    That text overrides a Class 1a/1b classification (P0 found 5 such conflicts).
+  - `check-vehicle`: NH records restrictions (route limit fields and restriction points). All are listed and checked against the profile.
+    P0 found 46 Class 1A/1B routes with height limits under 4.95 m.
+  - `no-restrictions-recorded`: always shown with "This does not guarantee there are none."
 - Checks against a B route:
   - `RouteClassification` **2a/2b** shows a blocking banner: **"NOT FOR HGVs: National Highways classifies this diversion as unsuitable for HGVs."**
   - Route limit fields and `DiversionPoint` restrictions are compared with the profile. Any conflict shows a blocking banner
@@ -188,7 +273,7 @@ Worker contract tests (`@cloudflare/vitest-pool-workers`); header/CORS tests; ma
 
 | Phase | Scope | Exit criteria |
 |---|---|---|
-| **P0 Data verification** | Get the NH key; capture S1 fixtures; verify link-ID join to S5/S4; measure payload size and Worker CPU; build and tune the matcher against real data; produce a match report | You review ~30 real matches/non-matches and sign off rules |
+| **P0 Data verification** | Capture real data, verify S1 against the network data, establish and validate the §5.2/§5.3 rules, measure feasibility. No UI. | All criteria in §13.1 met and signed off by you |
 | **P1 Foundation** | Repo + CI, Worker + static assets skeleton, PWA shell, design system (`frontend-design`), themes, layout, splash, safety notice | Deployed shell installs on your iPhone |
 | **P2 Ingest + API** | Adapters S1/S2/S4/S5/S6, normalisation, classification, R2 snapshots, last known good, meta/staleness, API contract | API serves classified closures with timestamps; failure tests pass |
 | **P3 Map, closures, roads** | Map layers, Closures/Traffic selector, road selector + centring + My Roads, closure sheet | Find M6 and its closures in two taps on a phone |
@@ -199,10 +284,67 @@ Worker contract tests (`@cloudflare/vitest-pool-workers`); header/CORS tests; ma
 | **P8 TV/dashboard** | Dashboard mode, D-pad focus | Works on your TV browser |
 | Later | C routing (A-to-B HGV), OSM low-bridge layer (from HGV-Destinations-Pro ideas), offline England pack, Scotland/Wales/NI, NTIS | — |
 
+### 13.1 P0 acceptance criteria
+
+P0 is the first development phase. It is **data verification only**, with the minimum tooling needed (TypeScript,
+Vitest, Zod, plus any geometry library justified in the report).
+
+- **P0 may create:** capture scripts (`scripts/`), trimmed real-data fixtures (`fixtures/`), schemas and types, pure
+  matching/classification logic (`shared/`), tests, and `docs/P0-REPORT.md` with updates to these docs.
+- **P0 must not create:** React or any other UI, map UI, production Worker code, deployment configuration or deployments,
+  or any application feature. Capture scripts run locally. The NH key lives only in a git-ignored local env file.
+
+**Data capture and verification**
+1. S1 planned **and** unplanned closures captured as JSON on at least **3 separate days**, including at least one weekend
+   day, together with same-day snapshots of S2, S4, S5 and S6. Fixtures are trimmed, contain no keys, and the capture is repeatable (`scripts/`).
+2. Every S1 and S6 field the design relies on is confirmed in real payloads, and the licence of each source (including S4)
+   is confirmed from its own published terms. All of it is recorded in `DATA-SOURCES.md` with the date. Anything still
+   unverified is listed explicitly.
+3. **Link-ID join measured:** the `linearElementReferenceModel` value is documented, and the percentage of S1 records whose
+   `linearElementIdentifier` resolves to an S5 `Link` is reported. If the join doesn't work, E5 is recorded as unavailable
+   and the B consequences are stated.
+4. Feasibility measured: S1 payload sizes and paging, how often records change, CPU time to parse + classify (to decide
+   between the Workers free plan and Workers Paid), and S1 timeliness compared with S2/S3 for the same events.
+
+**Algorithm established and documented (in `docs/P0-REPORT.md` and §5.2)**
+5. Network-node matching (path from `SRNStartNode` to `SRNEndNode` on one carriageway).
+6. Direction handling: compass, clockwise/anti-clockwise, "both directions" splitting, unknown direction meaning D.
+7. Junction matching: numbered junctions including suffixes (J4A), unnumbered and named junctions, closures spanning several stretches.
+8. Carriageway handling: main carriageway vs slip roads vs link roads, and closure-type eligibility (E1).
+9. Overlap threshold for E7, with the measured distribution that justifies it.
+10. Competing-candidate handling (E8), and the meaning of multiple routes per stretch (route numbers).
+11. Class A text recognition rules (§5.3).
+
+**Validation (evidence the rules are safe)**
+12. Two labelled sets: a **development set** (used to design rules) and a **held-out set** from a different capture day.
+    Rules and thresholds are frozen before the held-out set is evaluated.
+13. Held-out set: at least **100 eligible closure-directions** with human-reviewed ground truth (correct stretch, or "no
+    correct stretch"), including every closure the matcher classifies as B. Reviewed by me against NH descriptions,
+    junctions and maps, with a sample, including every disputed case, reviewed by you.
+14. **False positives: zero** B classifications pointing to a wrong stretch or route on the held-out set. The statistical
+    bound is reported (with 0 errors in N reviewed, the 95% upper bound is about 3/N).
+15. **False negatives** (human says a correct stretch exists, matcher says D) are measured and reported with reasons. There's
+    no target: they're the safe failure mode.
+16. **Final percentage** of closures that can safely receive B under the frozen rules is reported, broken down by road type
+    and closure type. No target.
+17. Class A recognition: **zero** generic statements classified as A on the reviewed sample; recall reported.
+18. Real-fixture **false-match test suite** passes, with at least one case for each: adjacent junction, opposite carriageway,
+    partial overlap, slip-road-only closure, closure spanning two stretches, parallel road near a motorway, discontinued
+    route, closure past its end time, lane-only closure.
+
+**Engineering**
+19. Matcher and classifier are pure TypeScript in `shared/` with unit tests. Typecheck, lint and tests pass. No secrets in
+    the repo (secret scan clean). Every dependency is justified in the report.
+20. `DATA-SOURCES.md` and §5 are updated with the findings. Decisions needed from you are listed.
+
+**Exit**
+21. You sign off the rules, thresholds and results. **If zero false positives can't be achieved on the held-out set, B is
+    disabled for V1** (A + D only) and P1 proceeds on that basis.
+
 ## 14. Reuse from previous projects
 
 - **HGV-Destinations-Pro:** reuse *ideas* only after review. The UK-bounded Photon search (for a later "Near place" search), the
   metres/feet-inches height parser (rewrite in TS with tests), the Overpass low-bridge query (later, labelled as community data),
   the TomTom deep-link attempt (replace with the documented `tomtomgo://x-callback-url` scheme). **Avoid:** raster tiles from
   `tile.openstreetmap.org` (usage policy), the OSRM demo (car-only), hard-coded admin credentials, very large single modules.
-- **driver-timesheet-pro:** lessons only. Real offline support (it had none), no globals or inline handlers, no CDN Tailwind, honest security claims.
+- No other previous project is a source of requirements or architecture for Traffic Advanced.

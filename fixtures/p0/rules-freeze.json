@@ -1,0 +1,19 @@
+{
+  "frozenAt": "2026-10-05T13:29:50.208Z",
+  "reason": "P0 freeze after decisions D1-D9 approved by owner on 2026-10-05; no optimisation for B count",
+  "files": {
+    "shared/diversion/rules.ts": "67d77628cbd20719a9a23165d0313ee8cfed8c056c827759c46637a63040de69",
+    "shared/diversion/evaluate-b.ts": "307f24dcf31b36b1f4f9f8d4763a008c8e1cafe96239cbae323fb0391d815c1b",
+    "shared/diversion/evaluate-a.ts": "c50720f8a90c781d9e3d993ab342cb289b735ebb59bcce78e0368744cc0e83c0",
+    "shared/diversion/closure-groups.ts": "5691290273c46a26ca582171711de4455cc4656f5900451cc97e1d0bdc566a4f",
+    "shared/diversion/stretch-index.ts": "74cdc5622778aed461c8d5059e9bcddc473ff4707e8151ca95e4847314f3e336",
+    "shared/diversion/stretch-labels.ts": "c18a6cc67815baf36c1ba4493f0013fba0ba41176f07fde5fd60e9889355ab5c",
+    "shared/diversion/s2-only.ts": "589c237266127ac471272fd8afac23075cd82b587e71f51758f3201e7462731b",
+    "shared/diversion/classify.ts": "9740df3b03d07eb314180c221d9559c82608a33e2050a5ecad258d89437b4ac9",
+    "shared/network/graph.ts": "9c7d14ac2681eea4faddd659ce999e1d2f34d8bad09956d6b821e0fee428f4b5",
+    "shared/geo/distance.ts": "f194508df53144c79e4bade854a38918f532784e512a2f5bf78e05f3282afcf4",
+    "shared/sources/nh-closures/merge.ts": "6a1374f07856fda0a4915cc79239f1d1e6964ccbe6ed88df52b4e9b1fa16acbe",
+    "shared/sources/nh-closures/normalise.ts": "93651e98cc5c7c4ab5ff97c8c0b9dbd38ed3bcfb10a4a3de897fcd990ea3ba31",
+    "shared/sources/nh-arcgis/normalise.ts": "59b44b265be975505e84b5e2b7bf6da41b80aeadffb91dd5b55b4eeb44585610"
+  }
+}

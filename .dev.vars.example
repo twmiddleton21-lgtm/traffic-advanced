@@ -1,0 +1,4 @@
+# Copy to .dev.vars (git-ignored) and fill in locally. Never commit real values.
+# National Highways Developer Portal subscription key
+# (subscribed to Road and Lane Closures v2.0 and Speed Managed Areas v1.0).
+NH_API_KEY=replace-with-your-key

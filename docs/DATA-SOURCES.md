@@ -7,12 +7,12 @@ than 3 months before relying on it. "SRN" = Strategic Road Network (England's mo
 
 | # | Source | Coords | Direction | Event ID | Diversion link | HGV restrictions | Key | Limit | Licence | Production use |
 |---|---|---|---|---|---|---|---|---|---|---|
-| S1 | NH Road & Lane Closures API v2.0 | ✅ WGS84 line | ✅ enum | ✅ situation + record id/version | ❌ none | ⚠ flags only | ✅ required | 10 calls/min/key | OGL v3.0 | ✅ primary (after P0 check) |
+| S1 | NH Road & Lane Closures API v2.0 | ✅ WGS84 line (lat lon order) | ✅ enum | ✅ situation (= S2 event no.) + record id/version | ❌ none | ⚠ flags only | ✅ required | 10 calls/min/key | OGL v3.0 | ✅ primary (verified 2026-10-05) |
 | S2 | NH Public Scheduled Road Closures (ArcGIS) | ✅ line | ⚠ in text only | ✅ event number | ❌ (text only) | ❌ | ❌ none | ArcGIS fair use | OGL v3.0 | ✅ fallback/cross-check |
 | S3 | NH 7-day Road Closure Report (xlsx) | ❌ | ✅ column | ❌ | ❌ (text only) | ❌ | ❌ none | n/a | not stated on page | ⚠ cross-check only |
-| S4 | NH Diversion Routes (ArcGIS) | ✅ lines/points | ✅ | ✅ route + stretch GUIDs | ⚠ to a *stretch*, not to an event | ✅ values + points | ❌ none | ArcGIS fair use, 1000/page | OGL v3.0 (portal) | ✅ diversion geometry |
+| S4 | NH Diversion Routes (ArcGIS) | ✅ lines/points | ✅ | ✅ route + stretch GUIDs | ⚠ to a *stretch*, not to an event | ✅ values + points | ❌ none | ArcGIS fair use, 1000/page | OGL v3.0 + OS attribution (verified 2026-10-05) | ✅ diversion geometry |
 | S5 | NH Network Model (ArcGIS) | ✅ | ✅ | ✅ link/node GUIDs | (join key) | ✅ 18 SRN restrictions | ❌ none | ArcGIS fair use | OGL v3.0 | ✅ road geometry + joins |
-| S6 | NH Speed Managed Areas API | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ (same portal) | 10/min | OGL v3.0 (assumed same portal, *verify*) | ✅ official congestion signal |
+| S6 | NH Speed Managed Areas API | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ (same portal) | 10/min | OGL v3.0 (verified 2026-10-05) | ✅ official congestion signal |
 | S7 | NH Digital VMS API | ✅ points | ✅ | ✅ | ❌ | ❌ | ✅ | 10/min | *verify* | ⚠ has display-use conditions |
 | S8 | NTIS DATEX II (speeds, journey times, events) | ✅ | ✅ | ✅ | *unverified* | *unverified* | subscription | *unverified* | *unverified* | ❓ access route unverified |
 | S9 | TomTom Traffic flow/incident tiles | tiles | n/a | n/a | ❌ | ❌ | ✅ | **200K tiles/month** (pricing page) | TomTom T&Cs | ⚠ optional overlay only |
@@ -40,8 +40,19 @@ than 3 months before relying on it. "SRN" = Strategic Road Network (England's mo
   for unplanned closures send explicit start/end windows; planned geometry is per-link (not the whole closure).
 - Refresh: "near real time" for planned and unplanned (portal FAQ says daily for planned in places; *measure in P0*).
 - v1.0 retired 11 June 2025, so breaking changes have happened before. Pin to v2.0 and watch the changelog.
-- **Unverified until we have a key (P0):** real payload size, whether `linearElementIdentifier` equals Network Model
-  `linkid`, which `linearElementReferenceModel` value is used, how often `generalPublicComment` contains diversion text.
+- **Verified 2026-10-05 with a real key** (details in `P0-REPORT.md`): planned window of 15 days = 16 pages / 59 MB /
+  1,136 situations / 7,625 records. **Situations are split across pages** (union records by record id). `linearElementReferenceModel`
+  = "The Network Model"; `linearElementIdentifier` = S5 `linkid` (98.9% resolve). `posList` is "lat lon" order. `generalPublicComment`
+  is a short location line with **no diversion text** (0 / 7,625). Situation `idG` = S2 `formattedeventnumber` base (explicit S1↔S2 link).
+  Unplanned records in this capture are signal-derived lane events with 15-min windows, with semantics unverified.
+- **Input date-times are read as UTC** (verified 2026-10-05 by a narrow-window experiment; see `P0-REPORT.md`).
+- **Record ids (`idG`) are not stable between fetches:** 113 of 577 were re-issued with new ids within ~40 minutes, with identical
+  situation, window, location, version and creation time. Key records by situation + window + location.
+- **S1 is not a complete list:** 148 S2 events in the same window had no S1 situation (the same 148 in a second capture 52 min later).
+  Some appear in S1 under another situation id; some are absent. Some S3 closures appear in neither S1 nor S2.
+- Record-id churn re-measured: 1,594 of 7,645 ids (21%) changed in 52 minutes with identical content.
+- **Unplanned closures (verified twice 2026-10-05):** situation ids are roadside signal ids (`signs/<signal>`), source "Signs and Signals",
+  15-minute windows, and every record reported 0 lanes restricted with all lanes "Open". No real unplanned closure observed yet.
 - Sources: developer portal API catalogue (`/developer/apis?api-version=2022-04-01-preview`), schema export, FAQ, changelog.
 
 ## S2: Public Scheduled Road Closures (ArcGIS feature service)
@@ -82,6 +93,19 @@ than 3 months before relying on it. "SRN" = Strategic Road Network (England's mo
   e.g. `M56/J12/J14/1` height 4.4 m.
 - `SRNStartNode`/`SRNEndNode` **are Network Model `nodeid`s** (verified: `M6/J41/J42/1` resolves to nodes "M6 J41" and "M6 J42").
 - Many routes were last modified in 2024. Fine for pre-agreed routes, but show `LastmodifiedDatetime` to users.
+- **Stretch GUIDs are not unique per row (verified 2026-10-05):** 2,862 rows but 2,433 GUIDs. 319 stretches are split across rows with identical
+  attributes (geometry parts, e.g. a main carriageway part plus a closed exit slip), and 1 has rows with conflicting junction labels. Merge by GUID.
+- `SRNStartNode`/`SRNEndNode` are where the *diversion* leaves and rejoins the SRN, which isn't always the stretch's labelled junction (e.g. `M54/J1/M6/J10A/2` starts at M54 J2).
+- **Licence (verified 2026-10-05, item terms):** Open Government Licence. Required attribution: "Data derived from Ordnance Survey Highway
+  Network, Subject to Crown copyright and database rights 2024. Ordnance Survey Licence: AC0000827444."
+- **Classification is not enough for HGVs (verified 2026-10-05):** 46 Class 1A/1B routes have height limits < 4.95 m, 74 have weight limits
+  < 44 t, and 5 are described "Non HGV" / "Cars only" while Class 1A. Route numbers mark sub-diversions, HGV vs non-HGV variants or side-road
+  flows, not a consistent "primary" order.
+- **Route geometry runs in the direction of travel (verified 2026-10-05, Day-1 capture):** of 2,022 routes with a single geometry part
+  and resolvable, distinct start/end nodes, **all 2,022** start exactly (0 m) at `SRNStartNode` and end at `SRNEndNode`; none are reversed.
+  (298 routes had a start/end node not found in S5, 4 had start = end, 2 are multi-part.) The start node is where the diversion leaves the SRN
+  and the end node where it rejoins, so vertex order = direction of travel. The map draws direction arrows on that basis, for single-part
+  routes only; multi-part routes have no proven part order. `scripts/dev/export-ui-snapshot.ts` re-checks every exported route (50 m tolerance).
 
 ## S5: Network Model (Public)
 
@@ -90,11 +114,25 @@ than 3 months before relying on it. "SRN" = Strategic Road Network (England's mo
   Vehicle_Restriction (18 SRN restrictions, e.g. "Vehicles Exceeding Height 4.9m Prohibited") + references, Junction, Road tables.
 - Updated daily; OGL v3.0; no key. Use for: **road geometry per road number + direction** (road selector centring), junction
   labels, network joins between S1 and S4.
+- **Junction numbers (verified 2026-10-05):** the Junction table names junctions in NH's own form ("M53 J4", "A1(M) J6", "M6 J10A",
+  "M4 J8/9", "M6 TOLL T7"). Junction_Reference maps each junction to its Nodes, which carry point geometry (Node `junctionnumber1`/`2` hold
+  the same names). 762 junction rows give 599 numbered names (M55 J2 is split across 4 rows) plus 160 named-only junctions ("Almondsbury
+  Interchange"). The map labels 596 at the centre of their nodes; 3 are left off because their nodes spread > 2 km (A1(M) J57, M42 J8,
+  A14 J41). See `scripts/dev/export-ui-junctions.ts`.
+- **S1 can reference links missing from S5 (seen 2026-10-05, Day-1 captures 1140Z-open + 1208Z-nh-api):** 1 of 724 closure groups
+  (A61 westbound, situation 522409, 9–10 Oct, class D) referenced one closed link absent from the S5 Link capture, so it has no map
+  geometry. The API publisher quarantines such closures and logs each one by name (`scripts/publish/publish-snapshot.ts`); 723 were published.
 
 ## S6–S8: other official NH services
 
 - **Speed Managed Areas** (same portal/key): planned temporary and unplanned variable (advisory/mandatory) speed restrictions,
-  including congestion-triggered ones. Official congestion signal for smart motorways. Candidate for the "Traffic" state.
+  including congestion-triggered ones. Official congestion signal for smart motorways. Planned for the V1 "Traffic" state
+  (SPECIFICATION §4). **Verified 2026-10-05:** endpoint `/sma/v1.0/speedManagedAreas`; record `sitSpeedManagement` with
+  `temporarySpeedLimit` in **km/h** and `complianceOption` mandatory/advisory. Planned records come from roadworks; unplanned ones are
+  per-signal (`signalIdentifier`) with 15-min windows. **0 km/h ↔ `suspended` exactly in two captures** (consistent with "no limit set";
+  NH doesn't document it). **`active` records' windows had always already ended**, so in-force status comes from `validityStatus` plus fetch
+  time, not the window. About 484 signals, stable ids, changing within minutes. **Licence: OGL v3.0** (verified 2026-10-05 from the S6 API's own
+  OpenAPI export).
 - **Digital VMS**: text of roadside signs. Instructional messages are excluded by NH; display conditions apply (300 m visibility
   window, clear when cleared). **Not in V1** (driver-display rules don't suit a planning app).
 - **Road Limits and Features**: emergency areas, bus stops, phones. Not needed in V1.
@@ -117,6 +155,15 @@ than 3 months before relying on it. "SRN" = Strategic Road Network (England's mo
 - Styles `liberty`, `bright`, `positron`, `dark`, `fiord` (all 200, CORS `*`). No key, no stated limits, commercial use allowed,
   attribution "OpenFreeMap © OpenMapTiles Data from OpenStreetMap". **No SLA.** Weekly planet MBTiles downloads permitted,
   so we can self-host an England extract (PMTiles on R2) if reliability or offline needs demand it.
+- **Road numbers (verified 2026-10-05, TileJSON `/planet`):** OpenMapTiles schema. `transportation_name` has `ref` (e.g. "M53", "A41"),
+  `ref_length`, `class` (UK motorways `motorway`, primary routes `trunk`, other A roads `primary`, B roads `secondary`) and `network`.
+  **No junction layer or junction-number field** in any vector layer, so junction numbers come from S5. Fonts "Noto Sans Regular/Bold"
+  are served from `tiles.openfreemap.org/fonts`. In the `dark` style a symbol layer (`water_name`) comes before buildings and roads.
+- **Hosts, for the CSP (verified 2026-10-05):** the `positron` and `dark` styles reference only `https://tiles.openfreemap.org`
+  (style, TileJSON `/planet`, vector tiles, `natural_earth/ne2sr` raster tiles, sprites `sprites/ofm_f384/ofm`, glyphs `fonts/…`).
+  A probe worker served under the app's CSP (`web/public/_headers`) fetched a vector tile, a glyph range and the sprite, decoded the
+  sprite and drew text on an OffscreenCanvas; only `data:` fetches and other hosts were blocked. MapLibre's worker makes no `data:`
+  fetches (its `data:` strings are object keys).
 
 ## Routing services (for classification C, post-V1)
 
@@ -138,13 +185,26 @@ same road number and same single direction parsed from the text.
 | No stretch on same road + direction | 65 |
 | Direction "both"/several/unparseable (needs per-direction split) | 184 |
 
-Diversion text in the same closures (393 distinct carriageway closures): **71 (≈18%) name specific roads/symbols**
-(e.g. "Diversion via A30 to Chard, A358 to rejoin A303 and vice versa"), 94 generic ("via National Highways network"),
-191 none, 37 other.
+Diversion text in the same closures: **71 of 393 (≈18%) name specific roads/symbols** (e.g. "Diversion via A30 to Chard,
+A358 to rejoin A303 and vice versa"), 94 generic ("via National Highways network"), 191 none, 37 other. (393 rather than
+400 because this count removed duplicates by description alone; the geometric trial removed them by description + event
+number.) The text categories came from a quick initial pattern match, not the final §5.3 rules.
 
 **Conclusions**
 1. **No free official source found links a closure/incident ID to a diversion route.** Classification A can only come from
-   closure-specific *text* in the closure record itself (≈18%), with no route geometry.
-2. Classification B is achievable for a minority of closures (≈10% strong geometric matches today; more once "both directions"
-   closures are split and S1 link IDs are joined via S5). Everything else must be **D**, honestly.
-3. Pre-agreed emergency routes are designed for unplanned closures. For planned works the route on the day may differ, so B wording must say so.
+   closure-specific *text* in the closure record itself, with no route geometry. The ≈18% above is an initial
+   observation, **not an expected A rate**. P0 defines and validates the A recognition rules.
+2. Initial real-data experiment: approximately 10% of tested planned closures produced a clean single diversion candidate
+   using the initial matching approach (geometry + road + text-parsed direction, without network IDs). **This is neither a
+   target nor a forecast.** P0 establishes the real B rate under the evidence rules in `SPECIFICATION.md` §5.2. Everything
+   without sufficient evidence is **D**.
+3. Pre-agreed emergency routes are designed for unplanned closures and carry no link to any closure record. A closure
+   (planned or unplanned) does **not** by itself mean an emergency route is in use. For planned works the signed route may
+   differ, so B claims only an evidence-based match, never an active route, and its wording must say so.
+
+## Routes per stretch (2026-10-05)
+
+Complete routes per `SRNClosureStretch`: 1 route for 2,112 stretches · 2 routes for 101 · 3 for 1 · 4 for 2 · **236 stretches
+have no complete route**. 6 stretches have routes with differing classifications. Example: `M65/J1/J2/1` and `M65/J1/J2/2`
+(both Class 1A). The meaning of the route number (primary vs contingency) is **unverified**; GG 903 mentions contingency routes
+where the primary has restrictions. P0 confirms it.

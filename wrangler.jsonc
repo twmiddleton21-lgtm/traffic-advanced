@@ -1,0 +1,26 @@
+// Cloudflare Worker deployment config (SPECIFICATION §10): one Worker serves the React app (Workers Static Assets) and the
+// read-only API (/api/*, worker/src/index.ts) from the same origin.
+// No secrets or account IDs belong here. The account comes from `wrangler login` or the CLOUDFLARE_ACCOUNT_ID / CLOUDFLARE_API_TOKEN
+// environment (GitHub Actions secrets in CI). Local secrets, when any are needed, go in the git-ignored .dev.vars.
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "traffic-advanced",
+  "main": "worker/src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    // Built by `npm run build` (vite.config.ts → web/dist).
+    "directory": "./web/dist",
+    "binding": "ASSETS",
+    // Only the API runs Worker code; everything else is served as static files, with index.html for app routes.
+    "run_worker_first": ["/api/*"],
+    "not_found_handling": "single-page-application"
+  },
+  "r2_buckets": [
+    {
+      // The Worker's snapshot store (worker/src/store.ts): versioned snapshot objects plus the current.json pointer, written by
+      // the publisher (npm run api:publish, then npm run api:upload). `wrangler dev` uses a local simulation of this bucket.
+      "binding": "SNAPSHOTS",
+      "bucket_name": "traffic-advanced-snapshots"
+    }
+  ]
+}

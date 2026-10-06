@@ -1,0 +1,68 @@
+# Live ingestion runner (docs/INGESTION.md): National Highways capture → pin → FROZEN matcher → publish → upload to R2.
+# The Cloudflare Worker stays a read-only API/static host; this job is the only writer of the snapshot bucket.
+#
+# SCHEDULE DISABLED until the owner explicitly approves automated live ingestion. Until then the job only runs when started by
+# hand (Actions → Ingest → Run workflow), and the default target is a dry run that uploads nothing.
+name: Ingest
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "dry-run: capture and publish inside the runner only; remote: also upload to the real R2 bucket"
+        type: choice
+        options: [dry-run, remote]
+        default: dry-run
+  # schedule:
+  #   - cron: "*/15 * * * *"   # NOT ENABLED. Needs owner approval of the cadence (and GitHub Actions minutes) first.
+
+permissions:
+  contents: read
+
+# One ingestion at a time, so two runs can never race to switch the current pointer.
+concurrency:
+  group: ingest
+  cancel-in-progress: false
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Secrets live in this GitHub environment, which can require a reviewer before a run gets them.
+    environment: ingest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Check the frozen matcher before touching any data
+        run: npx vitest run shared/diversion/rules-freeze.test.ts
+      # Exactly one of the next two steps runs. Only the explicit "remote" choice gets Cloudflare credentials; every other run
+      # publishes inside the runner only and never sees them (and never calls Wrangler or R2).
+      - name: Ingest once (no upload)
+        if: ${{ inputs.target != 'remote' }}
+        env:
+          TARGET: ${{ inputs.target }}
+          NH_API_KEY: ${{ secrets.NH_API_KEY }}
+        run: npm run ingest:once -- --no-upload
+      - name: Ingest once and publish to R2
+        if: ${{ inputs.target == 'remote' }}
+        env:
+          NH_API_KEY: ${{ secrets.NH_API_KEY }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          WRANGLER_SEND_METRICS: "false"
+        run: npm run ingest:once -- --remote
+      - name: Keep the refresh log and provenance (no raw data, no secrets)
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ingest-${{ github.run_id }}
+          path: |
+            data/published/meta.json
+            data/published/current.json
+            data/published/snapshots/*/provenance.json
+          if-no-files-found: warn
+          retention-days: 90

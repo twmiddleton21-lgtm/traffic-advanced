@@ -1,0 +1,430 @@
+{
+ "description": "P0 development set, day 1. Candidates produced by a per-record E1/E2/E5/E8 prototype (containment only, E6 not yet evaluated). Labels are my review; \"review\" items need your confirmation. Not a validation set.",
+ "capture": {
+  "s1": "2026-10-05T1208Z-nh-api",
+  "open": "2026-10-05T1140Z-open"
+ },
+ "candidates": [
+  {
+   "situationId": "509688",
+   "recordId": "1-1786632421-05aa1b75-ff65-403c-8b9e-5368dc8a05a8",
+   "s1Comment": "M5 southbound Jct 3 to Jct 4a carriageway closure",
+   "stretchGuid": "1de055c9-cc77-4a04-abe1-e1ba6d81d357",
+   "stretch": "M5 Southbound M5 JUNCTION 3 -> M5 JUNCTION 4",
+   "routes": [
+    "M5/JUNCTION/3/JUNCTION/4/1 Class_1A"
+   ],
+   "e7Coverage30m": 1.0,
+   "occurrences": 5,
+   "reviewLabel": "reject",
+   "reason": "Closure to J4a extends beyond the J3-J4 stretch (E6)."
+  },
+  {
+   "situationId": "441876",
+   "recordId": "1-1749476005-fa7f3b0a-00d3-489a-8ee4-10133fae0f62",
+   "s1Comment": "M53 Northbound Jct 9 entry slip road closure ",
+   "stretchGuid": "1ab63364-92e1-4500-997b-ff18bdb24ebb",
+   "stretch": "M53 Northbound M53 J9 -> M53 J8",
+   "routes": [
+    "M53/J9/J8/1 Class_1A"
+   ],
+   "e7Coverage30m": 1.0,
+   "occurrences": 20,
+   "reviewLabel": "reject",
+   "reason": "Slip-road closure; main carriageway stays open (E1). Record type carriagewayClosures with a merge-point main-carriageway link."
+  },
+  {
+   "situationId": "441876",
+   "recordId": "1-1749473590-27ce0226-f8c5-43d2-9cb8-a3a8ecc14ac0",
+   "s1Comment": "M53 Northbound Jct 8 entry slip road closure ",
+   "stretchGuid": "387bfda4-8f84-4d9d-8cd7-3b9b49d8c252",
+   "stretch": "M53 Northbound M53 J8 -> M53 J7",
+   "routes": [
+    "M53/J8/J7/1 Class_1A"
+   ],
+   "e7Coverage30m": 1.0,
+   "occurrences": 10,
+   "reviewLabel": "reject",
+   "reason": "Slip-road closure; main carriageway stays open (E1). Record type carriagewayClosures with a merge-point main-carriageway link."
+  },
+  {
+   "situationId": "501828",
+   "recordId": "1-1790595867-e03c4786-3831-4ef0-a405-5f08ed56a815",
+   "s1Comment": "A35 Miles Cross 3 way traffic lights for rdabt construction",
+   "stretchGuid": "d2c136c4-e8a6-4dee-90f2-3149b96eb006",
+   "stretch": "A35 Eastbound SYMONDS-LANE -> MILES-CROSS",
+   "routes": [
+    "A35/SYMONDS-LANE/MILES-CROSS/1 Class_1B"
+   ],
+   "e7Coverage30m": 0.6,
+   "occurrences": 2,
+   "reviewLabel": "reject",
+   "reason": "Temporary traffic lights, not a closure, despite carriagewayClosures type (E1)."
+  },
+  {
+   "situationId": "522472",
+   "recordId": "1-1789484321-a306240c-e304-4356-bf3d-87bef99faffd",
+   "s1Comment": "A64 westbound Towthorpe to Hopgrove, carriageway closure ",
+   "stretchGuid": "3d431d32-e08d-4c73-81dd-7e0faef24d53",
+   "stretch": "A64 Westbound J64 -> J1237",
+   "routes": [
+    "A64/J64/J1237/1 Class_1A"
+   ],
+   "e7Coverage30m": 0.0,
+   "occurrences": 1,
+   "reviewLabel": "reject",
+   "reason": "E7: 0% of closure geometry near the stretch despite network match."
+  },
+  {
+   "situationId": "525110",
+   "recordId": "1-1790694797-6b7ddae9-e9b6-40b5-992c-cb3782bf824c",
+   "s1Comment": "A1M southbound Sprotbrough Depot access road closure",
+   "stretchGuid": "811cbb40-9bcb-455f-87f7-9663b068a107",
+   "stretch": "A1(M) Southbound J37 -> J36",
+   "routes": [
+    "A1M/J37/J36/1 Class_1A"
+   ],
+   "e7Coverage30m": 1.0,
+   "occurrences": 1,
+   "reviewLabel": "reject",
+   "reason": "Depot access road closure, not a main-carriageway closure (E1)."
+  },
+  {
+   "situationId": "491584",
+   "recordId": "1-1784116210-81482350-8fce-450f-9822-c487b6618fae",
+   "s1Comment": "A1 southbound Colsterworth Layby clsoure",
+   "stretchGuid": "be023a50-f00e-4350-b405-c6f554305b11",
+   "stretch": "A1 Southbound A607 -> A606",
+   "routes": [
+    "A1/A607/A606/1 Class_1A"
+   ],
+   "e7Coverage30m": 1.0,
+   "occurrences": 1,
+   "reviewLabel": "reject",
+   "reason": "Layby closure, not a main-carriageway closure (E1)."
+  },
+  {
+   "situationId": "479303",
+   "recordId": "1-1769194397-a7bc0979-c5eb-4dd9-bbb6-e5596e63f3c3",
+   "s1Comment": "A2 eastbound Singlewell exit slip road closure",
+   "stretchGuid": "10de61ee-3873-4f74-9bed-31a477b58a68",
+   "stretch": "A2 Eastbound A227 -> VALLEY DRIVE",
+   "routes": [
+    "A2/A227/VALLEY/DRIVE/1 Class_1A"
+   ],
+   "e7Coverage30m": 1.0,
+   "occurrences": 2,
+   "reviewLabel": "reject",
+   "reason": "Slip-road closure; main carriageway stays open (E1). Record type carriagewayClosures with a merge-point main-carriageway link."
+  },
+  {
+   "situationId": "513589",
+   "recordId": "1-1790760729-c2888b56-358c-416a-8ba5-d3164c345432",
+   "s1Comment": "M1 northbound Jct 11A to Jct 13 carriageway closure",
+   "stretchGuid": "53e68192-fbb4-4744-bd3a-6977d1c2166b",
+   "stretch": "M1 Northbound M1 J11 -> M1 J12",
+   "routes": [
+    "M1/J11/J12/1 Class_1A"
+   ],
+   "e7Coverage30m": 1.0,
+   "occurrences": 2,
+   "reviewLabel": "reject",
+   "reason": "Closure J11A-J13 extends beyond the J11-J12 stretch; single record covers only part of the situation (E6)."
+  },
+  {
+   "situationId": "525155",
+   "recordId": "1-1790941004-5d336ca1-d402-49c4-bac9-85064a60c2a4",
+   "s1Comment": "M1 southbound Jct 12 entry slip carriageway closure ",
+   "stretchGuid": "54743775-a218-44e1-82cd-485a6072bf01",
+   "stretch": "M1 Southbound M1 J12 -> M1 J11",
+   "routes": [
+    "M1/J12/J11/1 Class_1A"
+   ],
+   "e7Coverage30m": 1.0,
+   "occurrences": 1,
+   "reviewLabel": "reject",
+   "reason": "Slip-road closure; main carriageway stays open (E1). Record type carriagewayClosures with a merge-point main-carriageway link."
+  },
+  {
+   "situationId": "507623",
+   "recordId": "1-1790687288-d72113fe-7294-4dcb-8979-6718c8c72d61",
+   "s1Comment": "M60 clockwise jct 21  carriageway Closure between exit and entry slip roads ",
+   "stretchGuid": "5f8e373f-41a3-40c8-8482-9e4bf36b5e05",
+   "stretch": "M60 Clockwise M60 J20 -> M60 J21",
+   "routes": [
+    "M60/J20/J21/1 Class_1A"
+   ],
+   "e7Coverage30m": 1.0,
+   "occurrences": 2,
+   "reviewLabel": "reject",
+   "reason": "Closure is within J21 (between its exit and entry slips); the J20-J21 route would take traffic off a junction early (E6)."
+  },
+  {
+   "situationId": "524864",
+   "recordId": "1-1790857317-c0af9c25-c04e-40d3-bdda-d63098c5ad40",
+   "s1Comment": "A27 eastbound Coldean to Falmer carriageway closure (Including layby)",
+   "stretchGuid": "5398d3cc-ba14-4ce7-a5ad-3ce40ac02470",
+   "stretch": "A27 Eastbound CARDEN-AVENUE -> A270",
+   "routes": [
+    "A27/CARDEN-AVENUE/A270/2 Class_1A"
+   ],
+   "e7Coverage30m": 1.0,
+   "occurrences": 3,
+   "reviewLabel": "review",
+   "reason": "Carriageway closure (including layby) contained in the stretch; junction extent (E6) not yet confirmed. Needs human review."
+  },
+  {
+   "situationId": "472550",
+   "recordId": "1-1785902537-0372f4c4-849c-4005-ad09-2574dc9fba25",
+   "s1Comment": "A34 northbound Marcham to Abingdon carriageway closure",
+   "stretchGuid": "ca48abf7-6bc9-4c3f-a252-0972f3a0594f",
+   "stretch": "A34 Northbound A4130 -> A420",
+   "routes": [
+    "A34/A4130/A420/1 Class_1A"
+   ],
+   "e7Coverage30m": 1.0,
+   "occurrences": 135,
+   "reviewLabel": "review",
+   "reason": "Closure contained in stretch but junction extent / direction not yet confirmed (E4/E6). Needs strict E6 evaluation and human review."
+  },
+  {
+   "situationId": "510118",
+   "recordId": "1-1790993169-d4941aa4-fadb-47b1-a6c3-c73c3d0549a6",
+   "s1Comment": "A160 eastbound Harbrough to Manby, carriageway closure ",
+   "stretchGuid": "49b7463c-90a4-4318-b7aa-3cd39a5d3d7b",
+   "stretch": "A160 Eastbound A1077 -> A1173",
+   "routes": [
+    "A160/A1077/A1173/1 Class_1A"
+   ],
+   "e7Coverage30m": 1.0,
+   "occurrences": 10,
+   "reviewLabel": "review",
+   "reason": "Closure contained in stretch but junction extent / direction not yet confirmed (E4/E6). Needs strict E6 evaluation and human review."
+  },
+  {
+   "situationId": "478422",
+   "recordId": "1-1790997126-ddaf95e3-90a5-43aa-ad3f-659b25c7d7e3",
+   "s1Comment": "A47 both directions Hardwick Roundabout to A1122 Roundabout carriageway closure",
+   "stretchGuid": "728a9e05-769e-4fe5-ae5a-6fc7eb80324d",
+   "stretch": "A47 Eastbound A10 -> A1065",
+   "routes": [
+    "A47/A10/A1065/1 Class_1A"
+   ],
+   "e7Coverage30m": 0.981,
+   "occurrences": 12,
+   "reviewLabel": "review",
+   "reason": "Both-directions closure: only one direction matched; per-direction split and E6 not yet applied."
+  },
+  {
+   "situationId": "477290",
+   "recordId": "1-1791198747-cb34e2f8-092d-4f17-8159-b0ee4b24f712",
+   "s1Comment": "M55 Eastbound Jct 1 carriageway closure (SB traffic to go up and over the slips and NB traffic sent North on A6)",
+   "stretchGuid": "c2cdd54a-49f0-4c65-81e7-9756337e7d60",
+   "stretch": "M55 Eastbound J2 -> J1",
+   "routes": [
+    "M55/J2/J1/1 Class_1A"
+   ],
+   "e7Coverage30m": 0.923,
+   "occurrences": 14,
+   "reviewLabel": "review",
+   "reason": "Closure contained in stretch but junction extent / direction not yet confirmed (E4/E6). Needs strict E6 evaluation and human review."
+  },
+  {
+   "situationId": "519077",
+   "recordId": "1-1789648213-37300f80-39b6-4390-b9b8-00d5b0d4e499",
+   "s1Comment": "A303 eastbound Cartgate roundabout to Tintinhull carriageway closure ",
+   "stretchGuid": "c3a40539-cd88-4b3e-ba28-f68fe5a2924b",
+   "stretch": "A303 Eastbound A3088 -> A37",
+   "routes": [
+    "A303/A3088/A37/1 Class_1A"
+   ],
+   "e7Coverage30m": 1.0,
+   "occurrences": 3,
+   "reviewLabel": "review",
+   "reason": "Closure contained in stretch but junction extent / direction not yet confirmed (E4/E6). Needs strict E6 evaluation and human review."
+  },
+  {
+   "situationId": "520618",
+   "recordId": "1-1788517834-8c648232-6bfa-462a-962b-75d19d1d622a",
+   "s1Comment": "A595 Eastbound and Westbound clints rbt to hensingham rbt carriageway closure",
+   "stretchGuid": "cb4a0c27-9e25-404e-a31a-5ba4f37c6463",
+   "stretch": "A595 Southbound A596 -> A5086",
+   "routes": [
+    "A595/A596/A5086/1 Class_1A"
+   ],
+   "e7Coverage30m": 1.0,
+   "occurrences": 1,
+   "reviewLabel": "review",
+   "reason": "Both-directions closure: only one direction matched; per-direction split and E6 not yet applied."
+  },
+  {
+   "situationId": "488062",
+   "recordId": "1-1790951183-e23d32b9-8084-4cb8-b709-031f3b3967e6",
+   "s1Comment": "A3 northbound Hazel Grove to Thursley carriageway closure",
+   "stretchGuid": "e910dd57-e362-4220-b402-3f8a71c5c79d",
+   "stretch": "A3 Northbound A325 -> A31",
+   "routes": [
+    "A3/A325/A31/1 Class_1A"
+   ],
+   "e7Coverage30m": 1.0,
+   "occurrences": 5,
+   "reviewLabel": "review",
+   "reason": "Closure contained in stretch but junction extent / direction not yet confirmed (E4/E6). Needs strict E6 evaluation and human review."
+  },
+  {
+   "situationId": "524859",
+   "recordId": "1-1790687288-042a484d-6e7d-486a-b6ea-30157f9d2d3d",
+   "s1Comment": "A47 both directions Elm High Road Roundabout to Lynn Road Roundabout carriageway closure ",
+   "stretchGuid": "21cb8a97-31e2-448b-a691-3c69f3189f18",
+   "stretch": "A47 Eastbound A1101 -> A17",
+   "routes": [
+    "A47/A1101/A17/1 Class_1A"
+   ],
+   "e7Coverage30m": 0.991,
+   "occurrences": 1,
+   "reviewLabel": "review",
+   "reason": "Both-directions closure: only one direction matched; per-direction split and E6 not yet applied."
+  },
+  {
+   "situationId": "484720",
+   "recordId": "1-1790694797-14473ac8-f67f-4110-8527-394eb43821d2",
+   "s1Comment": "A46 northbound and southbound Hykeham roundabout to Whisby roundabout carriageway closure ",
+   "stretchGuid": "3a964b3d-25af-439e-b1e9-647c88dc2dc6",
+   "stretch": "A46 Northbound A1434 -> B1190",
+   "routes": [
+    "A46/A1434/B1190/1 Class_1A"
+   ],
+   "e7Coverage30m": 0.984,
+   "occurrences": 2,
+   "reviewLabel": "review",
+   "reason": "Both-directions closure: only one direction matched; per-direction split and E6 not yet applied."
+  },
+  {
+   "situationId": "522896",
+   "recordId": "1-1790675890-95409bc5-3478-40cb-9745-94fee343c21c",
+   "s1Comment": "A5 eastbound Weeford to Ventura Park carriageway closure",
+   "stretchGuid": "007b0932-a2d7-49b2-b03c-8423e33f10cf",
+   "stretch": "A5 Eastbound WEEFORD ISLAND -> MILE OAK",
+   "routes": [
+    "A5/WEEFORD/ISLAND/MILE/OAK/1 Class_1A"
+   ],
+   "e7Coverage30m": 1.0,
+   "occurrences": 1,
+   "reviewLabel": "review",
+   "reason": "Closure contained in stretch but junction extent / direction not yet confirmed (E4/E6). Needs strict E6 evaluation and human review."
+  },
+  {
+   "situationId": "522305",
+   "recordId": "1-1790764771-2f51c3d6-9213-4c18-8aa8-3e2c10d26567",
+   "s1Comment": "A66 Eastbound Kemplay Roundabout to Temple Sowerby Carriageway closure",
+   "stretchGuid": "140695a8-b26b-465f-9cc6-33ea2ea2b2d0",
+   "stretch": "A66 Clockwise A6/A66 -> A66 BROUGH BYPASS",
+   "routes": [
+    "A66/A6/A66/BROUGH/BYPASS/1 Class_1A"
+   ],
+   "e7Coverage30m": 1.0,
+   "occurrences": 6,
+   "reviewLabel": "review",
+   "reason": "Closure contained in stretch but junction extent / direction not yet confirmed (E4/E6). Needs strict E6 evaluation and human review."
+  },
+  {
+   "situationId": "511133",
+   "recordId": "1-1790243198-a8c4a2e5-8d7d-4c2f-8c9f-ebc677b6fb53",
+   "s1Comment": "Road closure",
+   "stretchGuid": "a940cfe6-bf6f-4f40-aa5c-aff8583fdc6b",
+   "stretch": "A38 Northbound A38/A5121, BRANSTON -> A5121/A38, CLAY MILLS",
+   "routes": [
+    "A38/A38/A5121,/BRANSTON/A5121/A38,/CLAY/MILLS/1 Class_1A"
+   ],
+   "e7Coverage30m": 1.0,
+   "occurrences": 1,
+   "reviewLabel": "review",
+   "reason": "Closure contained in stretch but junction extent / direction not yet confirmed (E4/E6). Needs strict E6 evaluation and human review."
+  },
+  {
+   "situationId": "495537",
+   "recordId": "1-1790989370-b72c4fb8-9092-414f-b0d1-ec69f1551def",
+   "s1Comment": "A5 both directions Kilsby to Halfway House carriageway closure",
+   "stretchGuid": "9dca5479-bdd0-4600-98e6-7c63545d36ac",
+   "stretch": "A5 Northbound A45 -> A428",
+   "routes": [
+    "A5/A45/A428/1 Class_1A"
+   ],
+   "e7Coverage30m": 1.0,
+   "occurrences": 1,
+   "reviewLabel": "review",
+   "reason": "Both-directions closure: only one direction matched; per-direction split and E6 not yet applied."
+  },
+  {
+   "situationId": "461015",
+   "recordId": "1-1790874321-a9cd7673-1890-4b0b-b4c9-58448e7d012d",
+   "s1Comment": "A52 eastbound Wheatcroft Roundabout to Ambleside carriageway closure",
+   "stretchGuid": "9ec4ef70-49d9-4be2-ab91-c29977c526a9",
+   "stretch": "A52 Eastbound J52 -> J52",
+   "routes": [
+    "A52/J52/J52/4 Class_1A"
+   ],
+   "e7Coverage30m": 1.0,
+   "occurrences": 2,
+   "reviewLabel": "review",
+   "reason": "Closure contained in stretch but junction extent / direction not yet confirmed (E4/E6). Needs strict E6 evaluation and human review."
+  },
+  {
+   "situationId": "470447",
+   "recordId": "1-1764693521-3c0c9f30-0a06-4921-92fd-34a891f2a307",
+   "s1Comment": "A27 eastbound Fontwell west roundabout to Crossbush carriageway closure",
+   "stretchGuid": "75b97b64-2e3c-4245-aa5d-d19000fdb89c",
+   "stretch": "A27 Eastbound A29 -> A284",
+   "routes": [
+    "A27/A29/A284/2 Class_1A"
+   ],
+   "e7Coverage30m": 1.0,
+   "occurrences": 3,
+   "reviewLabel": "review",
+   "reason": "Closure contained in stretch but junction extent / direction not yet confirmed (E4/E6). Needs strict E6 evaluation and human review."
+  },
+  {
+   "situationId": "521365",
+   "recordId": "1-1790936494-4cf811d5-2216-4828-893a-b11810172e78",
+   "s1Comment": "M55 Eastbound Jct 1 Carriageway closure (traffic to go up and over the slips)",
+   "stretchGuid": "c2cdd54a-49f0-4c65-81e7-9756337e7d60",
+   "stretch": "M55 Eastbound J2 -> J1",
+   "routes": [
+    "M55/J2/J1/1 Class_1A"
+   ],
+   "e7Coverage30m": 1.0,
+   "occurrences": 3,
+   "reviewLabel": "review",
+   "reason": "Closure contained in stretch but junction extent / direction not yet confirmed (E4/E6). Needs strict E6 evaluation and human review."
+  },
+  {
+   "situationId": "491297",
+   "recordId": "1-1788923486-31ba22aa-1851-44e6-8e0a-d460fedacf38",
+   "s1Comment": "M53 Southbound Jct 4 to 5 Carriageway Closure ",
+   "stretchGuid": "f4d161af-19a1-4104-96ec-147659531ef3",
+   "stretch": "M53 Southbound M53 J4 -> M53 J5",
+   "routes": [
+    "M53/J4/J5/1 Class_1A"
+   ],
+   "e7Coverage30m": 1.0,
+   "occurrences": 30,
+   "reviewLabel": "review-likely",
+   "reason": "Closure junctions appear to equal stretch junctions. Needs human confirmation."
+  },
+  {
+   "situationId": "476153",
+   "recordId": "1-1791169373-53370d49-5d40-42e0-b509-9693b6e951c2",
+   "s1Comment": "A34 southbound Milton to Chilton carriageway closure",
+   "stretchGuid": "4669177f-c0f7-4881-9eb0-0ec71865f8ca",
+   "stretch": "A34 Southbound A4130 -> A4185",
+   "routes": [
+    "A34/A4130/A4185/1 Class_1A"
+   ],
+   "e7Coverage30m": 1.0,
+   "occurrences": 7,
+   "reviewLabel": "review-likely",
+   "reason": "Closure junctions appear to equal stretch junctions. Needs human confirmation."
+  }
+ ],
+ "labellingNote": "Initial labels were drafted with keyword rules and then corrected by hand (A27 Coldean-Falmer, M60 J21). All labels remain subject to your review."
+}

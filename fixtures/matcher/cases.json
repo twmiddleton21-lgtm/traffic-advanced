@@ -1,0 +1,122 @@
+{
+ "description": "Matcher regression cases from the 2026-10-05 capture. 'expected' comes from human review, not from the matcher. Rejected cases must stay D. Positive cases record CURRENT matcher behaviour for reviewer-checked candidates pending owner review; they are not confirmed production matches.",
+ "capture": {
+  "open": "2026-10-05T1140Z-open",
+  "nhApi": "2026-10-05T1208Z-nh-api"
+ },
+ "cases": [
+  {
+   "name": "m53-j8-j9-entry-slips",
+   "situationId": "441876",
+   "textIncludes": "entry slip road closure",
+   "expected": "D",
+   "review": "M53 northbound J8 and J9 entry slip-road closures (same situation); main carriageway open. Both were false positives in the per-record prototype."
+  },
+  {
+   "name": "m1-j12-entry-slip",
+   "situationId": "525155",
+   "textIncludes": "Jct 12 entry slip",
+   "expected": "D",
+   "review": "Entry slip closure encoded with main-carriageway links closed at the merge."
+  },
+  {
+   "name": "a2-singlewell-exit-slip",
+   "situationId": "479303",
+   "textIncludes": "Singlewell exit slip",
+   "expected": "D",
+   "review": "Exit slip-road closure."
+  },
+  {
+   "name": "a1-colsterworth-layby",
+   "situationId": "491584",
+   "textIncludes": "Layby",
+   "expected": "D",
+   "review": "Layby closure encoded as main carriageway closed with 0 lanes open."
+  },
+  {
+   "name": "a1m-sprotbrough-depot-access",
+   "situationId": "525110",
+   "textIncludes": "Depot access",
+   "expected": "D",
+   "review": "Depot access road closure."
+  },
+  {
+   "name": "a35-miles-cross-traffic-lights",
+   "situationId": "501828",
+   "textIncludes": "traffic lights",
+   "expected": "D",
+   "review": "Temporary traffic lights typed carriagewayClosures."
+  },
+  {
+   "name": "m1-j11a-to-j13",
+   "situationId": "513589",
+   "textIncludes": "Jct 11A to Jct 13",
+   "expected": "D",
+   "review": "Closure extends beyond the J11-J12 stretch."
+  },
+  {
+   "name": "m5-j3-to-j4a",
+   "situationId": "509688",
+   "textIncludes": "Jct 3 to Jct 4a",
+   "expected": "D",
+   "review": "Closure extends beyond the J3-J4 stretch (J4-J4A links closed the same night)."
+  },
+  {
+   "name": "m60-within-j21",
+   "situationId": "507623",
+   "textIncludes": "jct 21",
+   "expected": "D",
+   "review": "Closure inside J21 between its slips; J20-J21 route would leave a junction early."
+  },
+  {
+   "name": "a64-towthorpe-hopgrove",
+   "situationId": "522472",
+   "textIncludes": "Towthorpe to Hopgrove",
+   "expected": "D",
+   "review": "Network match but 0% spatial agreement (E7)."
+  },
+  {
+   "name": "a42-j11-to-j13-continues-from-m42",
+   "situationId": "469317",
+   "textIncludes": "A42 northbound Jct 11 to Jct 13",
+   "expected": "D",
+   "review": "Found by the strict matcher's first run: closure continues from M42 onto A42; an M42-only fragment matched M42 J10-J11."
+  },
+  {
+   "name": "a42-j13-to-m1-j23a",
+   "situationId": "469236",
+   "textIncludes": "Jct 13 to M1 Jct 23a",
+   "expected": "D",
+   "review": "Found by the strict matcher's first run: A42 closure into M1 J23a; M1-only fragment matched M1 J23A-J24."
+  },
+  {
+   "name": "m53-j4-to-j5-southbound",
+   "situationId": "491297",
+   "textIncludes": "Jct 4 to 5 Carriageway Closure",
+   "expected": "B",
+   "expectedStretch": "M53 southBound M53 J4 to M53 J5",
+   "confirmation": "reviewer-checked (stretch labels agree with path-end junctions); pending owner review",
+   "review": "NH text 'Jct 4 to 5' equals stretch J4-J5; closed links run from within J4 to within J5; route M53/J4/J5/1 Class 1A.",
+   "direction": "southBound"
+  },
+  {
+   "name": "m65-j7-to-j8-eastbound",
+   "situationId": "520677",
+   "textIncludes": "Jct 7 to 8",
+   "expected": "B",
+   "expectedStretch": "M65 eastBound M65 J7 to M65 J8",
+   "confirmation": "reviewer-checked (stretch labels agree with path-end junctions); pending owner review",
+   "review": "NH text 'Jct 7 to 8' equals stretch J7-J8; route M65/J7/J8/1 Class 1A.",
+   "direction": "eastBound"
+  },
+  {
+   "name": "m54-j1-to-m6-j10a-eastbound",
+   "situationId": "515870",
+   "textIncludes": "Jct 1 to M6 Jct 10A",
+   "expected": "D",
+   "confirmation": "reviewer recommends D; D7 approved 2026-10-05",
+   "review": "Expected D under approved D7: NH closure text and the S4 stretch label say J1, but route M54/J1/M6/J10A/2 traces from the M54 J2 node, so the labels can't be reconciled with the path. Position-precise E6 (D9) alone would not change it: the closed section starts ~53 m before the J1 node (0 lanes open), so the junction before the closure is J2.",
+   "direction": "eastBound"
+  }
+ ]
+}

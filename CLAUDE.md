@@ -1,128 +1,114 @@
 # Traffic Advanced — development rules
 
-Map-based web app showing road closures, live traffic and HGV diversion information for professional
-drivers. **What** we build is in `docs/SPECIFICATION.md`; **what the data can and cannot prove** is in
-`docs/DATA-SOURCES.md`. Read both before changing data, matching or diversion code. This file is **how** we work.
+Traffic Advanced is a map-based web app giving HGV drivers road-closure, traffic and diversion information.
+This file says **how** to work on it. **What** to build: `docs/SPECIFICATION.md`. **What the data can prove**:
+`docs/DATA-SOURCES.md`. Read the relevant sections of both before changing data, matching, diversion or safety code.
 
-## 1. Accuracy and HGV safety come first
+## Accuracy
 
-Wrong diversion information can put an HGV under a low bridge. Feature count, polish and speed all rank below accuracy.
+- **Never guess a closure → diversion relationship.** If the data does not prove it, the code must not imply it.
+- Every diversion carries exactly one classification: **A** official closure-specific · **B** official NH route matched
+  on documented evidence · **C** calculated HGV route · **D** no reliable diversion. Definitions, required evidence
+  and UI wording are in `docs/SPECIFICATION.md` §5. Use that wording exactly.
+- **A false-positive match is more serious than a missed match.** When evidence is insufficient or ambiguous, the result is D.
+- Matching and classification are deterministic, live in one place in `shared/`, and are covered by tests on real
+  data, including tests proving that near-misses do **not** match.
+- Never present a calculated route as official, and never present a car route as an HGV route.
+- Show official text verbatim. Don't paraphrase, summarise or "clean up" National Highways wording.
+- Matching thresholds, evidence rules, classification logic and safety wording **must not be changed silently**.
+  Propose the change, show the fixture evidence, and get approval.
 
-- **Never infer a relationship the data does not state.** If a source doesn't prove that a diversion
-  belongs to a closure, the code must not present it as if it does.
-- Every diversion shown must carry exactly one classification from `docs/SPECIFICATION.md` §5:
-  **A** official closure-specific · **B** official NH route, matched on evidence · **C** calculated HGV
-  route · **D** no reliable diversion. The classification is computed in one place (`shared/diversion/classify.ts`),
-  is part of the API contract, and is rendered with the exact wording from the spec. Never restyle C to look like A/B.
-- Matching rules are deterministic, documented and covered by tests, including **false-match tests**
-  (cases that must *not* match). Changing a threshold needs a fixture showing why.
-- Never route, or suggest a route, through a known restriction that conflicts with the user's vehicle
-  profile. Conflicts are shown as a blocking, high-contrast warning, never a subtle badge.
-- Never present a car route as an HGV route.
-- Never present cached data as live. Every dataset carries `fetchedAt` / `sourceUpdatedAt`; the UI always
-  shows "Last updated" and flags staleness using the thresholds in the spec.
-- Show official text (e.g. National Highways diversion descriptions) **verbatim**. Don't paraphrase or summarise it.
-- Keep data sources visually and semantically separate: NH closure/incident, planned roadworks, live
-  traffic, official diversion, calculated route. Never merge them into one ambiguous "traffic" status.
+## HGV safety
 
-## 2. Evidence-based development
+- Always evaluate routes against the vehicle profile (height, width, weight, length).
+- A known restriction that conflicts with the profile **blocks** the route with a prominent warning. It's never a subtle badge.
+- Routes NH classifies **Class 2a/2b** ("not to be used by HGVs") are never presented as suitable for HGVs.
+- Absence of restriction data is not proof of clearance. Say so.
+- The app is for planning and information, not for interaction while driving. Safety copy (follow physical signs,
+  police and National Highways instructions; signs take priority over the app) must stay visible where the spec requires it.
 
-- Don't assume an API field, behaviour, limit or licence term exists. Verify it against the real
-  response, official docs or the licence text, then record it in `docs/DATA-SOURCES.md` with the date checked.
-- When something can't be verified, say so in code comments/docs and design for the uncertainty. Don't paper over it.
-- **Use Context7** (`resolve-library-id` → `query-docs`) before writing code against React, Vite, TypeScript,
-  Tailwind, MapLibre, TanStack Query, vite-plugin-pwa/Workbox, Cloudflare Workers/Wrangler/KV/R2, Zod,
-  Vitest, Playwright, or any routing/traffic API. Prefer current docs over memory, even for familiar APIs.
-- Test data code against **real recorded responses** (fixtures in `fixtures/`, captured by a script and
-  stripped of keys), not invented payloads. Invented data is only for edge cases real data doesn't cover, and is labelled as such.
-- When upstream formats change, update fixtures and tests first, then the parser.
+## Data
 
-## 3. Architecture rules
+- **National Highways is the primary authority for V1 (England).** Other UK authorities are added later as new adapters.
+- Every external source has its own adapter (`fetch → validate → normalise`) tagged with authority and source. No
+  source-specific logic outside its adapter.
+- Validate every upstream payload with a schema (Zod) at the boundary. Quarantine and log invalid records. Never pass them through.
+- Preserve the **last known good** dataset. A failed or suspicious refresh never replaces good data.
+- Never present stale or cached data as live. Every dataset and record carries its fetch time and source timestamps,
+  and the UI shows "Last updated" plus delayed/stale states.
+- Record every verified fact about a source (fields, limits, licence, behaviour) in `docs/DATA-SOURCES.md` with the date checked.
+- Don't invent API fields, behaviours or capabilities. Verify against real responses or official documentation.
+  Mark anything unverified as unverified.
+- Test against **real captured data** in `fixtures/` (trimmed, keys stripped). Invented data only for edge cases real
+  data lacks, and labelled as synthetic.
 
-- Layout: `web/` (React PWA), `worker/` (Cloudflare Worker: scheduled ingest + read API), `shared/`
-  (types, Zod schemas, pure domain logic used by both), `fixtures/`, `scripts/`, `docs/`.
-- Each upstream source is an **adapter** behind a common interface (`fetch → validate → normalise`),
-  tagged with authority/region (`nh-england` today; Scotland/Wales/NI later). Don't special-case a
-  source outside its adapter.
-- Domain logic (matching, classification, restriction checks, time/stale rules, unit conversion) is pure
-  TypeScript in `shared/`, with no DOM, React or Worker APIs, and is fully unit-tested.
-- The frontend talks only to our own `/api/*`. It never calls keyed upstream APIs directly.
-- Validate every upstream payload and every API response with Zod at the boundary. Reject or quarantine
-  invalid records. Never let them silently through.
-- Keep the last known good dataset. A failed or invalid refresh must never replace good data with nothing.
+## Architecture
 
-## 4. Security and privacy
+```
+web/       React PWA (UI only)
+worker/    Cloudflare Worker: scheduled ingest, storage, read-only /api/*
+shared/    types, schemas and pure domain logic used by web and worker
+fixtures/  captured real upstream data for tests
+scripts/   data capture, preprocessing and analysis scripts
+docs/      specification, data-source evidence, reports
+```
 
-- **No secrets in the repo or the frontend bundle.** Keys live in Wrangler secrets (`wrangler secret put`)
-  and GitHub Actions secrets; local dev uses `.dev.vars` (git-ignored). Add an example file with placeholders only.
-- The Worker exposes read-only endpoints. Validate and bound all query params; apply rate limiting; send
-  restrictive CORS (our origin only) and security headers (CSP, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`).
-- Render all upstream text as text. No `dangerouslySetInnerHTML`, no HTML from feeds.
-- Outbound links/deep links are built from an allow-list of schemes/hosts with encoded parameters. Never
-  build URLs from raw upstream strings.
-- Location is opt-in, one-shot (`getCurrentPosition`, never `watchPosition`), requested only from a user
-  action with an explanation first, and never stored server-side or logged.
-- No analytics/trackers without explicit approval. No cookies needed.
-- Dependencies: justify each one (size, maintenance, licence), pin via the lockfile, run `npm audit` in CI,
-  and keep Dependabot on. Prefer platform APIs and small libraries.
-- Don't claim ISO certification. Follow the practices (least privilege, secret rotation, audit trail of data refreshes).
+- Pure, framework-free TypeScript in `shared/` for: closure/diversion matching, classification, HGV restriction
+  checks, stale-data rules, unit conversion (m ↔ ft-in, t), and source confidence. No DOM, React or Worker APIs there.
+- The frontend calls only our own `/api/*`. It never calls private or keyed upstream APIs directly.
+- Keep modules small and single-purpose. Prefer clear code over clever abstractions.
 
-## 5. UI rules
+## Security
 
-- Mobile-first (design at 360–390 px, then tablet, desktop, large touchscreen, TV). No horizontal page scroll.
-- Touch targets ≥ 48 px. Primary actions reachable one-handed. Large, high-contrast text; map labels readable in sunlight and at night.
-- Themes: system / light / dark, with no flash of the wrong theme. Map style follows the theme.
-- Fully keyboard and D-pad operable (TV remotes send arrow keys/Enter/Back): logical focus order, a visible
-  focus ring, nothing that relies on hover only.
-- Accessibility: semantic HTML, labelled controls, WCAG 2.2 AA contrast, `prefers-reduced-motion`
-  respected. Information is never conveyed by colour alone (closures and classifications have icon + text).
-- Every async view has designed loading, empty, error, offline and stale states.
-- UK conventions: `en-GB` dates, 24-hour times, heights in metres **and** feet-inches, weights in tonnes.
-- Use the **`frontend-design` skill** for significant UI work (new screens, layout/design-system changes). Small tweaks don't need it.
-- Safety copy from the spec (don't use while driving; physical signs take priority) must not be removed or hidden.
+- No secrets in the repository or the frontend bundle. API keys live server-side only: Wrangler secrets in production,
+  git-ignored `.dev.vars` locally, GitHub Actions secrets in CI. Commit example files with placeholders only.
+- Restrictive CORS (our origin only) and security headers (CSP, `X-Content-Type-Options`, `Referrer-Policy`,
+  `Permissions-Policy`, HSTS) on every response.
+- Validate and bound all request input. Rate-limit the public API.
+- Build outbound links and deep links only from an allow-list of schemes/hosts with encoded parameters. Never from raw upstream text.
+  Render upstream text as text, never as HTML.
+- Location is optional, one-shot and user-initiated. Never store or log it server-side.
+- No tracking, analytics or cookies unless explicitly approved.
+- Dependency auditing (`npm audit`, Dependabot) and GitHub secret scanning with push protection stay enabled.
 
-## 6. Code conventions
+## UI
 
-- TypeScript strict; no `any` (use `unknown` + narrowing); no unexplained `!`.
-- React function components + hooks; server state via TanStack Query; no global state library unless justified.
-- Files: `PascalCase.tsx` components, `camelCase.ts` modules, tests co-located as `*.test.ts(x)`.
-- Comments explain *why* (especially data quirks, with a link to the evidence). No commented-out code, no `console.log` in commits.
-- Don't add a dependency, remove working functionality, or rewrite working code without a stated reason.
-  Prefer small, reviewable changes.
+- Mobile-first and focused on HGV drivers: clear information, minimal steps, strong contrast, large touch targets (≥ 48 px).
+- Themes: dark, light and system, with no flash of the wrong theme.
+- Works on phone, tablet, desktop, large touchscreen and TV. Fully keyboard and D-pad operable, with a visible focus ring
+  and nothing that depends on hover alone.
+- Accessibility: semantic HTML, labelled controls, WCAG 2.2 AA contrast, reduced-motion support, and never colour alone.
+- Always make the following visually distinct: **traffic vs closures**; **official vs matched vs calculated** diversions;
+  **fresh vs delayed vs stale/offline** data.
+- Every async view has loading, empty, error, offline and stale states.
+- UK conventions: en-GB dates, 24-hour times, heights in metres and feet-inches, weights in tonnes.
 
-## 7. Commands
+## Development workflow
 
-Defined once the project is scaffolded (P1). Required scripts: `dev`, `build`, `preview`, `typecheck`,
-`lint`, `format`, `test`, `test:e2e`, `fixtures:capture`, and **`check`** (typecheck + lint + test + build),
-which must pass before any commit. Update this section when the scripts exist.
+1. Inspect the existing code and relevant docs before changing anything.
+2. Use **Context7** for current library/framework/API documentation (React, Vite, TypeScript, Tailwind, MapLibre,
+   TanStack Query, PWA tooling, Cloudflare Workers/Wrangler/R2, Zod, Vitest, Playwright, routing/traffic APIs).
+3. Use the **frontend-design** skill for significant UI work (new screens, layout or design-system changes).
+4. Test with real data. Add tests for all new logic. Data/matching changes need false-match tests too.
+5. Run typecheck, lint, tests and build (`npm run check` once scaffolded) before calling work done. Report failures honestly.
+6. Fix straightforward problems (type/lint errors, tests broken by your change, imports, formatting) without asking.
+   Ask before changing safety or data-matching behaviour, the API contract, or adding a dependency.
+7. Use **/code-review** for substantial changes. Simplify anything over-engineered.
+8. Don't introduce unnecessary dependencies. Justify each one (need, size, maintenance, licence).
+9. Don't remove working functionality or rewrite working code without a stated reason.
+10. Check UI changes at phone, tablet and desktop sizes, in both themes, using keyboard only.
 
-## 8. Working loop
+## Git and GitHub
 
-1. Understand the goal and read the relevant spec section before coding.
-2. After each change run the narrowest relevant tests, then `npm run check` before calling it done.
-   Report failures with their output. Don't hide or skip them.
-3. **Fix straightforward problems yourself** (type/lint errors, failing tests caused by your change,
-   imports, formatting). **Ask first** before changing matching thresholds, diversion classification,
-   safety wording, data-retention behaviour, the API contract, or adding a dependency.
-4. New logic needs tests. Data/matching changes need real-fixture tests **and** false-match tests.
-5. Check UI changes at phone, tablet and desktop widths, in both themes, with keyboard only.
-6. **Review your own diff before committing** (`git diff --staged`): correctness, accuracy wording,
-   secrets, leftover debugging, unrelated changes, missing tests. Use `/code-review` for substantial changes
-   and simplify anything over-built.
+- `main` is always deployable. Work on feature branches (`feat/`, `fix/`, `data/`, `docs/`, `chore/`) and merge via PR.
+- Meaningful Conventional Commits. Never commit secrets, `.dev.vars`, build output, `node_modules` or raw data dumps.
+- CI (typecheck, lint, tests, build, audit) must pass before merging or pushing to `main`.
+- Use GitHub issues/PRs where they help (phase tracking, data-quality findings). No process for its own sake.
+- Commit or push only when requested or as part of an explicitly approved phase.
 
-## 9. Git and GitHub
+## External references
 
-- `main` is always deployable and protected. Work on short-lived branches (`feat/…`, `fix/…`, `data/…`,
-  `docs/…`, `chore/…`) and merge by PR once CI passes.
-- Conventional Commits, small and meaningful. Never commit secrets, `.dev.vars`, build output, `node_modules`
-  or large raw datasets (fixtures are trimmed samples).
-- Don't push failing code. CI (typecheck, lint, tests, build, `npm audit`) must be green.
-- GitHub issues: one per phase/feature with acceptance criteria, plus issues for data-quality findings.
-  Don't create process for its own sake.
-- Commit or push only when asked or as part of an agreed phase.
-
-## 10. Documentation
-
-- Spec changes go in `docs/SPECIFICATION.md`; data findings (with date and evidence) in `docs/DATA-SOURCES.md`.
-- Long-term notes and decisions also live in the Obsidian vault at `D:\VAULT ONE\01 Projects\Traffic Advanced\`
-  (follow the vault's own CLAUDE.md). Don't duplicate the spec there. Link to it.
+- `HGV-Destinations-Pro` (github.com/twmiddleton21-lgtm/HGV-Destinations-Pro) may be inspected when HGV routing, UK
+  address search, low-bridge data or height parsing is relevant. Reuse ideas only after review. Don't import its architecture.
+- Project notes and decisions are also kept in the Obsidian vault at `D:\VAULT ONE\01 Projects\Traffic Advanced\`
+  (follow the vault's CLAUDE.md). Link to the spec rather than duplicating it.
