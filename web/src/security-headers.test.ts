@@ -66,8 +66,11 @@ describe("static security headers", () => {
   });
 
   it("CSP connects only to our origin and the external hosts the app's code actually uses", () => {
-    const hosts = new Set(sourceFiles.flatMap((f) => [...readFileSync(f, "utf8").matchAll(/https:\/\/([a-z0-9.-]+)/g)].map((m) => `https://${m[1]}`)));
-    expect([...hosts]).toEqual(["https://tiles.openfreemap.org"]);
+    // Pages people open from a link (the official-source link): navigations, never connections, so never in connect-src.
+    const linkOnly = ["https://nationalhighways.co.uk"];
+    const found = new Set(sourceFiles.flatMap((f) => [...readFileSync(f, "utf8").matchAll(/https:\/\/([a-z0-9.-]+)/g)].map((m) => `https://${m[1]}`)));
+    const hosts = [...found].filter((h) => !linkOnly.includes(h));
+    expect(hosts).toEqual(["https://tiles.openfreemap.org"]);
     expect(csp.get("connect-src")).toEqual(["'self'", ...hosts]);
   });
 

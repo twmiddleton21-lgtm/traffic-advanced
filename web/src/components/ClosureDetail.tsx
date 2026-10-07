@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { ClosuresSnapshot, OfficialRoute, TrafficClosure } from "../../../shared/api/closures.ts";
+import { NOT_LIVE_TEXT } from "../domain/dataStatus.ts";
 import { confirmedJunctions, directionLabel, formatDateTime, formatWindow } from "../domain/filters.ts";
 import { classificationMeaning, formatRestriction } from "../domain/units.ts";
 import { DiversionBadge } from "./DiversionBadge.tsx";
@@ -107,7 +108,7 @@ export function ClosureDetail({ closure: c, provenance, onClose }: Props) {
           <Facts>
             <Fact label="Source">{SOURCE[c.source]}</Fact>
             <Fact label="NH data from">{formatDateTime(provenance.capturedAt)}</Fact>
-            <Fact label="Data status">{provenance.kind === "live" ? "Live" : `${provenance.label}, not live`}</Fact>
+            <Fact label="Data status">{provenance.kind === "live" ? "Live" : NOT_LIVE_TEXT}</Fact>
             <Fact label="NH reference">Situation {c.situationId}</Fact>
           </Facts>
         </Section>

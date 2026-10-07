@@ -1,4 +1,4 @@
-import { freshnessLine, formatTime } from "../domain/dataStatus.ts";
+import { freshnessLine, formatTime, lastUpdatedLine, NOT_LIVE_TEXT, OFFICIAL_SOURCE_URL } from "../domain/dataStatus.ts";
 import type { ClosuresState } from "../hooks/useClosures.ts";
 
 export type ThemeChoice = "light" | "dark";
@@ -64,23 +64,10 @@ function DataStatus({ data, now }: { data: ClosuresState; now: Date }) {
   const provenance = data.snapshot?.provenance;
   if (!provenance) return <span className="text-[14px] text-muted">{data.loadError ? "No data loaded" : "Loading data status"}</span>;
   const live = provenance.kind === "live";
-  const { freshness, text } = freshnessLine(provenance.capturedAt, now);
   // Phones and tablets: status and an icon-only Refresh share one row; the "Checked" time shows on desktop only.
   return (
     <div className="flex items-center gap-2 lg:flex-wrap">
-      <div
-        className={`flex min-w-0 items-stretch overflow-hidden rounded-[4px] border max-lg:flex-1 ${live ? "border-line" : "border-sign"}`}
-        role="status"
-        aria-label={`${live ? "Live data" : `${provenance.label}, not live data`}. ${text}`}
-      >
-        {!live && <span className="hazard-stripe w-3 shrink-0" aria-hidden="true" />}
-        <span className="flex flex-wrap items-center gap-x-2 px-2.5 py-1 text-[14px]">
-          <strong className={live ? "" : "text-ink dark:text-sign"}>{live ? "Live data" : `${provenance.label}, not live`}</strong>
-          <span className={FRESHNESS_TONE[freshness]} data-freshness={freshness}>
-            {text}
-          </span>
-        </span>
-      </div>
+      {live ? <LiveStatus capturedAt={provenance.capturedAt} now={now} /> : <NotLiveStatus capturedAt={provenance.capturedAt} now={now} />}
       <button
         type="button"
         onClick={data.refresh}
@@ -92,6 +79,56 @@ function DataStatus({ data, now }: { data: ClosuresState; now: Date }) {
         <span className="max-lg:sr-only">{data.isRefreshing ? "Refreshing…" : "Refresh"}</span>
       </button>
       {data.lastSuccessAt !== null && <span className="text-[13px] text-muted max-lg:hidden">Checked {formatTime(data.lastSuccessAt)}</span>}
+    </div>
+  );
+}
+
+function LiveStatus({ capturedAt, now }: { capturedAt: string; now: Date }) {
+  const { freshness, text } = freshnessLine(capturedAt, now);
+  return (
+    <div className="flex min-w-0 items-stretch overflow-hidden rounded-[4px] border border-line max-lg:flex-1" role="status" aria-label={`Live data. ${text}`}>
+      <span className="flex flex-wrap items-center gap-x-2 px-2.5 py-1 text-[14px]">
+        <strong>Live data</strong>
+        <span className={FRESHNESS_TONE[freshness]} data-freshness={freshness}>
+          {text}
+        </span>
+      </span>
+    </div>
+  );
+}
+
+/**
+ * Two short lines, so the banner stays compact beside the search box on desktop: when the data is from, then what it is. The link
+ * takes taps across 48px (CLAUDE.md) but negative margins keep its line as short as the text; the banner doesn't clip overflow,
+ * so the taller tap area isn't cut off at its edge.
+ */
+function NotLiveStatus({ capturedAt, now }: { capturedAt: string; now: Date }) {
+  const { freshness, updated, warning } = lastUpdatedLine(capturedAt, now);
+  return (
+    <div className="flex min-w-0 items-stretch rounded-[4px] border border-sign max-lg:flex-1">
+      <span className="hazard-stripe w-3 shrink-0 rounded-l-[3px]" aria-hidden="true" />
+      <div
+        className="min-w-0 px-2.5 py-1 text-[14px] leading-snug"
+        role="status"
+        aria-label={`Data last updated: ${updated}.${warning ? ` ${warning}` : ""} ${NOT_LIVE_TEXT}`}
+      >
+        <p className={FRESHNESS_TONE[freshness]} data-freshness={freshness}>
+          <span className="font-normal text-muted">Data last updated:</span> <time dateTime={capturedAt} className="font-bold text-ink">{updated}</time>
+          {warning && <> {warning}</>}
+        </p>
+        <p className="flex flex-wrap items-center gap-x-3">
+          <strong className="text-ink dark:text-sign">{NOT_LIVE_TEXT}</strong>
+          <a
+            href={OFFICIAL_SOURCE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="-mb-3 -mt-4 inline-flex min-h-12 items-center font-bold text-motorway underline decoration-2 underline-offset-2 hover:no-underline dark:text-sign"
+          >
+            Check official source<span aria-hidden="true">&nbsp;→</span>
+            <span className="sr-only"> (National Highways, opens in a new tab)</span>
+          </a>
+        </p>
+      </div>
     </div>
   );
 }
