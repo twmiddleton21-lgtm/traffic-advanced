@@ -5,12 +5,23 @@ import { RoadShield } from "./RoadShield.tsx";
 
 interface Props {
   closures: TrafficClosure[];
+  /** No closures at all on the chosen day (not just none matching the filters). */
+  emptyDay: boolean;
   selectedId: string | null;
   onSelect: (id: string) => void;
   onClearFilters: () => void;
 }
 
-export function ClosureList({ closures, selectedId, onSelect, onClearFilters }: Props) {
+export function ClosureList({ closures, emptyDay, selectedId, onSelect, onClearFilters }: Props) {
+  if (emptyDay) {
+    // A quiet day is a valid answer, not an error.
+    return (
+      <div className="px-4 py-10 text-center" role="status">
+        <p className="font-bold">No closures scheduled for this day</p>
+        <p className="mt-1 text-[14px] text-muted">Choose another date to see its closures.</p>
+      </div>
+    );
+  }
   if (closures.length === 0) {
     return (
       <div className="px-4 py-10 text-center">

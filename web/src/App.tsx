@@ -2,7 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppHeader, type ThemeChoice } from "./components/AppHeader.tsx";
 import { ClosureDetail } from "./components/ClosureDetail.tsx";
 import { ClosureList } from "./components/ClosureList.tsx";
+import { DateSelector } from "./components/DateSelector.tsx";
 import { FilterBar } from "./components/FilterBar.tsx";
+import { appliesOnDay, clampDay, closuresOnDay, firstDayFor, selectableDays, selectionOnDay, ukDayKey, type DayKey } from "./domain/closureDates.ts";
 import { refreshNotice } from "./domain/dataStatus.ts";
 import { applyFilters, type FilterId } from "./domain/filters.ts";
 import { useClosures } from "./hooks/useClosures.ts";
@@ -32,8 +34,35 @@ export function App() {
   const drawerModal = !wide && drawerOpen;
 
   const closures = useMemo(() => data?.closures ?? [], [data]);
-  const visible = useMemo(() => applyFilters(closures, filter, query), [closures, filter, query]);
-  const selected = closures.find((c) => c.id === selectedId) ?? null;
+  // The chosen day (UK calendar date) decides what the map AND the list show. Null means today, which follows the clock; a chosen
+  // day is kept inside the days on offer, so it moves to today after midnight and stays valid when a newer snapshot arrives.
+  const today = ukDayKey(now);
+  const [chosenDay, setChosenDay] = useState<DayKey | null>(null);
+  const days = useMemo(() => selectableDays(closures, today), [closures, today]);
+  const day = clampDay(chosenDay, days);
+  // One derived view of the snapshot for the day: map, list, counts and filter chips all use it. The snapshot isn't changed or
+  // fetched again.
+  const dayClosures = useMemo(() => closuresOnDay(closures, day), [closures, day]);
+  const visible = useMemo(() => applyFilters(dayClosures, filter, query), [dayClosures, filter, query]);
+  const selectedClosure = closures.find((c) => c.id === selectedId) ?? null;
+  // Details only for a closure on the chosen day's map and list.
+  const selected = selectedClosure && appliesOnDay(selectedClosure.window, day) ? selectedClosure : null;
+
+  const changeDay = (next: DayKey) => {
+    setChosenDay(next);
+    setSelectedId((id) => selectionOnDay(closures, id, next));
+  };
+
+  // A link to one closure (?closure=…) opens on the first day it applies on, once the data has arrived.
+  const [linkResolved, setLinkResolved] = useState(false);
+  if (!linkResolved && data) {
+    setLinkResolved(true);
+    if (selectedClosure && !appliesOnDay(selectedClosure.window, day)) {
+      const linkedDay = firstDayFor(selectedClosure, days);
+      if (linkedDay) setChosenDay(linkedDay);
+      else setSelectedId(null);
+    }
+  }
 
   // Keep the selected closure in the URL so a link opens it.
   useEffect(() => {
@@ -113,7 +142,7 @@ export function App() {
     });
   }, []);
 
-  const count = data ? (visible.length === closures.length ? `${closures.length}` : `${visible.length} of ${closures.length}`) : null;
+  const count = data ? (visible.length === dayClosures.length ? `${dayClosures.length}` : `${visible.length} of ${dayClosures.length}`) : null;
 
   return (
     <div className="flex h-full flex-col">
@@ -126,6 +155,8 @@ export function App() {
           {notice}
         </p>
       )}
+
+      {data && <DateSelector days={days} selected={day} today={today} onSelect={changeDay} inert={drawerModal} />}
 
       <main className="relative flex min-h-0 flex-1">
         <aside
@@ -167,7 +198,7 @@ export function App() {
                 className="h-11 w-full rounded-[4px] border border-line bg-bg px-3 text-[16px] text-ink placeholder:text-muted"
               />
             </label>
-            {data && <FilterBar closures={closures} query={query} active={filter} onChange={setFilter} />}
+            {data && <FilterBar closures={dayClosures} query={query} active={filter} onChange={setFilter} />}
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
             {isLoading && <p className="px-4 py-6 text-muted">Loading closures…</p>}
@@ -183,6 +214,7 @@ export function App() {
             {data && (
               <ClosureList
                 closures={visible}
+                emptyDay={dayClosures.length === 0}
                 selectedId={selectedId}
                 onSelect={selectFromList}
                 onClearFilters={() => {
