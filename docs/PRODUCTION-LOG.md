@@ -1,10 +1,30 @@
 # Production log
 
 Public URL: https://traffic-advanced.twmiddleton21.workers.dev (Cloudflare Workers, workers.dev). R2 bucket: `traffic-advanced-snapshots`
-(location hint weur). Worker version `dcdd6680-f66d-451d-9c52-d135a169b5ce`, deployed 2026-10-07 21:28:47 UTC from `main`
-`a516cd2dc0cb8c9ab8730feccd5d670171108bb5` (all deployments: see "Worker deployments" below).
+(location hint weur). Worker version `160046f5-c009-44a2-a497-927c89c2bc33`, deployed 2026-10-07 23:24:55 UTC from `main`
+`068936c17d8562e77e3d271c1a4b781a65b4b6e7` (all deployments: see "Worker deployments" below).
 
-## Current state (recorded 2026-10-07 21:32 UTC, after the PR #7 deployment)
+## Current state (recorded 2026-10-07 23:28 UTC, after the PR #9 deployment)
+
+| | Live |
+|---|---|
+| Worker version | `160046f5-c009-44a2-a497-927c89c2bc33` (100%), deployed 2026-10-07 23:24:55 UTC |
+| Snapshot version | `20261007T230604Z-1d901c092718` (published by scheduled Ingest run #10, see "Scheduled ingestion") |
+| NH data captured | 2026-10-07 23:06:04 UTC |
+| `publishedAt` in pointer | 2026-10-07 23:08:58 UTC |
+| Closures | 796 (A 162, B 5, D 629) |
+| Junctions | 596 |
+| closures.json SHA-256 | `fcc8551bfb4c81cf72638aff489e3f70c1f1c70f936ed2c395e7c8ad04f3cbac` |
+| junctions.json SHA-256 | `0bcf38dabd69c9720d339da4fb4963d002f96ac59f9fbc54423f3e905ea60df3` |
+| provenance.json SHA-256 | `d05a15c43a44e2ab5a6deccfa6028b17f86d1038a1db2f60da62a577dde01fd3` |
+| `current.json` pointer SHA-256 | `89e5cad2c7176fe8c573d998f757c5d963883a138cd7db546f7bf3b8fcc9cb01` |
+| Rules-freeze hash | `f42c7e22e47b5642…` (unchanged) |
+| Captures | `2026-10-07T2304Z-open`, `2026-10-07T2306Z-nh-api` |
+| Provenance kind | `development-snapshot` (still not labelled live, by design; docs/INGESTION.md) |
+
+Read from the R2 `current.json` pointer (read-only) and the live `/api/version`, `/api/closures` and `/api/junctions` after the deployment.
+
+## State after the PR #7 deployment (recorded 2026-10-07 21:32 UTC)
 
 | | Live |
 |---|---|
@@ -54,6 +74,7 @@ version: `npx wrangler rollback <version-id>`. Only on the owner's instruction.
 | `66b05e74-768f-463b-872b-be4dbfea3d1d` | 2026-10-06 16:46:13 | `67ea1cf` | Map location control (PR #1), CI workflow (PR #2), sharp override for GHSA-wq5f-xc86-pv6w (PR #3) |
 | `eca30767-3f8f-46be-93b2-7df80858422b` | 2026-10-06 19:28:09 | `c6f5c2e` | Premium responsive UI (PR #5) |
 | `dcdd6680-f66d-451d-9c52-d135a169b5ce` | 2026-10-07 21:28:47 | `a516cd2` | Data-status banner and official source link (PR #7) |
+| `160046f5-c009-44a2-a497-927c89c2bc33` | 2026-10-07 23:24:55 | `068936c` | Closures date selector (PR #9) |
 
 ### 2026-10-06 16:46 UTC: map location control
 
@@ -107,6 +128,40 @@ security-header changes.
   phone-sized browser window could be opened in this session.
 - **Not yet checked on a real device:** the banner and the link's tap target on a phone and a tablet.
 
+### 2026-10-07 23:24 UTC: closures date selector (PR #9)
+
+PR #9 merged 2026-10-07 23:20:49 UTC with a normal merge commit, `068936c17d8562e77e3d271c1a4b781a65b4b6e7` (parents `bea9ac6` and
+`47dab60`). A date selector under the header picks one UK calendar day (Europe/London), defaulting to today; the map, closures list,
+count and filter chips then show only the closures whose `[start, end)` window overlaps that day, so an overnight closure appears on both
+days it covers. The days offered run from today to the latest closure **start** date in the loaded snapshot (not the latest end, which
+long-running works stretch into 2027), held as the range's two ends so no list of every day is ever built. Seven dates from 768px up, three
+on phones. Changing the day filters the snapshot already loaded: no new API request, no download. Web UI only: no matcher, ingestion, R2,
+scheduler, snapshot, API or cache changes.
+
+- Deployed 2026-10-07 23:24:55 UTC (Wrangler's timestamp; 00:24 UK time on 8 October).
+- Before deploying, on `main` `068936c`: `npm ci`, typecheck, lint, `npm test` (383/383),
+  build, `npm audit` (0 vulnerabilities), the rules-freeze test (15/15), `git diff --check` and `npm run worker:check` (bindings
+  `SNAPSHOTS` and `ASSETS` only) all passed. Since the previous deployment (`a516cd2`) only `docs/PRODUCTION-LOG.md` and the date-selector
+  files under `web/src` had changed. CI passed on PR #9 (run 37698746785) and on the merge commit (run 37701744633).
+- Wrangler uploaded 3 changed static files (`index.html`, `index-D0_feQO8.js`, `index-CU-IF0PP.css`); the live page, script and stylesheet
+  were byte-identical to the local build. The R2 `current.json` pointer was byte-identical before and after (SHA-256 `89e5cad2…cb01`), the
+  live snapshot stayed `20261007T230604Z-1d901c092718` (796 closures), and no ingestion run was triggered. That snapshot was published by
+  scheduled Ingest run #10 before the deployment, not by the deployment.
+- Checked live: `/`, `/api/version`, `/api/closures` and `/api/junctions` 200; conditional requests with the `ETag` returned 304 on all
+  three APIs; CSP, `X-Frame-Options`, HSTS, `nosniff`, `Referrer-Policy` and `Permissions-Policy` still sent; no 5xx, 1102 or CPU-limit
+  errors.
+- Checked live (desktop Chrome, 1440px, dark theme): the selector opened on "Today, Thursday 8 October 2026" (the UK date); 7 dates shown;
+  date buttons and arrows 48px; the range ran 8 to 21 October with the previous arrow disabled on today and the next arrow on 21 October;
+  each day's count matched its list (for example 149, 145, 83, 29); the map showed visibly fewer closures on Sunday 11 October (29) than
+  on Tuesday 20 October (128); no API request while changing days; no horizontal overflow. The data-status banner, the official National
+  Highways link and the location control were unchanged.
+- Phone widths weren't checked on the live site: the production page can't be framed (`X-Frame-Options: DENY`) and phone-width frames of a
+  local build wouldn't load in this session's browser. During PR #9, a local dev server showed 3 dates with 48px targets and no overflow at
+  360, 390 and 414px (before its last commit, which changed only how the dates are worked out, not the layout).
+- The empty-day message ("No closures scheduled for this day") is covered by automated tests but wasn't seen live: every day in the
+  current range has closures.
+- **Not yet checked on a real device:** the date selector on a phone and a tablet.
+
 ## Scheduled ingestion
 
 The hourly schedule (`17 * * * *` UTC, `.github/workflows/ingest.yml`) reached `main` at 2026-10-06 11:39:22 UTC (`4fb67e4`), but GitHub
@@ -126,6 +181,8 @@ incident). Meanwhile the live data went stale and the app labelled it so.
   `main` `9aaee3c`: #6 started 2026-10-06 23:03:07, #7 2026-10-07 02:22:28, #8 10:14:14, #9 17:25:58 (UTC). Run #9 published the current
   snapshot. So the schedule runs, but GitHub creates runs for only some hourly slots (none since 17:25 UTC at the time of recording), even
   though the banner says "Updated hourly". No manual run since #4.
+- **Update (recorded 2026-10-07 23:28 UTC):** scheduled Ingest run #10 (run 37700098112, `main` `bea9ac6`) started 23:04:23 UTC,
+  succeeded, and published `20261007T230604Z-1d901c092718` (796 closures), the current snapshot. No further run had appeared by 23:28 UTC.
 
 ## First live state (recorded 2026-10-06, post-live review)
 
