@@ -4,7 +4,7 @@ import { ClosureDetail } from "./components/ClosureDetail.tsx";
 import { ClosureList } from "./components/ClosureList.tsx";
 import { DateSelector } from "./components/DateSelector.tsx";
 import { FilterBar } from "./components/FilterBar.tsx";
-import { appliesOnDay, clampDay, closuresOnDay, firstDayFor, selectableDays, selectionOnDay, ukDayKey, type DayKey } from "./domain/closureDates.ts";
+import { appliesOnDay, clampDay, closuresOnDay, firstDayFor, selectableRange, selectionOnDay, ukDayKey, type DayKey } from "./domain/closureDates.ts";
 import { refreshNotice } from "./domain/dataStatus.ts";
 import { applyFilters, type FilterId } from "./domain/filters.ts";
 import { useClosures } from "./hooks/useClosures.ts";
@@ -38,8 +38,8 @@ export function App() {
   // day is kept inside the days on offer, so it moves to today after midnight and stays valid when a newer snapshot arrives.
   const today = ukDayKey(now);
   const [chosenDay, setChosenDay] = useState<DayKey | null>(null);
-  const days = useMemo(() => selectableDays(closures, today), [closures, today]);
-  const day = clampDay(chosenDay, days);
+  const range = useMemo(() => selectableRange(closures, today), [closures, today]);
+  const day = clampDay(chosenDay, range);
   // One derived view of the snapshot for the day: map, list, counts and filter chips all use it. The snapshot isn't changed or
   // fetched again.
   const dayClosures = useMemo(() => closuresOnDay(closures, day), [closures, day]);
@@ -58,7 +58,7 @@ export function App() {
   if (!linkResolved && data) {
     setLinkResolved(true);
     if (selectedClosure && !appliesOnDay(selectedClosure.window, day)) {
-      const linkedDay = firstDayFor(selectedClosure, days);
+      const linkedDay = firstDayFor(selectedClosure, range);
       if (linkedDay) setChosenDay(linkedDay);
       else setSelectedId(null);
     }
@@ -156,7 +156,7 @@ export function App() {
         </p>
       )}
 
-      {data && <DateSelector days={days} selected={day} today={today} onSelect={changeDay} inert={drawerModal} />}
+      {data && <DateSelector range={range} selected={day} today={today} onSelect={changeDay} inert={drawerModal} />}
 
       <main className="relative flex min-h-0 flex-1">
         <aside

@@ -1,5 +1,5 @@
 import { useRef, useState, useSyncExternalStore } from "react";
-import { dayLabels, visibleStart, type DayKey } from "../domain/closureDates.ts";
+import { addDays, dayCount, dayIndex, dayLabels, daysFrom, visibleStart, type DayKey, type DayRange } from "../domain/closureDates.ts";
 
 /** Seven dates from Tailwind's `md` width (48rem) up, three on phones. Keep in step with the `md:` classes below. */
 const SEVEN_QUERY = "(min-width: 48rem)";
@@ -10,8 +10,8 @@ const subscribe = (onChange: () => void) => {
 };
 
 interface Props {
-  /** The days on offer, consecutive, from today (domain/closureDates.ts selectableDays). */
-  days: DayKey[];
+  /** The days on offer, from today (domain/closureDates.ts selectableRange). Only the shown run is ever turned into dates. */
+  range: DayRange;
   selected: DayKey;
   today: DayKey;
   onSelect: (day: DayKey) => void;
@@ -23,22 +23,23 @@ interface Props {
  * Which day's closures the map and list show. A row of date buttons (seven on wider screens, three on phones with the chosen day
  * in the middle) between previous/next day buttons. One choice from a set, so the same radio pattern as the filter chips.
  */
-export function DateSelector({ days, selected, today, onSelect, inert }: Props) {
+export function DateSelector({ range, selected, today, onSelect, inert }: Props) {
   const seven = useSyncExternalStore(subscribe, () => window.matchMedia(SEVEN_QUERY).matches);
-  const index = Math.max(0, days.indexOf(selected));
-  const size = Math.min(seven ? 7 : 3, days.length);
+  const total = dayCount(range);
+  const index = Math.min(Math.max(0, dayIndex(range, selected)), total - 1);
+  const size = Math.min(seven ? 7 : 3, total);
   // Desktop keeps the row still while the chosen day is in view; phones keep the chosen day in the middle.
   const [start, setStart] = useState(0);
-  const shownStart = visibleStart(days.length, size, index, seven ? "keep" : "center", start);
+  const shownStart = visibleStart(total, size, index, seven ? "keep" : "center", start);
   if (shownStart !== start) setStart(shownStart);
-  const shown = days.slice(shownStart, shownStart + size);
+  const shown = daysFrom(range, shownStart, size);
 
   // An arrow that becomes disabled can't keep focus: move it to the chosen date instead of losing it.
   const group = useRef<HTMLDivElement>(null);
   const step = (by: -1 | 1) => {
     const next = index + by;
-    onSelect(days[next]!);
-    if (next === 0 || next === days.length - 1) requestAnimationFrame(() => group.current?.querySelector<HTMLElement>('[aria-checked="true"]')?.focus());
+    onSelect(addDays(selected, by));
+    if (next === 0 || next === total - 1) requestAnimationFrame(() => group.current?.querySelector<HTMLElement>('[aria-checked="true"]')?.focus());
   };
 
   return (
@@ -82,7 +83,7 @@ export function DateSelector({ days, selected, today, onSelect, inert }: Props) 
           );
         })}
       </div>
-      <StepButton direction="next" disabled={index === days.length - 1} onClick={() => step(1)} />
+      <StepButton direction="next" disabled={index === total - 1} onClick={() => step(1)} />
     </div>
   );
 }

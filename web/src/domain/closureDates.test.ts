@@ -1,14 +1,20 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import type { TrafficClosure } from "../../../shared/api/closures.ts";
+import { closuresSnapshotSchema, type TrafficClosure } from "../../../shared/api/closures.ts";
 import { developmentSnapshotSource } from "../data/trafficService.ts";
 import {
   addDays,
   appliesOnDay,
   clampDay,
   closuresOnDay,
+  dayCount,
+  dayFromNumber,
+  dayIndex,
   dayLabels,
+  dayNumber,
+  daysFrom,
   firstDayFor,
-  selectableDays,
+  selectableRange,
   selectionOnDay,
   ukDayKey,
   visibleStart,
@@ -101,42 +107,46 @@ describe("which closures apply on a UK calendar day ([start, end) overlaps the d
 
 describe("the days the selector offers", () => {
   it("run from today (UK) through the latest date any closure STARTS", () => {
-    const days = selectableDays([overnight, threeDays, later], "2026-10-07");
-    expect(days[0]).toBe("2026-10-07");
-    expect(days.at(-1)).toBe("2026-10-12");
-    expect(days).toHaveLength(6);
+    const range = selectableRange([overnight, threeDays, later], "2026-10-07");
+    expect(range).toEqual({ first: "2026-10-07", last: "2026-10-12" });
+    expect(dayCount(range)).toBe(6);
+    expect(daysFrom(range, 0, 7)).toEqual(["2026-10-07", "2026-10-08", "2026-10-09", "2026-10-10", "2026-10-11", "2026-10-12"]);
   });
 
   it("a long-running closure's 2027 end does not extend the range; only its start counts", () => {
-    expect(selectableDays([overnight, later, longRunning], "2026-10-07").at(-1)).toBe("2026-10-12");
+    expect(selectableRange([overnight, later, longRunning], "2026-10-07").last).toBe("2026-10-12");
     // Its start (January 2026) is before today, so it adds no days either.
-    expect(selectableDays([longRunning], "2026-10-07")).toEqual(["2026-10-07"]);
+    expect(selectableRange([longRunning], "2026-10-07")).toEqual({ first: "2026-10-07", last: "2026-10-07" });
   });
 
   it("start before today: earlier days are not offered", () => {
-    expect(selectableDays([threeDays], "2026-10-08")).toEqual(["2026-10-08"]);
+    expect(selectableRange([threeDays], "2026-10-08")).toEqual({ first: "2026-10-08", last: "2026-10-08" });
   });
 
   it("with no closure starting today or later, only today is offered (no invented dates)", () => {
-    expect(selectableDays([], "2026-10-07")).toEqual(["2026-10-07"]);
+    expect(selectableRange([], "2026-10-07")).toEqual({ first: "2026-10-07", last: "2026-10-07" });
   });
 
   it("count each calendar day once across the clock change", () => {
     const afterChange = at("after", "2026-10-27T20:00:00.00Z", "2026-10-28T06:00:00.00Z");
-    expect(selectableDays([afterChange], "2026-10-24")).toEqual(["2026-10-24", "2026-10-25", "2026-10-26", "2026-10-27"]);
+    const range = selectableRange([afterChange], "2026-10-24");
+    expect(dayCount(range)).toBe(4);
+    expect(daysFrom(range, 0, 7)).toEqual(["2026-10-24", "2026-10-25", "2026-10-26", "2026-10-27"]);
   });
 
   it("on the real development snapshot: every offered day is consecutive, and starts at today", () => {
     const today = ukDayKey(Math.min(...real.map((c) => Date.parse(c.window.start))));
-    const days = selectableDays(real, today);
-    expect(days[0]).toBe(today);
+    const range = selectableRange(real, today);
+    expect(range.first).toBe(today);
+    expect(range.last).toBe(ukDayKey(Math.max(...real.map((c) => Date.parse(c.window.start)))));
+    const days = daysFrom(range, 0, dayCount(range));
+    expect(days).toHaveLength(dayCount(range));
     days.slice(1).forEach((d, i) => expect(d).toBe(addDays(days[i]!, 1)));
-    expect(days.at(-1)).toBe(ukDayKey(Math.max(...real.map((c) => Date.parse(c.window.start)))));
   });
 });
 
 describe("the selected day", () => {
-  const days = ["2026-10-07", "2026-10-08", "2026-10-09"];
+  const days = { first: "2026-10-07", last: "2026-10-09" };
 
   it("defaults to today, the first offered day", () => {
     expect(clampDay(null, days)).toBe("2026-10-07");
@@ -189,9 +199,12 @@ describe("the selected closure when the day changes", () => {
   });
 
   it("a link to a later closure opens on the first offered day it applies on", () => {
-    const days = selectableDays(all, "2026-10-07");
-    expect(firstDayFor(later, days)).toBe("2026-10-12");
-    expect(firstDayFor(at("gone", "2026-10-01T19:00:00Z", "2026-10-02T05:00:00Z"), days)).toBeNull();
+    const range = selectableRange(all, "2026-10-07");
+    expect(firstDayFor(later, range)).toBe("2026-10-12");
+    expect(firstDayFor(overnight, range)).toBe("2026-10-07");
+    expect(firstDayFor(at("started", "2026-10-05T19:00:00Z", "2026-10-09T05:00:00Z"), range)).toBe("2026-10-07"); // began before today
+    expect(firstDayFor(at("gone", "2026-10-01T19:00:00Z", "2026-10-02T05:00:00Z"), range)).toBeNull();
+    expect(firstDayFor(at("after", "2026-10-20T19:00:00Z", "2026-10-21T05:00:00Z"), range)).toBeNull(); // after the last day
   });
 });
 
@@ -204,5 +217,59 @@ describe("labels", () => {
       dateShort: "7 Oct",
       full: "Wednesday 7 October 2026",
     });
+  });
+});
+
+describe("far-future dates in the data can't exhaust the page", () => {
+  // Schema-valid (Date.parse accepts them) but absurd: the latest date JavaScript can represent, and a five-digit year.
+  const farFuture = at("far-future", "+275760-09-12T00:00:00.000Z", "+275760-09-13T00:00:00.000Z");
+  const year10000 = at("year-10000", "+010000-01-01T09:00:00.000Z", "+010000-01-02T09:00:00.000Z");
+
+  it("such closures pass the API schema, so the date code itself must cope", () => {
+    const parsed = closuresSnapshotSchema.safeParse({
+      provenance: { kind: "live", label: "Live", capturedAt: "2026-10-07T17:27:17Z", sources: [], notes: [] },
+      generatedAt: "2026-10-07T17:27:17Z",
+      closures: [farFuture, year10000],
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it("the range is held as its two ends however far it reaches; only the shown run is ever listed", () => {
+    const range = selectableRange([overnight, year10000, farFuture], "2026-10-07");
+    expect(range).toEqual({ first: "2026-10-07", last: "275760-09-12" });
+    expect(dayCount(range)).toBeGreaterThan(99_000_000); // about 100 million days on offer...
+    const started = performance.now();
+    const shown = daysFrom(range, dayIndex(range, "275760-09-12") - 6, 7); // ...but the last week is 7 dates
+    expect(shown).toHaveLength(7);
+    expect(shown.at(-1)).toBe("275760-09-12");
+    expect(daysFrom(range, 0, 3)).toEqual(["2026-10-07", "2026-10-08", "2026-10-09"]);
+    expect(daysFrom(range, dayCount(range) + 5, 7)).toEqual([]); // past the end: nothing, never a negative length
+    expect(performance.now() - started).toBeLessThan(50);
+  });
+
+  it("selecting and stepping at the far end is arithmetic, not listing", () => {
+    const range = selectableRange([farFuture], "2026-10-07");
+    const last = clampDay("275760-09-13", range); // beyond the last day
+    expect(last).toBe("275760-09-12");
+    expect(clampDay("999999-01-01", range)).toBe("2026-10-07"); // no date can represent it: back to today
+    expect(dayIndex(range, last)).toBe(dayCount(range) - 1);
+    expect(addDays(last, -1)).toBe("275760-09-11");
+    expect(visibleStart(dayCount(range), 3, dayIndex(range, last), "center")).toBe(dayCount(range) - 3);
+  });
+
+  it("five-digit years order after four-digit ones (compared as day numbers, not text)", () => {
+    expect(dayNumber("10000-01-01")).toBeGreaterThan(dayNumber("9999-12-31"));
+    expect(dayFromNumber(dayNumber("10000-01-01"))).toBe("10000-01-01");
+    expect(addDays("9999-12-31", 1)).toBe("10000-01-01");
+    expect(selectableRange([year10000], "2026-10-07").last).toBe("10000-01-01");
+    expect(appliesOnDay(year10000.window, "10000-01-01")).toBe(true);
+    expect(appliesOnDay(year10000.window, "2026-10-07")).toBe(false);
+  });
+
+  it("the selector only ever builds the shown dates from the range", () => {
+    const selector = readFileSync("web/src/components/DateSelector.tsx", "utf8");
+    expect(selector).toMatch(/daysFrom\(range, shownStart, size\)/);
+    expect(selector).not.toMatch(/selectableDays|days\.slice|days\.indexOf/);
+    expect(readFileSync("web/src/domain/closureDates.ts", "utf8")).not.toMatch(/selectableDays/);
   });
 });
