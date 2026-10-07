@@ -38,6 +38,9 @@ describe("not-live banner", () => {
     const header = readFileSync("web/src/components/AppHeader.tsx", "utf8");
     expect(header).toMatch(/href=\{OFFICIAL_SOURCE_URL\}\s+target="_blank"\s+rel="noopener noreferrer"/);
     expect(header).toMatch(/Check official source<span aria-hidden="true">&nbsp;→<\/span>/);
+    // A 48px tap target (CLAUDE.md), inside a banner that doesn't clip it.
+    expect(header).toMatch(/rel="noopener noreferrer"\s+className="[^"]*\bmin-h-12\b/);
+    expect(header.slice(header.indexOf("function NotLiveStatus"))).not.toMatch(/overflow-hidden/);
   });
 
   it("no longer calls the data a development snapshot anywhere in the UI", () => {

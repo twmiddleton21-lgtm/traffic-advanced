@@ -97,12 +97,16 @@ function LiveStatus({ capturedAt, now }: { capturedAt: string; now: Date }) {
   );
 }
 
-/** Two short lines, so the banner stays compact beside the search box on desktop: when the data is from, then what it is. */
+/**
+ * Two short lines, so the banner stays compact beside the search box on desktop: when the data is from, then what it is. The link
+ * takes taps across 48px (CLAUDE.md) but negative margins keep its line as short as the text; the banner doesn't clip overflow,
+ * so the taller tap area isn't cut off at its edge.
+ */
 function NotLiveStatus({ capturedAt, now }: { capturedAt: string; now: Date }) {
   const { freshness, updated, warning } = lastUpdatedLine(capturedAt, now);
   return (
-    <div className="flex min-w-0 items-stretch overflow-hidden rounded-[4px] border border-sign max-lg:flex-1">
-      <span className="hazard-stripe w-3 shrink-0" aria-hidden="true" />
+    <div className="flex min-w-0 items-stretch rounded-[4px] border border-sign max-lg:flex-1">
+      <span className="hazard-stripe w-3 shrink-0 rounded-l-[3px]" aria-hidden="true" />
       <div
         className="min-w-0 px-2.5 py-1 text-[14px] leading-snug"
         role="status"
@@ -118,7 +122,7 @@ function NotLiveStatus({ capturedAt, now }: { capturedAt: string; now: Date }) {
             href={OFFICIAL_SOURCE_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="-my-1 inline-flex items-center py-1 font-bold text-motorway underline decoration-2 underline-offset-2 hover:no-underline dark:text-sign"
+            className="-mb-3 -mt-4 inline-flex min-h-12 items-center font-bold text-motorway underline decoration-2 underline-offset-2 hover:no-underline dark:text-sign"
           >
             Check official source<span aria-hidden="true">&nbsp;→</span>
             <span className="sr-only"> (National Highways, opens in a new tab)</span>
