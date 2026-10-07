@@ -1,10 +1,29 @@
 # Production log
 
 Public URL: https://traffic-advanced.twmiddleton21.workers.dev (Cloudflare Workers, workers.dev). R2 bucket: `traffic-advanced-snapshots`
-(location hint weur). Worker version `eca30767-3f8f-46be-93b2-7df80858422b`, deployed 2026-10-06 19:28:09 UTC from `main`
-`c6f5c2e39babd5cdbe43d2d300973c1c7e54a258` (all deployments: see "Worker deployments" below).
+(location hint weur). Worker version `dcdd6680-f66d-451d-9c52-d135a169b5ce`, deployed 2026-10-07 21:28:47 UTC from `main`
+`a516cd2dc0cb8c9ab8730feccd5d670171108bb5` (all deployments: see "Worker deployments" below).
 
-## Current state (recorded 2026-10-06 19:35 UTC, after the PR #5 deployment)
+## Current state (recorded 2026-10-07 21:32 UTC, after the PR #7 deployment)
+
+| | Live |
+|---|---|
+| Worker version | `dcdd6680-f66d-451d-9c52-d135a169b5ce` (100%), deployed 2026-10-07 21:28:47 UTC |
+| Snapshot version | `20261007T172717Z-6fe1508b16c2` (published by scheduled Ingest run #9, see "Scheduled ingestion") |
+| NH data captured | 2026-10-07 17:27:17 UTC |
+| `publishedAt` in pointer | 2026-10-07 17:30:09 UTC |
+| Closures | 738 (A 146, B 4, D 588) |
+| closures.json SHA-256 | `40c8f051df1278b924dba84acac1a05e743ef2ba8c2c6872c40419450e06bfd3` |
+| junctions.json SHA-256 | `ac9cf1b20123d49bf22e3c97673edbf4547fa0aa8d4aaab0c2fad0adec756c27` |
+| provenance.json SHA-256 | `425ec7474f81c5036ad12695b0c5f592b8fa45d49d87fe2234c0172d8b2f5431` |
+| `current.json` pointer SHA-256 | `51dda7f553f3545a9f58a0793ef44f1cda9e075ddd019577e811a3f0b6fa92b7` |
+| Rules-freeze hash | `f42c7e22e47b5642…` (unchanged) |
+| Captures | `2026-10-07T1726Z-open`, `2026-10-07T1727Z-nh-api` |
+| Provenance kind | `development-snapshot` (still not labelled live, by design; docs/INGESTION.md) |
+
+Read from the R2 `current.json` pointer (read-only) and the live `/api/version` and `/api/closures` at 21:32 UTC.
+
+## State after the PR #5 deployment (recorded 2026-10-06 19:35 UTC)
 
 | | Live |
 |---|---|
@@ -34,6 +53,7 @@ version: `npx wrangler rollback <version-id>`. Only on the owner's instruction.
 | `ec447b2d-6e50-413c-a652-aafbb1b67115` | 2026-10-06 06:41:33 | | First controlled production deployment: Day-1 snapshot |
 | `66b05e74-768f-463b-872b-be4dbfea3d1d` | 2026-10-06 16:46:13 | `67ea1cf` | Map location control (PR #1), CI workflow (PR #2), sharp override for GHSA-wq5f-xc86-pv6w (PR #3) |
 | `eca30767-3f8f-46be-93b2-7df80858422b` | 2026-10-06 19:28:09 | `c6f5c2e` | Premium responsive UI (PR #5) |
+| `dcdd6680-f66d-451d-9c52-d135a169b5ce` | 2026-10-07 21:28:47 | `a516cd2` | Data-status banner and official source link (PR #7) |
 
 ### 2026-10-06 16:46 UTC: map location control
 
@@ -62,6 +82,31 @@ for accessibility, and new app icons. Web UI only: no matcher, ingestion, R2, sc
 - **Not yet checked on real devices** (not production failures; the checks above ran in desktop Chrome): touch pinch and pan, page zoom on
   iOS and Android, safe-area insets on a notched phone, browser toolbar show/hide, live rotation, and a screen-reader pass.
 
+### 2026-10-07 21:28 UTC: data-status banner (PR #7)
+
+PR #7 merged 2026-10-07 21:24:34 UTC with a normal merge commit, `a516cd2dc0cb8c9ab8730feccd5d670171108bb5` (parents `9aaee3c` and
+`787074a`). The not-live banner's "Development snapshot, not live" became "Data last updated: …" (the snapshot's capture time), "Data is not live. Updated hourly."
+and a "Check official source →" link to the National Highways Road Closure Report
+(`https://nationalhighways.co.uk/roads-and-travel/live-travel-updates/road-closure-report/`, new tab, `rel="noopener noreferrer"`, 48px tap
+target). The closure details' "Data status" uses the same not-live wording. Web UI only: no matcher, ingestion, R2, scheduler, API or
+security-header changes.
+
+- Before deploying, on `main` `a516cd2`: `npm ci`, `npm run check` (346/346 tests), the rules-freeze test (15/15), `npm audit`
+  (0 vulnerabilities) and `npm run worker:check` (bindings `SNAPSHOTS` and `ASSETS` only) all passed. CI passed on PR #7 (run 37687791932)
+  and on the merge commit (run 37689185130).
+- Wrangler uploaded 3 changed static files (`index.html`, `index-UT09Ak2Z.js`, `index-XtUQv51Z.css`); the live page, script and stylesheet
+  were byte-identical to the local build. The R2 `current.json` pointer was byte-identical before and after (SHA-256 `51dda7f5…`), the
+  live snapshot stayed `20261007T172717Z-6fe1508b16c2` (738 closures), and no ingestion run was triggered.
+- Checked live (desktop Chrome, 1440px, dark theme): the banner shows the three lines above; the link goes exactly to the Road Closure
+  Report, opens in a new tab and isn't shown as a raw URL; its tap target is 48px tall; "Development snapshot" no longer appears; no
+  horizontal overflow; the search box isn't squeezed. The data was over an hour old, so the banner correctly showed the stale state
+  ("Offline/stale. Check official sources.", in the stale colour). CSP, `X-Frame-Options` and HSTS were still sent.
+- Phone and tablet widths were measured before merging, on a local dev server from the same source: at 360, 768, 1024 and 1280px the link
+  kept a 48px tap target and there was no horizontal overflow. (At 1024px the search box is narrow in the stale state, as it already was
+  before PR #7.) The same check on the live site wasn't possible: the production page can't be framed (`X-Frame-Options: DENY`) and no
+  phone-sized browser window could be opened in this session.
+- **Not yet checked on a real device:** the banner and the link's tap target on a phone and a tablet.
+
 ## Scheduled ingestion
 
 The hourly schedule (`17 * * * *` UTC, `.github/workflows/ingest.yml`) reached `main` at 2026-10-06 11:39:22 UTC (`4fb67e4`), but GitHub
@@ -77,6 +122,10 @@ incident). Meanwhile the live data went stale and the app labelled it so.
 - **To watch (not a confirmed failure):** as of 19:35 UTC no run had appeared yet for the 19:17 slot (still none when rechecked at
   19:40 UTC). GitHub can delay scheduled runs, so this may still start late. If slots keep being missed, disabling and re-enabling the
   workflow in the Actions UI is the next step (a settings change, owner's decision).
+- **Update (recorded 2026-10-07 21:32 UTC):** no run appeared for the 2026-10-06 19:17 slot. Scheduled runs since then, all successful on
+  `main` `9aaee3c`: #6 started 2026-10-06 23:03:07, #7 2026-10-07 02:22:28, #8 10:14:14, #9 17:25:58 (UTC). Run #9 published the current
+  snapshot. So the schedule runs, but GitHub creates runs for only some hourly slots (none since 17:25 UTC at the time of recording), even
+  though the banner says "Updated hourly". No manual run since #4.
 
 ## First live state (recorded 2026-10-06, post-live review)
 
