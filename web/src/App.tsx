@@ -35,11 +35,11 @@ export function App() {
 
   const closures = useMemo(() => data?.closures ?? [], [data]);
   // The chosen day (UK calendar date) decides what the map AND the list show. Null means today, which follows the clock; a chosen
-  // day is kept inside the days on offer, so it moves to today after midnight and stays valid when a newer snapshot arrives.
+  // day is kept inside the days on offer (yesterday onwards), so it stays valid after midnight and when a newer snapshot arrives.
   const today = ukDayKey(now);
   const [chosenDay, setChosenDay] = useState<DayKey | null>(null);
   const range = useMemo(() => selectableRange(closures, today), [closures, today]);
-  const day = clampDay(chosenDay, range);
+  const day = clampDay(chosenDay, range, today);
   // One derived view of the snapshot for the day: map, list, counts and filter chips all use it. The snapshot isn't changed or
   // fetched again.
   const dayClosures = useMemo(() => closuresOnDay(closures, day), [closures, day]);

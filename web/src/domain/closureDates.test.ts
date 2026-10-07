@@ -106,38 +106,38 @@ describe("which closures apply on a UK calendar day ([start, end) overlaps the d
 });
 
 describe("the days the selector offers", () => {
-  it("run from today (UK) through the latest date any closure STARTS", () => {
+  it("run from yesterday (UK) through the latest date any closure STARTS", () => {
     const range = selectableRange([overnight, threeDays, later], "2026-10-07");
-    expect(range).toEqual({ first: "2026-10-07", last: "2026-10-12" });
-    expect(dayCount(range)).toBe(6);
-    expect(daysFrom(range, 0, 7)).toEqual(["2026-10-07", "2026-10-08", "2026-10-09", "2026-10-10", "2026-10-11", "2026-10-12"]);
+    expect(range).toEqual({ first: "2026-10-06", last: "2026-10-12" });
+    expect(dayCount(range)).toBe(7);
+    expect(daysFrom(range, 0, 7)).toEqual(["2026-10-06", "2026-10-07", "2026-10-08", "2026-10-09", "2026-10-10", "2026-10-11", "2026-10-12"]);
   });
 
   it("a long-running closure's 2027 end does not extend the range; only its start counts", () => {
     expect(selectableRange([overnight, later, longRunning], "2026-10-07").last).toBe("2026-10-12");
     // Its start (January 2026) is before today, so it adds no days either.
-    expect(selectableRange([longRunning], "2026-10-07")).toEqual({ first: "2026-10-07", last: "2026-10-07" });
+    expect(selectableRange([longRunning], "2026-10-07")).toEqual({ first: "2026-10-06", last: "2026-10-07" });
   });
 
-  it("start before today: earlier days are not offered", () => {
-    expect(selectableRange([threeDays], "2026-10-08")).toEqual({ first: "2026-10-08", last: "2026-10-08" });
+  it("days before yesterday are not offered", () => {
+    expect(selectableRange([threeDays], "2026-10-08")).toEqual({ first: "2026-10-07", last: "2026-10-08" });
   });
 
-  it("with no closure starting today or later, only today is offered (no invented dates)", () => {
-    expect(selectableRange([], "2026-10-07")).toEqual({ first: "2026-10-07", last: "2026-10-07" });
+  it("with no closure starting today or later, only yesterday and today are offered (no invented dates)", () => {
+    expect(selectableRange([], "2026-10-07")).toEqual({ first: "2026-10-06", last: "2026-10-07" });
   });
 
   it("count each calendar day once across the clock change", () => {
     const afterChange = at("after", "2026-10-27T20:00:00.00Z", "2026-10-28T06:00:00.00Z");
     const range = selectableRange([afterChange], "2026-10-24");
-    expect(dayCount(range)).toBe(4);
-    expect(daysFrom(range, 0, 7)).toEqual(["2026-10-24", "2026-10-25", "2026-10-26", "2026-10-27"]);
+    expect(dayCount(range)).toBe(5);
+    expect(daysFrom(range, 0, 7)).toEqual(["2026-10-23", "2026-10-24", "2026-10-25", "2026-10-26", "2026-10-27"]);
   });
 
-  it("on the real development snapshot: every offered day is consecutive, and starts at today", () => {
+  it("on the real development snapshot: every offered day is consecutive, and starts at yesterday", () => {
     const today = ukDayKey(Math.min(...real.map((c) => Date.parse(c.window.start))));
     const range = selectableRange(real, today);
-    expect(range.first).toBe(today);
+    expect(range.first).toBe(addDays(today, -1));
     expect(range.last).toBe(ukDayKey(Math.max(...real.map((c) => Date.parse(c.window.start)))));
     const days = daysFrom(range, 0, dayCount(range));
     expect(days).toHaveLength(dayCount(range));
@@ -146,16 +146,41 @@ describe("the days the selector offers", () => {
 });
 
 describe("the selected day", () => {
-  const days = { first: "2026-10-07", last: "2026-10-09" };
+  const today = "2026-10-07";
+  const days = selectableRange([at("to-9th", "2026-10-09T19:00:00Z", "2026-10-10T05:00:00Z")], today); // 6 Oct to 9 Oct
 
-  it("defaults to today, the first offered day", () => {
-    expect(clampDay(null, days)).toBe("2026-10-07");
+  it("defaults to today, not to the first offered day (yesterday)", () => {
+    expect(days.first).toBe("2026-10-06");
+    expect(clampDay(null, days, today)).toBe("2026-10-07");
+  });
+
+  it("yesterday is selectable", () => {
+    expect(clampDay("2026-10-06", days, today)).toBe("2026-10-06");
   });
 
   it("never goes before the first or after the last offered day", () => {
-    expect(clampDay("2026-10-06", days)).toBe("2026-10-07");
-    expect(clampDay("2026-10-12", days)).toBe("2026-10-09");
-    expect(clampDay("2026-10-08", days)).toBe("2026-10-08");
+    expect(clampDay("2026-10-05", days, today)).toBe("2026-10-06");
+    expect(clampDay("2026-10-12", days, today)).toBe("2026-10-09");
+    expect(clampDay("2026-10-08", days, today)).toBe("2026-10-08");
+  });
+
+  it("stepping back from today reaches yesterday, where the previous-day arrow is disabled (it is the first day)", () => {
+    const yesterday = addDays(today, -1);
+    expect(clampDay(yesterday, days, today)).toBe("2026-10-06");
+    expect(dayIndex(days, today)).toBe(1);
+    expect(dayIndex(days, yesterday)).toBe(0);
+    expect(readFileSync("web/src/components/DateSelector.tsx", "utf8")).toMatch(/direction="previous" disabled=\{index === 0\}/);
+  });
+
+  it("phones open with yesterday, today (chosen, in the middle) and tomorrow", () => {
+    expect(daysFrom(days, visibleStart(dayCount(days), 3, dayIndex(days, today), "center"), 3)).toEqual(["2026-10-06", "2026-10-07", "2026-10-08"]);
+  });
+
+  it("an overnight closure from yesterday evening shows on yesterday and on today", () => {
+    const lastNight = at("last-night", "2026-10-06T19:00:00.00Z", "2026-10-07T05:00:00.00Z"); // Tue 20:00 to Wed 06:00 UK
+    expect(closuresOnDay([lastNight], "2026-10-06")).toEqual([lastNight]);
+    expect(closuresOnDay([lastNight], "2026-10-07")).toEqual([lastNight]);
+    expect(closuresOnDay([lastNight], "2026-10-08")).toEqual([]);
   });
 
   it("today is the UK date, which can differ from the UTC date", () => {
@@ -202,7 +227,7 @@ describe("the selected closure when the day changes", () => {
     const range = selectableRange(all, "2026-10-07");
     expect(firstDayFor(later, range)).toBe("2026-10-12");
     expect(firstDayFor(overnight, range)).toBe("2026-10-07");
-    expect(firstDayFor(at("started", "2026-10-05T19:00:00Z", "2026-10-09T05:00:00Z"), range)).toBe("2026-10-07"); // began before today
+    expect(firstDayFor(at("started", "2026-10-05T19:00:00Z", "2026-10-09T05:00:00Z"), range)).toBe("2026-10-06"); // began before yesterday: its first offered day is yesterday
     expect(firstDayFor(at("gone", "2026-10-01T19:00:00Z", "2026-10-02T05:00:00Z"), range)).toBeNull();
     expect(firstDayFor(at("after", "2026-10-20T19:00:00Z", "2026-10-21T05:00:00Z"), range)).toBeNull(); // after the last day
   });
@@ -236,22 +261,22 @@ describe("far-future dates in the data can't exhaust the page", () => {
 
   it("the range is held as its two ends however far it reaches; only the shown run is ever listed", () => {
     const range = selectableRange([overnight, year10000, farFuture], "2026-10-07");
-    expect(range).toEqual({ first: "2026-10-07", last: "275760-09-12" });
+    expect(range).toEqual({ first: "2026-10-06", last: "275760-09-12" });
     expect(dayCount(range)).toBeGreaterThan(99_000_000); // about 100 million days on offer...
     const started = performance.now();
     const shown = daysFrom(range, dayIndex(range, "275760-09-12") - 6, 7); // ...but the last week is 7 dates
     expect(shown).toHaveLength(7);
     expect(shown.at(-1)).toBe("275760-09-12");
-    expect(daysFrom(range, 0, 3)).toEqual(["2026-10-07", "2026-10-08", "2026-10-09"]);
+    expect(daysFrom(range, 0, 3)).toEqual(["2026-10-06", "2026-10-07", "2026-10-08"]);
     expect(daysFrom(range, dayCount(range) + 5, 7)).toEqual([]); // past the end: nothing, never a negative length
     expect(performance.now() - started).toBeLessThan(50);
   });
 
   it("selecting and stepping at the far end is arithmetic, not listing", () => {
     const range = selectableRange([farFuture], "2026-10-07");
-    const last = clampDay("275760-09-13", range); // beyond the last day
+    const last = clampDay("275760-09-13", range, "2026-10-07"); // beyond the last day
     expect(last).toBe("275760-09-12");
-    expect(clampDay("999999-01-01", range)).toBe("2026-10-07"); // no date can represent it: back to today
+    expect(clampDay("999999-01-01", range, "2026-10-07")).toBe("2026-10-07"); // no date can represent it: back to today
     expect(dayIndex(range, last)).toBe(dayCount(range) - 1);
     expect(addDays(last, -1)).toBe("275760-09-11");
     expect(visibleStart(dayCount(range), 3, dayIndex(range, last), "center")).toBe(dayCount(range) - 3);

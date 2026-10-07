@@ -10,7 +10,7 @@ const subscribe = (onChange: () => void) => {
 };
 
 interface Props {
-  /** The days on offer, from today (domain/closureDates.ts selectableRange). Only the shown run is ever turned into dates. */
+  /** The days on offer, from yesterday (domain/closureDates.ts selectableRange). Only the shown run is ever turned into dates. */
   range: DayRange;
   selected: DayKey;
   today: DayKey;
