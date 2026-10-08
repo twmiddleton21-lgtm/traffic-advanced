@@ -1,14 +1,14 @@
 # Production log
 
 Public URL: https://traffic-advanced.twmiddleton21.workers.dev (Cloudflare Workers, workers.dev). R2 bucket: `traffic-advanced-snapshots`
-(location hint weur). Worker version `160046f5-c009-44a2-a497-927c89c2bc33`, deployed 2026-10-07 23:24:55 UTC from `main`
-`068936c17d8562e77e3d271c1a4b781a65b4b6e7` (all deployments: see "Worker deployments" below).
+(location hint weur). Worker version `665cb5d4-3885-447e-9fb6-231b9326fa7f`, deployed 2026-10-08 00:09:07 UTC from `main`
+`6dfe9eb49f34f3c1ab0eeee4ce4ff9c665f14cba` (all deployments: see "Worker deployments" below).
 
-## Current state (recorded 2026-10-07 23:28 UTC, after the PR #9 deployment)
+## Current state (recorded 2026-10-07 23:28 UTC after the PR #9 deployment; Worker updated 2026-10-08 00:09 UTC by the PR #11 deployment, data unchanged)
 
 | | Live |
 |---|---|
-| Worker version | `160046f5-c009-44a2-a497-927c89c2bc33` (100%), deployed 2026-10-07 23:24:55 UTC |
+| Worker version | `665cb5d4-3885-447e-9fb6-231b9326fa7f` (100%), deployed 2026-10-08 00:09:07 UTC |
 | Snapshot version | `20261007T230604Z-1d901c092718` (published by scheduled Ingest run #10, see "Scheduled ingestion") |
 | NH data captured | 2026-10-07 23:06:04 UTC |
 | `publishedAt` in pointer | 2026-10-07 23:08:58 UTC |
@@ -75,6 +75,7 @@ version: `npx wrangler rollback <version-id>`. Only on the owner's instruction.
 | `eca30767-3f8f-46be-93b2-7df80858422b` | 2026-10-06 19:28:09 | `c6f5c2e` | Premium responsive UI (PR #5) |
 | `dcdd6680-f66d-451d-9c52-d135a169b5ce` | 2026-10-07 21:28:47 | `a516cd2` | Data-status banner and official source link (PR #7) |
 | `160046f5-c009-44a2-a497-927c89c2bc33` | 2026-10-07 23:24:55 | `068936c` | Closures date selector (PR #9) |
+| `665cb5d4-3885-447e-9fb6-231b9326fa7f` | 2026-10-08 00:09:07 | `6dfe9eb` | Date selector can go back to yesterday (PR #11) |
 
 ### 2026-10-06 16:46 UTC: map location control
 
@@ -161,6 +162,31 @@ scheduler, snapshot, API or cache changes.
 - The empty-day message ("No closures scheduled for this day") is covered by automated tests but wasn't seen live: every day in the
   current range has closures.
 - **Not yet checked on a real device:** the date selector on a phone and a tablet.
+
+### 2026-10-08 00:09 UTC: date selector reaches yesterday (PR #11)
+
+PR #11 merged 2026-10-08 00:05:17 UTC with a normal merge commit, `6dfe9eb49f34f3c1ab0eeee4ce4ff9c665f14cba` (parents `66e1273` and
+`4a13754`). The days on offer now start at **yesterday** (Europe/London) instead of today, because closures that start yesterday evening
+often run into this morning; **today** stays the default. The last day, the `[start, end)` filtering and the two-ends range are unchanged.
+Web UI only (4 files under `web/src`): no matcher, ingestion, R2, scheduler, snapshot, API or cache changes.
+
+- Deployed 2026-10-08 00:09:07 UTC (Wrangler's timestamp; 01:09 UK time).
+- Before deploying, on `main` `6dfe9eb`: `npm ci`, typecheck, lint, `npm test` (387/387), build, `npm audit` (0 vulnerabilities), the
+  rules-freeze test (15/15), `git diff --check` and `npm run worker:check` (bindings `SNAPSHOTS` and `ASSETS` only) all passed. Since the
+  previous deployment (`068936c`) only `docs/PRODUCTION-LOG.md` and the four PR #11 files had changed. CI passed on PR #11 (run
+  37705186530) and on the merge commit (run 37705857461).
+- Wrangler uploaded 2 changed static files; the live script (`index-BfGsEVyK.js`) was byte-identical to the local build. The R2
+  `current.json` pointer was byte-identical before and after (SHA-256 `89e5cad2…cb01`), the live snapshot stayed
+  `20261007T230604Z-1d901c092718` (796 closures), and no ingestion run was triggered (the latest was still scheduled run #10).
+- Checked live: `/`, `/api/version`, `/api/closures` and `/api/junctions` 200; conditional requests with the `ETag` returned 304 on all
+  three APIs; the security headers still sent on the app and the API; no 5xx, 1102 or CPU-limit errors.
+- Checked live (desktop Chrome, 1440px): the selector opened on "Today, Thursday 8 October 2026" (the UK date) with Wednesday 7 October
+  to its left. Selecting 7 October worked (the count and list changed from 149 to 79) and disabled the previous-day arrow; the next-day
+  arrow went back to today (149), and stepping back from today reached 7 October. Buttons and arrows 48px; no horizontal overflow; no API
+  request while changing days.
+- Yesterday shows the closures still in force when the snapshot was captured (ingestion drops closures that had already ended), such as
+  last night's closures that ran into this morning, not every closure that ran yesterday.
+- **Not yet checked:** phone widths on the live site, and real devices.
 
 ## Scheduled ingestion
 
