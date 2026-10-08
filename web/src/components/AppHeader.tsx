@@ -1,5 +1,6 @@
 import { freshnessLine, formatTime, lastUpdatedLine, NOT_LIVE_TEXT, OFFICIAL_SOURCE_URL } from "../domain/dataStatus.ts";
 import type { ClosuresState } from "../hooks/useClosures.ts";
+import { BrandLogo } from "./BrandLogo.tsx";
 
 export type ThemeChoice = "light" | "dark";
 
@@ -22,10 +23,7 @@ export function AppHeader({ data, now, query, onQueryChange, theme, onToggleThem
       inert={inert}
       className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-b border-line bg-surface pb-2 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-[max(0.5rem,env(safe-area-inset-top))] lg:gap-x-5 lg:gap-y-2 lg:py-2.5"
     >
-      <div className="flex items-center gap-2.5">
-        <BrandMark />
-        <h1 className="text-[17px] font-bold tracking-tight lg:text-[19px]">Traffic Advanced</h1>
-      </div>
+      <BrandLogo />
 
       <div className="order-last basis-full lg:order-none lg:basis-auto">
         <DataStatus data={data} now={now} />
@@ -138,18 +136,6 @@ function RefreshIcon({ spinning }: { spinning: boolean }) {
     <svg viewBox="0 0 16 16" className={`size-4 ${spinning ? "motion-safe:animate-spin" : ""}`} aria-hidden="true">
       <path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
       <path d="M12.5 1.5v3.5H9" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function BrandMark() {
-  // A closed carriageway with a diversion arc: the product in one glyph.
-  return (
-    <svg viewBox="0 0 32 32" className="size-8" aria-hidden="true">
-      <rect width="32" height="32" rx="5" fill="#0b4f9c" />
-      <path d="M6 22 H26" stroke="#fff" strokeWidth="3" strokeLinecap="round" />
-      <path d="M13 22 V16" stroke="#c8102e" strokeWidth="3" strokeLinecap="round" />
-      <path d="M7 19 C9 8, 23 8, 25 19" fill="none" stroke="#ffd200" strokeWidth="3" strokeLinecap="round" />
     </svg>
   );
 }

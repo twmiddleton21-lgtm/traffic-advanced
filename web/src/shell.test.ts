@@ -27,10 +27,17 @@ describe("app shell: page zoom", () => {
 describe("app icons", () => {
   const links = [...html.matchAll(/<link rel="(icon|apple-touch-icon)"[^>]*href="\/([^"]+)"[^>]*>/g)].map((m) => ({ tag: m[0], rel: m[1]!, file: m[2]! }));
 
-  it("are square PNGs in web/public, at the sizes they declare", () => {
-    expect(links.map((l) => l.rel).sort()).toEqual(["apple-touch-icon", "icon"]);
+  it("are an SVG favicon plus square PNGs in web/public, at the sizes they declare", () => {
+    expect(links.map((l) => `${l.rel} ${l.file}`).sort()).toEqual([
+      "apple-touch-icon apple-touch-icon.png",
+      "icon favicon-16x16.png",
+      "icon favicon-32x32.png",
+      "icon favicon.svg",
+    ]);
+    expect(links.find((l) => l.file === "favicon.svg")?.tag).toMatch(/type="image\/svg\+xml"/);
     for (const { tag, rel, file } of links) {
       expect(existsSync(`web/public/${file}`), file).toBe(true);
+      if (file.endsWith(".svg")) continue;
       const { width, height } = pngSize(`web/public/${file}`);
       expect(width, file).toBe(height);
       const declared = tag.match(/sizes="(\d+)x(\d+)"/);
@@ -39,9 +46,14 @@ describe("app icons", () => {
     }
   });
 
-  it("are the only icon files published: the master artwork stays out of web/public, and the superseded icon is gone", () => {
-    expect(readdirSync("web/public").filter((f) => /\.(png|jpe?g|svg|ico|webp)$/i.test(f)).sort()).toEqual(["apple-touch-icon.png", "banner.jpg", "favicon-32.png"]);
-    expect(existsSync("web/brand/appicon.jpg")).toBe(true);
-    expect(html).not.toMatch(/href="\/appicon/);
+  it("are the only images published: the masters stay in web/brand, and the superseded branding is gone", () => {
+    expect(readdirSync("web/public").filter((f) => /\.(png|jpe?g|svg|ico|webp)$/i.test(f)).sort()).toEqual([
+      "apple-touch-icon.png",
+      "banner.svg",
+      "favicon-16x16.png",
+      "favicon-32x32.png",
+      "favicon.svg",
+    ]);
+    for (const old of ["web/public/banner.jpg", "web/public/favicon-32.png", "web/brand/appicon.jpg"]) expect(existsSync(old), old).toBe(false);
   });
 });
