@@ -38,7 +38,7 @@ describe("splash", () => {
   it("is in the page from the first paint, shows the banner at its own aspect ratio, and keeps the app inert until ready", () => {
     const html = readFileSync("web/index.html", "utf8");
     expect(html).toMatch(/<div id="splash" class="ta-splash" role="status">/);
-    expect(html).toMatch(/<img class="ta-splash-banner" src="\/banner\.jpg" width="1168" height="784" alt="Traffic Advanced"/);
+    expect(html).toMatch(/<img class="ta-splash-banner" src="\/banner\.svg" width="1186" height="400" alt="Traffic Advanced"/);
     expect(html).toMatch(/<div id="root" inert><\/div>/);
     // No inline styles: the CSP allows the bundled stylesheet only.
     expect(html).not.toMatch(/<style|style="/);

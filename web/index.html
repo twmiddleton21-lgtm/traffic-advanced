@@ -8,9 +8,11 @@
     <meta name="description" content="Road closures and official HGV diversions on England's motorways and major A roads." />
     <meta name="theme-color" content="#15191d" />
     <title>Traffic Advanced</title>
-    <!-- Square derivatives of the owner's icon artwork (master: web/brand/appicon.jpg, not published), centred on its white
-         background, never cropped. -->
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <!-- Rendered from the brand masters in web/brand (README there). Browsers that support SVG favicons use favicon.svg; the PNGs
+         are fallbacks. The touch icon is full bleed, as iOS rounds the corners itself. -->
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <script>
       // Apply the saved or system theme before first paint (no flash of the wrong theme).
@@ -28,7 +30,7 @@
          view. The app removes it as soon as the closures and the first map render are ready (web/src/splash.ts). -->
     <div id="splash" class="ta-splash" role="status">
       <div class="ta-splash-inner">
-        <img class="ta-splash-banner" src="/banner.jpg" width="1168" height="784" alt="Traffic Advanced" fetchpriority="high" />
+        <img class="ta-splash-banner" src="/banner.svg" width="1186" height="400" alt="Traffic Advanced" fetchpriority="high" />
         <div class="ta-splash-progress" aria-hidden="true"></div>
         <p class="ta-splash-text">Loading closures and map</p>
       </div>

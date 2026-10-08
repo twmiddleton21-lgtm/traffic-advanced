@@ -106,8 +106,8 @@ body {
   }
 }
 
-/* Splash (web/index.html, removed by web/src/splash.ts): the banner as a sign plate on the theme background, with a quiet progress
-   line. The banner's white margin outside its frame is what the rounded corners trim, never the logo. */
+/* Splash (web/index.html, removed by web/src/splash.ts): the banner (web/brand/traffic-advanced-banner.svg) as a sign plate on the
+   theme background, with a quiet progress line. */
 .ta-splash {
   position: fixed;
   inset: 0;
@@ -133,11 +133,12 @@ body {
 }
 .ta-splash-banner {
   display: block;
-  /* Never wider than the screen allows, nor taller than 55% of it in landscape; height follows the image's own 1168:784 ratio. */
+  /* Never wider than the screen allows, nor taller than 55% of it in landscape; height follows the image's own 1186:400 ratio. */
   width: min(80vw, 420px);
-  width: min(80vw, 420px, calc(55dvh * 1168 / 784));
+  width: min(80vw, 420px, calc(55dvh * 1186 / 400));
   height: auto;
-  border-radius: 14px;
+  /* The banner's own corner radius (28 of its 1186 by 400 units), so the shadow follows its corners at every size. */
+  border-radius: 2.361% / 7%;
   box-shadow: 0 1px 3px rgb(0 0 0 / 0.12);
 }
 .ta-splash-progress {
