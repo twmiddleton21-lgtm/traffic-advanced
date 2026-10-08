@@ -69,10 +69,11 @@ export interface DayRange {
 }
 
 /**
- * The days the selector offers: from today through the latest date any closure STARTS in this snapshot. Not the latest end:
- * some planned works carry overall windows of a year or more, and the snapshot only lists closures starting within its capture
- * horizon, so later days would look falsely quiet. Long-running closures still apply on every offered day they overlap.
- * With no closure starting today or later, only today is offered. One pass over the closures; nothing is listed per day.
+ * The days the selector offers: from yesterday through the latest date any closure STARTS in this snapshot (and at least today).
+ * Yesterday, because closures that start yesterday evening often run into this morning. Not the latest end: some planned works
+ * carry overall windows of a year or more, and the snapshot only lists closures starting within its capture horizon, so later days
+ * would look falsely quiet. Long-running closures still apply on every offered day they overlap. One pass over the closures;
+ * nothing is listed per day.
  */
 export function selectableRange(closures: TrafficClosure[], today: DayKey): DayRange {
   let last = dayNumber(today);
@@ -82,7 +83,7 @@ export function selectableRange(closures: TrafficClosure[], today: DayKey): DayR
     const day = ukDayNumber(start);
     if (day > last) last = day;
   }
-  return { first: today, last: dayFromNumber(last) };
+  return { first: addDays(today, -1), last: dayFromNumber(last) };
 }
 
 /** How many days the range offers (arithmetic only). */
@@ -91,12 +92,15 @@ export const dayCount = (range: DayRange): number => dayNumber(range.last) - day
 /** Position of a day within the range (0 = first). */
 export const dayIndex = (range: DayRange, day: DayKey): number => dayNumber(day) - dayNumber(range.first);
 
-/** The selected day kept inside the range (it moves to today after midnight, or into a newer snapshot's range). */
-export function clampDay(day: DayKey | null, range: DayRange): DayKey {
-  if (day === null) return range.first;
-  const n = dayNumber(day);
-  // A day no date can represent falls back to today.
-  if (Number.isNaN(n) || n < dayNumber(range.first)) return range.first;
+/**
+ * The day to show: the chosen day kept inside the range (so after midnight, or with a newer snapshot, it stays valid). No choice
+ * yet means today, the default, even though the range starts a day earlier.
+ */
+export function clampDay(day: DayKey | null, range: DayRange, today: DayKey): DayKey {
+  // No choice, or a day no date can represent: today.
+  const n = day === null ? Number.NaN : dayNumber(day);
+  if (day === null || Number.isNaN(n)) return clampDay(today, range, today);
+  if (n < dayNumber(range.first)) return range.first;
   return n > dayNumber(range.last) ? range.last : day;
 }
 
