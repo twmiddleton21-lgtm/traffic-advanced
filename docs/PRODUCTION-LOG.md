@@ -1,10 +1,30 @@
 # Production log
 
 Public URL: https://traffic-advanced.twmiddleton21.workers.dev (Cloudflare Workers, workers.dev). R2 bucket: `traffic-advanced-snapshots`
-(location hint weur). Worker version `665cb5d4-3885-447e-9fb6-231b9326fa7f`, deployed 2026-10-08 00:09:07 UTC from `main`
-`6dfe9eb49f34f3c1ab0eeee4ce4ff9c665f14cba` (all deployments: see "Worker deployments" below).
+(location hint weur). Worker version `d5dae9fe-0916-4a47-9f33-d9df9f890484`, deployed 2026-10-08 22:02:34 UTC from `main`
+`bb29aec656e21fe8a05282dd86ce0e19afedd38b` (all deployments: see "Worker deployments" below).
 
-## Current state (recorded 2026-10-07 23:28 UTC after the PR #9 deployment; Worker updated 2026-10-08 00:09 UTC by the PR #11 deployment, data unchanged)
+## Current state (recorded 2026-10-08 22:08 UTC, after the PR #13 deployment)
+
+| | Live |
+|---|---|
+| Worker version | `d5dae9fe-0916-4a47-9f33-d9df9f890484` (100%), deployed 2026-10-08 22:02:34 UTC |
+| Snapshot version | `20261008T175408Z-f810b6a76409` (published by scheduled Ingest run #13, see "Scheduled ingestion") |
+| NH data captured | 2026-10-08 17:54:08 UTC |
+| `publishedAt` in pointer | 2026-10-08 17:56:58 UTC |
+| Closures | 739 (A 148, B 4, D 587) |
+| Junctions | 596 |
+| closures.json SHA-256 | `0130a8dc73bdc22fa2daf7d88cfcc8ea904b97e85fed71c87ed6be919dbf2e7e` |
+| junctions.json SHA-256 | `95e19070a286fcf88459d2ba744a6d54e7e1b2a10b448b072dbaa086adf26652` |
+| provenance.json SHA-256 | `0e5480d72e05501f9c5323bf6f9a2675837bce446686fd0f2f951213b8ceea70` |
+| `current.json` pointer SHA-256 | `e39c4c4a5cd85c68bb7a0e4d12077576b417c41b5377284fcf6de083dd1f62c8` |
+| Rules-freeze hash | `f42c7e22e47b5642…` (unchanged) |
+| Captures | `2026-10-08T1752Z-open`, `2026-10-08T1754Z-nh-api` |
+| Provenance kind | `development-snapshot` (still not labelled live, by design; docs/INGESTION.md) |
+
+Read from the R2 `current.json` pointer (read-only) and the live `/api/version`, `/api/closures` and `/api/junctions` around the deployment.
+
+## State after the PR #9 deployment (recorded 2026-10-07 23:28 UTC; Worker updated 2026-10-08 00:09 UTC by the PR #11 deployment, data unchanged)
 
 | | Live |
 |---|---|
@@ -76,6 +96,7 @@ version: `npx wrangler rollback <version-id>`. Only on the owner's instruction.
 | `dcdd6680-f66d-451d-9c52-d135a169b5ce` | 2026-10-07 21:28:47 | `a516cd2` | Data-status banner and official source link (PR #7) |
 | `160046f5-c009-44a2-a497-927c89c2bc33` | 2026-10-07 23:24:55 | `068936c` | Closures date selector (PR #9) |
 | `665cb5d4-3885-447e-9fb6-231b9326fa7f` | 2026-10-08 00:09:07 | `6dfe9eb` | Date selector can go back to yesterday (PR #11) |
+| `d5dae9fe-0916-4a47-9f33-d9df9f890484` | 2026-10-08 22:02:34 | `bb29aec` | Traffic Advanced brand identity (PR #13) |
 
 ### 2026-10-06 16:46 UTC: map location control
 
@@ -188,6 +209,41 @@ Web UI only (4 files under `web/src`): no matcher, ingestion, R2, scheduler, sna
   last night's closures that ran into this morning, not every closure that ran yesterday.
 - **Not yet checked:** phone widths on the live site, and real devices.
 
+### 2026-10-08 22:02 UTC: brand identity (PR #13)
+
+PR #13 merged 2026-10-08 21:56:06 UTC with a normal merge commit, `bb29aec656e21fe8a05282dd86ce0e19afedd38b` (parents `729718f` and
+`fed78a6`). The truck-and-bridge branding was replaced by the approved navy, gold and white motorway badge: an SVG favicon with 16 and
+32px PNG fallbacks, a new Apple touch icon, an inline header logo (badge alone below 360px; the heading is named "Traffic Advanced" for
+screen readers at every width) and an SVG splash banner. The masters are in `web/brand` (README there). No web app manifest was added, so
+the app isn't installable. Web UI and static assets only (27 files under `web/`): no matcher, ingestion, R2, scheduler, snapshot, API,
+Worker configuration, security-header or theme-colour changes.
+
+- Deployed 2026-10-08 22:02:34 UTC (Wrangler's timestamp; 23:02 UK time).
+- Before deploying, on `main` `bb29aec` (clean working tree, level with `origin/main`): `npm ci`, `npm run check` (typecheck, lint,
+  397/397 tests, build), `npm audit` (0 vulnerabilities), the rules-freeze test (15/15), `git diff --check` and the Wrangler dry run
+  (bindings `SNAPSHOTS` and `ASSETS` only) all passed. CI passed on PR #13 (run 37849118982) and on the merge commit (CI run #27).
+- Wrangler uploaded 8 changed static files and kept the existing `SNAPSHOTS` and `ASSETS` bindings. The live `index.html`, script
+  (`index-B3RrpR_f.js`) and stylesheet (`index-1ubtVtAU.css`) were byte-identical to the local build. The R2 `current.json` pointer was
+  byte-identical before and after (SHA-256 `e39c4c4a…62c8`), the live snapshot stayed `20261008T175408Z-f810b6a76409` (739 closures;
+  `/api/version` unchanged), and no ingestion run was triggered (the latest was still scheduled run #13).
+- Checked live on `https://trafficadvanced.uk`: `/`, `/api/version`, `/api/closures` (739 closures) and `/api/junctions` (596) 200;
+  conditional requests with the `ETag` returned 304 on all three APIs; the security headers unchanged on the app and the API (the CSP's
+  script hash still matches `web/public/_headers`). `favicon.svg` and `banner.svg` were served as `image/svg+xml`, `favicon-16x16.png`,
+  `favicon-32x32.png` and `apple-touch-icon.png` as `image/png`, all 200 and byte-identical to the build. The removed `/banner.jpg` and
+  `/favicon-32.png` now get the app page (200, `text/html`), as any unknown path does; nothing references them.
+- Checked live (desktop Chrome, 1440px, dark and light themes): the badge 40px and the wordmark 217×40px ("ADVANCED" gold in dark, navy
+  in light); every header item on one row, the header 70px tall, no horizontal overflow; Chrome used the SVG favicon and the splash loaded
+  `banner.svg`. No failed browser requests or console errors. No 5xx, 1102, Worker exception or CPU-limit errors during the checks (the
+  Worker log captured part of them: 4 requests, all 200).
+- Phone widths were checked against the local production build, not on the live page (it can't be framed, `X-Frame-Options: DENY`, and
+  no phone-sized browser window could be opened). The live files are byte-identical to that build. In it, at 320, 359, 360, 390 and 414px
+  in both themes: badge only below 360px, the 173.6×32px wordmark from 360px, the theme button on the logo row and no horizontal
+  overflow. The splash banner measured 256×86px at 320×568, 312×105px at 390×844 and 420×142px at 1024×768 and 844×390, with nothing
+  cropped.
+- The banner showed "Offline/stale. Check official sources." because the snapshot was captured at 17:54 UTC, over four hours earlier (see
+  "Scheduled ingestion"). That is the existing data's age, not a problem with this deployment.
+- **Not yet checked:** real Safari (iOS and macOS), the Apple touch icon via "Add to Home Screen", and real phones and tablets.
+
 ## Scheduled ingestion
 
 The hourly schedule (`17 * * * *` UTC, `.github/workflows/ingest.yml`) reached `main` at 2026-10-06 11:39:22 UTC (`4fb67e4`), but GitHub
@@ -209,6 +265,10 @@ incident). Meanwhile the live data went stale and the app labelled it so.
   though the banner says "Updated hourly". No manual run since #4.
 - **Update (recorded 2026-10-07 23:28 UTC):** scheduled Ingest run #10 (run 37700098112, `main` `bea9ac6`) started 23:04:23 UTC,
   succeeded, and published `20261007T230604Z-1d901c092718` (796 closures), the current snapshot. No further run had appeared by 23:28 UTC.
+- **Update (recorded 2026-10-08 22:08 UTC):** scheduled runs since then, all successful on `main` `729718f`: #11 (run 37719123270)
+  started 2026-10-08 02:41:43, #12 (run 37764214130) 10:33:09, #13 (run 37819900027) 17:52:21 (UTC). Run #13 published
+  `20261008T175408Z-f810b6a76409` (739 closures), the current snapshot. No further run had appeared by 22:08 UTC, so the data was over
+  four hours old at the PR #13 deployment.
 
 ## First live state (recorded 2026-10-06, post-live review)
 
