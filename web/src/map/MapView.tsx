@@ -19,6 +19,9 @@ import {
   type LocationNotice,
 } from "./location.ts";
 import { closureBounds, closureLines, closureMarkers, confirmedJunctionNames, diversionEnds, ENGLAND_BOUNDS, junctionPoints, selectedRouteLines } from "./layers.ts";
+import type { RestrictionLayer } from "../settings/preferences.ts";
+import type { LayerData } from "../restrictions/useRestrictionData.ts";
+import { EMPTY, layerIds, RESTRICTION_SOURCES, restrictionFeatures, zoneFeatures } from "./restrictionLayers.ts";
 import { baseLabelAdjustments, confirmedJunctionFilter, overlayLayers, roadEmphasisBeforeId, roadEmphasisLayers, selectedFilter, type Theme } from "./style.ts";
 
 /** OpenFreeMap: free, no key, commercial use allowed, attribution included in the style (docs/DATA-SOURCES.md S10). */
@@ -32,11 +35,33 @@ interface Props {
   /** Called whenever the map has finished rendering (MapLibre "idle"): the app's signal that the first view is ready. */
   onIdle?: () => void;
   theme: Theme;
+  /** Restriction overlays: each layer's visibility, its data once loaded, and its map credit (shown while it is on). */
+  restrictions: RestrictionOverlay[];
+  selectedRestrictionId: string | null;
+  onSelectRestriction: (id: string) => void;
+  /** The visible area after each move, for the keyboard-accessible "restrictions in view" list. Never leaves the device. */
+  onViewChange?: (view: MapViewArea) => void;
+  /** Whether the base map failed to load, for Settings' warnings. */
+  onBaseMapError?: (failed: boolean) => void;
 }
 type Latest = { current: Props };
 
+export interface RestrictionOverlay {
+  layer: RestrictionLayer;
+  visible: boolean;
+  data: LayerData | null;
+  attribution: string;
+}
+
+export interface MapViewArea {
+  /** [west, south, east, north] */
+  bounds: [number, number, number, number];
+  centre: [number, number];
+  zoom: number;
+}
+
 export function MapView(props: Props) {
-  const { closures, selected, junctions, theme } = props;
+  const { closures, selected, junctions, theme, restrictions, selectedRestrictionId } = props;
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const styleTheme = useRef(theme);
@@ -116,9 +141,19 @@ export function MapView(props: Props) {
     const stopFolding = foldAttributionLater(map, container.current);
     registerInteractions(map, latest);
     map.on("idle", () => latest.current.onIdle?.());
+    const reportView = () => {
+      const b = map.getBounds();
+      const c = map.getCenter();
+      latest.current.onViewChange?.({ bounds: [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()], centre: [c.lng, c.lat], zoom: map.getZoom() });
+    };
+    map.on("load", reportView);
+    map.on("moveend", reportView);
     map.on("error", (e: ErrorEvent) => {
       // Tile/style failures leave the list usable; tell the user rather than failing silently.
-      if (/style|tile|source/i.test(e.error.message)) setBaseMapError(true);
+      if (/style|tile|source/i.test(e.error.message)) {
+        setBaseMapError(true);
+        latest.current.onBaseMapError?.(true);
+      }
       // Registering a listener replaces MapLibre's own console report, so keep errors (e.g. invalid layers) visible to developers.
       console.error(e.error);
     });
@@ -153,6 +188,13 @@ export function MapView(props: Props) {
     if (!map?.getSource("closures")) return;
     updateData(map, closures, selected, junctions);
   }, [closures, selected, junctions]);
+
+  // Restriction overlays: visibility, data and the selected marker. Closures and their layers are never touched here.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map?.getSource(RESTRICTION_SOURCES.height)) return;
+    applyRestrictions(map, restrictions, selectedRestrictionId);
+  }, [restrictions, selectedRestrictionId]);
 
   // Frame the selected closure with its whole diversion, start to rejoin.
   useEffect(() => {
@@ -252,14 +294,49 @@ function installLayers(map: MapLibreMap, latest: Latest) {
   map.addSource("selected-route", { type: "geojson", data: selectedRouteLines(selected) });
   map.addSource("route-ends", { type: "geojson", data: diversionEnds(selected) });
   map.addSource("junctions", { type: "geojson", data: junctionPoints(junctions) });
+  // Restriction sources start empty and hidden; each carries its credit, which MapLibre shows only while its layers are visible.
+  for (const r of latest.current.restrictions) map.addSource(RESTRICTION_SOURCES[r.layer], { type: "geojson", data: EMPTY, attribution: r.attribution });
+  for (const layer of ["height", "weight", "lez", "ulez"] as const) {
+    if (!map.getSource(RESTRICTION_SOURCES[layer])) map.addSource(RESTRICTION_SOURCES[layer], { type: "geojson", data: EMPTY });
+  }
+  shownData.delete(map);
 
   // Bottom → top; see style.ts for why this order is the label priority.
   for (const layer of overlayLayers()) map.addLayer(layer);
   applySelection(map, selected);
+  applyRestrictions(map, latest.current.restrictions, latest.current.selectedRestrictionId);
+}
+
+/** The data each restriction source last received, so a large file is handed to MapLibre once, not on every render. */
+const shownData = new WeakMap<MapLibreMap, Map<RestrictionLayer, LayerData | null>>();
+
+function applyRestrictions(map: MapLibreMap, overlays: RestrictionOverlay[], selectedId: string | null) {
+  const shown = shownData.get(map) ?? new Map<RestrictionLayer, LayerData | null>();
+  shownData.set(map, shown);
+  for (const o of overlays) {
+    const visible = o.visible && o.data !== null;
+    for (const id of layerIds(o.layer)) map.setLayoutProperty(id, "visibility", visible ? "visible" : "none");
+    if (o.data && shown.get(o.layer) !== o.data) {
+      shown.set(o.layer, o.data);
+      const source = map.getSource<GeoJSONSource>(RESTRICTION_SOURCES[o.layer]);
+      void source?.setData("points" in o.data ? restrictionFeatures(o.data.points) : zoneFeatures(o.data.zones));
+    }
+  }
+  for (const layer of ["height", "weight"] as const) map.setFilter(`restriction-${layer}-selected`, ["==", ["get", "id"], selectedId ?? "__none__"]);
 }
 
 /** Layer-scoped handlers survive style swaps in MapLibre, so they're registered once, not on every "style.load". */
 function registerInteractions(map: MapLibreMap, latest: Latest) {
+  // Restriction markers open their details, unless a closure is under the tap: closures keep priority.
+  for (const layer of ["restriction-height", "restriction-weight"]) {
+    map.on("click", layer, (e) => {
+      if (map.queryRenderedFeatures(e.point, { layers: ["marker", "closure-line", "selected-marker"] }).length > 0) return;
+      const id = e.features?.[0]?.properties?.["id"] as string | undefined;
+      if (id) latest.current.onSelectRestriction(id);
+    });
+    map.on("mouseenter", layer, () => (map.getCanvas().style.cursor = "pointer"));
+    map.on("mouseleave", layer, () => (map.getCanvas().style.cursor = ""));
+  }
   for (const layer of ["marker", "closure-line", "selected-marker"]) {
     map.on("click", layer, (e) => {
       const id = e.features?.[0]?.properties?.["id"] as string | undefined;

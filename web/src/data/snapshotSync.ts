@@ -23,6 +23,8 @@ export interface Synced<T> {
   confirmedAt: number | null;
   /** The latest check or download failed; the shown data is the copy already held. */
   refreshError: Error | null;
+  /** When the shown version was published, from /api/version, once confirmed this visit; null if not known. */
+  publishedAt: string | null;
 }
 
 export interface SnapshotSync<T> {
@@ -40,6 +42,7 @@ export function createSnapshotSync<T extends Snapshot>(options: {
   const now = options.now ?? Date.now;
   let held: { version: string; data: T } | null = null;
   let confirmedAt: number | null = null;
+  let publishedAt: string | null = null;
   let deviceCopyRead = false;
 
   const result = (refreshError: Error | null): Synced<T> => ({
@@ -48,6 +51,7 @@ export function createSnapshotSync<T extends Snapshot>(options: {
     via: confirmedAt === null ? "device-cache" : "api",
     confirmedAt,
     refreshError,
+    publishedAt,
   });
 
   async function readDeviceCopy(): Promise<void> {
@@ -75,6 +79,7 @@ export function createSnapshotSync<T extends Snapshot>(options: {
       }
       if (held?.version === published.version) {
         confirmedAt = now();
+        publishedAt = published.publishedAt;
         return result(null);
       }
 
@@ -91,6 +96,8 @@ export function createSnapshotSync<T extends Snapshot>(options: {
       // The download names its own version (X-Snapshot-Version): if a newer one was published since the check, that is what arrived.
       held = { version: doc.version, data: doc.data };
       confirmedAt = now();
+      // Only the version the check described has a known publication time.
+      publishedAt = doc.version === published.version ? published.publishedAt : null;
       await options.cache.write(options.kind, { version: doc.version, raw: doc.raw });
       return result(null);
     },

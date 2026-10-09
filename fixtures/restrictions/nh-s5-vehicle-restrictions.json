@@ -1,0 +1,85 @@
+{
+ "_source": "NH Network Model (Public), layer 3 (Vehicle_Restriction), open-data capture 2026-10-06T0652Z; 4 of 18 real records. Contains public sector information licensed under the Open Government Licence v3.0.",
+ "features": [
+  {
+   "attributes": {
+    "objectid": 10783,
+    "toid": "osgb4000000008050435",
+    "vehicleid": "059b34b5-6351-4036-8db1-7dd4dc284a53",
+    "restriction": "MH",
+    "description": "Vehicles Exceeding Height 4.9m Prohibited",
+    "measure": 4.9,
+    "unitofmeasure": "M",
+    "globalid": "1dc2c729-47dd-4279-aa51-3f1e08575f7d",
+    "created_user": "esriuk_automation_nh",
+    "created_date": 1791253237792,
+    "last_edited_user": "esriuk_automation_nh",
+    "last_edited_date": 1791253237792
+   },
+   "geometry": {
+    "x": -1.472328,
+    "y": 54.961938
+   }
+  },
+  {
+   "attributes": {
+    "objectid": 10784,
+    "toid": "osgb4000000019593808",
+    "vehicleid": "c6662f5c-1fc1-4309-9441-59ca4a9c07ac",
+    "restriction": "MH",
+    "description": "Vehicles Exceeding Height 4.6m Prohibited",
+    "measure": 4.6,
+    "unitofmeasure": "M",
+    "globalid": "3fff0bd5-dc03-4894-a8e5-09224bf5a906",
+    "created_user": "esriuk_automation_nh",
+    "created_date": 1791253237792,
+    "last_edited_user": "esriuk_automation_nh",
+    "last_edited_date": 1791253237792
+   },
+   "geometry": {
+    "x": -1.402809,
+    "y": 52.530622
+   }
+  },
+  {
+   "attributes": {
+    "objectid": 10785,
+    "toid": "osgb4000000023039587",
+    "vehicleid": "29798e13-ed80-424f-9f5e-d6913eb0066c",
+    "restriction": "MH",
+    "description": "Vehicles Exceeding Height 4.2m Prohibited",
+    "measure": 4.2,
+    "unitofmeasure": "M",
+    "globalid": "60730c92-128c-4272-a9c8-49e581978509",
+    "created_user": "esriuk_automation_nh",
+    "created_date": 1791253237792,
+    "last_edited_user": "esriuk_automation_nh",
+    "last_edited_date": 1791253237792
+   },
+   "geometry": {
+    "x": -1.860277,
+    "y": 51.08517
+   }
+  },
+  {
+   "attributes": {
+    "objectid": 10786,
+    "toid": "osgb4000000025204600",
+    "vehicleid": "6c9d217c-0486-4625-901b-a882b03bad6d",
+    "restriction": "MH",
+    "description": "Vehicles Exceeding Height 15ft 0ins Prohibited",
+    "measure": 4.5,
+    "unitofmeasure": "M",
+    "globalid": "e9938062-2fe2-46cb-be47-5b2eb1a6c48d",
+    "created_user": "esriuk_automation_nh",
+    "created_date": 1791253237792,
+    "last_edited_user": "esriuk_automation_nh",
+    "last_edited_date": 1791253237792
+   },
+   "geometry": {
+    "x": -4.349168,
+    "y": 50.408012
+   }
+  }
+ ]
+}

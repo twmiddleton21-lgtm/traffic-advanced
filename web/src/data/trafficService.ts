@@ -124,3 +124,29 @@ export const trafficService: LiveTrafficApi = liveApiSource(globalThis.location?
 
 /** Development only: used when the API can't supply any data at all. Never replaces data the API has already supplied. */
 export const developmentFallback: TrafficDataSource | null = import.meta.env.DEV ? developmentSnapshotSource : null;
+
+/**
+ * A restriction data file (web/src/restrictions/catalog.ts): a static, content-hashed file from our own origin, fetched only when its
+ * layer is switched on, and validated before the map sees it. The request carries no viewport or location: it is the whole file.
+ */
+export async function getRestrictionFile<T>(url: string, schema: ZodType<T>, signal?: AbortSignal, fetchImpl: typeof fetch = (...args) => fetch(...args), timeoutMs = 30_000): Promise<T> {
+  const timeout = AbortSignal.timeout(timeoutMs);
+  let response: Response;
+  try {
+    response = await fetchImpl(new URL(url, globalThis.location?.origin ?? "http://localhost"), { signal: signal ? AbortSignal.any([signal, timeout]) : timeout });
+  } catch (e) {
+    if (signal?.aborted) throw e;
+    if (timeout.aborted) throw new TrafficApiError("timeout", `Restriction data didn't load within ${Math.round(timeoutMs / 1000)} seconds.`, { cause: e });
+    throw new TrafficApiError("unavailable", "Restriction data can't be loaded. Check your connection.", { cause: e });
+  }
+  if (!response.ok) throw new TrafficApiError("http", `Restriction data couldn't be loaded (error ${response.status}).`);
+  let body: unknown;
+  try {
+    body = await response.json();
+  } catch (e) {
+    throw new TrafficApiError("malformed", "Restriction data couldn't be read, so it isn't shown.", { cause: e });
+  }
+  const parsed = schema.safeParse(body);
+  if (!parsed.success) throw new TrafficApiError("invalid", "Restriction data failed validation, so it isn't shown.", { cause: parsed.error });
+  return parsed.data;
+}

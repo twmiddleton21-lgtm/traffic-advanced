@@ -164,10 +164,12 @@ describe("development fallback (no API data and no device copy)", () => {
   });
 
   it("never replaces API data that is already shown", () => {
-    const synced: Synced<ClosuresSnapshot> = { data: capturedLater(5), version: "v2", via: "api", confirmedAt: 1, refreshError: unavailable() };
+    const synced: Synced<ClosuresSnapshot> = { data: capturedLater(5), version: "v2", via: "api", confirmedAt: 1, refreshError: unavailable(), publishedAt: "2026-10-08T23:26:43.000Z" };
     const state = deriveClosuresState({ data: synced, error: null, isFetching: false, refetch: () => Promise.resolve() }, { data: base, error: null, isFetching: false, refetch: () => Promise.resolve() });
     expect(state.via).toBe("api");
     expect(state.snapshot).toBe(synced.data);
+    // The traffic data's own version and publication time, for Settings (never the app's version).
+    expect(state).toMatchObject({ version: "v2", publishedAt: "2026-10-08T23:26:43.000Z" });
   });
 
   it("without a fallback (production builds), nothing to show is a load error, not an empty map", () => {

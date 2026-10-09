@@ -17,6 +17,8 @@ than 3 months before relying on it. "SRN" = Strategic Road Network (England's mo
 | S8 | NTIS DATEX II (speeds, journey times, events) | ✅ | ✅ | ✅ | *unverified* | *unverified* | subscription | *unverified* | *unverified* | ❓ access route unverified |
 | S9 | TomTom Traffic flow/incident tiles | tiles | n/a | n/a | ❌ | ❌ | ✅ | **200K tiles/month** (pricing page) | TomTom T&Cs | ⚠ optional overlay only |
 | S10 | OpenFreeMap base map | tiles | n/a | n/a | n/a | n/a | ❌ | none stated | OSM ODbL + attribution | ✅ (no SLA) |
+| S11 | TfL open data: height restrictions; LEZ and ULEZ boundaries | ✅ WGS84 + BNG / encoded polylines | n/a | grid ref | n/a | ✅ heights (bands only), London | ❌ none | 500 calls/min/feed | TfL Transport Data Service licence (verified 2026-10-09; registration question open) | ✅ restriction layers (docs/RESTRICTIONS.md) |
+| S12 | OpenStreetMap restriction tags (Overpass) | ✅ | n/a | element id + version | n/a | ✅ heights, weights (community) | ❌ none | Overpass usage policy | ODbL 1.0 (verified 2026-10-09) | ⏸ pipeline ready, **not in the 2026-10-09 build** (Overpass unavailable); labelled unverified when added |
 
 ## S1: Road and Lane Closures API v2.0
 
@@ -98,6 +100,17 @@ than 3 months before relying on it. "SRN" = Strategic Road Network (England's mo
 - `SRNStartNode`/`SRNEndNode` are where the *diversion* leaves and rejoins the SRN, which isn't always the stretch's labelled junction (e.g. `M54/J1/M6/J10A/2` starts at M54 J2).
 - **Licence (verified 2026-10-05, item terms):** Open Government Licence. Required attribution: "Data derived from Ordnance Survey Highway
   Network, Subject to Crown copyright and database rights 2024. Ordnance Survey Licence: AC0000827444."
+  - Re-read 2026-10-09 from the item's ArcGIS licence field (`licenseInfo`):
+    - It says "The data is published under an Open Government Licence". The words "Open Government Licence" link to
+      `https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/`, so the publisher identifies **OGL v3.0**.
+    - The visible text alone gives no version, which an earlier reading on the same day relied on.
+    - The restriction layers now say OGL v3.0 and keep NH's Ordnance Survey attribution verbatim.
+- **`DiversionPoint` weights (checked 2026-10-09):**
+  - Only `RestrictionType` "weight", `MeasureValue` and `MeasureUnit` "Tonnes". No direction, extent, vehicle class or exemptions.
+  - One point per route and direction: 84 records at 75 places.
+  - Of the 77 records at 7.5 t, 73 are on routes whose `WeightLimitTonnes` is also 7.5.
+  - Some route descriptions say the route is for "Vehicles under 7.5t Only".
+  - Shown as values of unrecorded type, never as lorry or all-vehicle limits (`docs/RESTRICTIONS.md`).
 - **Classification is not enough for HGVs (verified 2026-10-05):** 46 Class 1A/1B routes have height limits < 4.95 m, 74 have weight limits
   < 44 t, and 5 are described "Non HGV" / "Cars only" while Class 1A. Route numbers mark sub-diversions, HGV vs non-HGV variants or side-road
   flows, not a consistent "primary" order.
@@ -164,6 +177,68 @@ than 3 months before relying on it. "SRN" = Strategic Road Network (England's mo
   A probe worker served under the app's CSP (`web/public/_headers`) fetched a vector tile, a glyph range and the sprite, decoded the
   sprite and drew text on an OffscreenCanvas; only `data:` fetches and other hosts were blocked. MapLibre's worker makes no `data:`
   fetches (its `data:` strings are object keys).
+
+## S11: TfL open data (restriction layers, checked 2026-10-09)
+
+- **Licence:** [Transport Data Service licence](https://tfl.gov.uk/corporate/terms-and-conditions/transport-data-service), "based on
+  version 2.0 of the Open Government Licence with specific amendments for Transport for London".
+  - **Allows:** copying, publishing, distributing, adapting, and commercial and non-commercial use.
+  - **Requires** the attribution "Powered by TfL Open Data", "Contains OS data © Crown copyright and database rights 2016" and
+    "Geomni UK Map data © and database rights [2019]".
+  - **Forbids** suggesting official status or TfL endorsement, and more than 500 calls per minute per feed.
+  - **Unresolved:** the terms mention information "You provide on registration". These files download from an open bucket
+    without registration or a key, and whether registering is required for this use is unconfirmed (`docs/RESTRICTIONS.md`).
+- **Files** (bucket `roads.data.tfl.gov.uk`, no key):
+  - `BridgesRestrictions/height-restrictions-in-london.xlsx`: 90,944 bytes, last modified 2019-10-09. It has 877 structures
+    with height **bands**, BNG and WGS84 coordinates, borough, road name and number, red route flag and comments. **No weights.**
+    Its WGS84 coordinates match our OS-method conversion of its BNG coordinates to within 0.1 m for all 877.
+  - `Boundaries/lez.json` (last modified 2023-07-20) and `Boundaries/ULEZ_Boundary_20230829.json` (2023-09-13): each is 22 Google
+    encoded polylines, and the two files are **byte-identical** (SHA-256 `de14c05c…`).
+    - The ULEZ shapefile zip is identical to the LEZ 2021 zip, and contains `LEZ.shp`.
+    - TfL's LEZ page says the ULEZ "operates in the same zone".
+- **Cross-check:** GLA London Datastore "London Wide Ultra Low Emission Zone 2023" (OGL v2.0, GeoJSON in EPSG:27700).
+  - Publisher GLA, author TfL, update frequency "One off".
+  - The dataset page (2026-10-09) says it was last updated "over 2 years ago". The downloaded file's HTTP `Last-Modified` is
+    2025-10-21, which is not a data date.
+  - Its 22 polygons are labelled `BOUNDARY: "Low Emission Zone"`.
+  - Converted to WGS84 and compared with TfL's boundary:
+    - GLA vertices to TfL's line: median 2.3 m, 99th percentile 10.6 m, maximum 41.7 m;
+    - TfL vertices to the GLA's line: median 1.3 m, 99th percentile 9.6 m, maximum 110.7 m, on one stretch by the M25 near
+      Heathrow. The cause is not verified.
+- **Use:** see `docs/RESTRICTIONS.md`.
+
+## S12: OpenStreetMap restriction tags (checked 2026-10-09)
+
+- **Tags:** `maxheight`, `maxheight:physical`, `maxweight`, `maxweightrating`, `maxweightrating:hgv` and `maxweight:hgv`, plus
+  `:conditional` forms, on roads used by motor vehicles and on nodes. The query is
+  `scripts/restrictions/osm-england.overpassql`, run as 24 bounding-box tiles. Overpass doesn't clip them: the build keeps only
+  elements inside England using the ONS boundary (below).
+- **UK practice:**
+  - `maxweightrating:hgv` is the lorry-symbol (environmental) limit, and the older `maxweight:hgv` means the same (about 1,500
+    were being converted in 2025).
+  - `maxweight` is an all-vehicle limit.
+- **Values seen in a central London sample of 1,958 elements:**
+  - `maxweightrating:hgv` was the most common (671), with exemptions `none @ delivery` (288) and `none @ destination` (234);
+  - `maxheight` included `default` (189), `below_default` (84) and feet-inches (`15'3"` …);
+  - one weight was in `KG`.
+- **Licence:** ODbL 1.0. A filtered extract that is used publicly is a derivative database and must be offered under ODbL
+  (`docs/RESTRICTIONS.md`).
+- **Overpass:** the public instance announces a rate limit per IP (2 to 4 slots). It was overloaded for much of 2026-10-09 (HTTP
+  504 "server is probably too busy"). The VK Maps instance (`maps.mail.ru`) also failed for part of that time.
+  - Clipping to England on the server is the costly part: a large tile with a per-statement area clip ran for over 5 minutes, and
+    one clip per tile for nearly 10.
+  - Bounding-box queries for central London took about 15 s. So the tiles are bounding-box only, and the build clips to England
+    with the ONS boundary (below).
+- **England boundary for the clip:** ONS "Countries (December 2023) Boundaries UK BFE" (full resolution, extent of the realm),
+  England (`E92000001`), simplified to 10 m by the ArcGIS service (`maxAllowableOffset=10`), British National Grid, 93 rings.
+  - OGL v3.0, with "Source: Office for National Statistics licensed under the Open Government Licence v3.0. Contains OS data ©
+    Crown copyright and database right 2023."
+  - Checked: inside England for London, Chester, Carlisle, Berwick, Penzance, the Isles of Scilly and seafront roads (Brighton,
+    Blackpool, Dover docks, Liverpool Pier Head, Southend); outside for Cardiff, Wrexham, Chepstow, Gretna, Calais and the Isle
+    of Man.
+- **Completeness:** unknown. There is no official full list to compare against.
+- **Not in the 2026-10-09 build:** Overpass stayed overloaded, so no complete England download was possible
+  (`docs/RESTRICTIONS.md`).
 
 ## Routing services (for classification C, post-V1)
 
