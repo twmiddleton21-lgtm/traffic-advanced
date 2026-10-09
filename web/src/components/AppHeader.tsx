@@ -1,22 +1,22 @@
+import type { Ref } from "react";
 import { freshnessLine, formatTime, lastUpdatedLine, NOT_LIVE_TEXT, OFFICIAL_SOURCE_URL } from "../domain/dataStatus.ts";
 import type { ClosuresState } from "../hooks/useClosures.ts";
 import { BrandLogo } from "./BrandLogo.tsx";
-
-export type ThemeChoice = "light" | "dark";
 
 interface Props {
   data: ClosuresState;
   now: Date;
   query: string;
   onQueryChange: (q: string) => void;
-  theme: ThemeChoice;
-  onToggleTheme: () => void;
+  settingsOpen: boolean;
+  onOpenSettings: () => void;
+  settingsButtonRef: Ref<HTMLButtonElement>;
   /** Set while the closures drawer is open as a modal on phones and tablets. */
   inert?: boolean;
 }
 
-export function AppHeader({ data, now, query, onQueryChange, theme, onToggleTheme, inert }: Props) {
-  // Phones and tablets: brand and theme on one row, data status (always visible) below; the search box moves into the closures
+export function AppHeader({ data, now, query, onQueryChange, settingsOpen, onOpenSettings, settingsButtonRef, inert }: Props) {
+  // Phones and tablets: brand and Settings on one row, data status (always visible) below; the search box moves into the closures
   // drawer. Desktop keeps one row. Safe-area padding keeps it clear of notches and rounded corners.
   return (
     <header
@@ -40,13 +40,18 @@ export function AppHeader({ data, now, query, onQueryChange, theme, onToggleThem
         />
       </label>
 
+      {/* Settings: theme, restriction layers, app and data status, help. Icon-only on phones (named for screen readers). */}
       <button
+        ref={settingsButtonRef}
         type="button"
-        onClick={onToggleTheme}
-        className="h-10 rounded-[4px] border border-line px-3 text-[14px] font-bold hover:bg-raised max-lg:ml-auto"
-        aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
+        onClick={onOpenSettings}
+        aria-haspopup="dialog"
+        aria-expanded={settingsOpen}
+        aria-controls="settings-dialog"
+        className="flex h-12 min-w-12 items-center justify-center gap-2 rounded-[4px] border border-line px-3 text-[14px] font-bold hover:bg-raised max-lg:ml-auto"
       >
-        {theme === "dark" ? "Light map" : "Dark map"}
+        <GearIcon />
+        <span className="max-lg:sr-only">Settings</span>
       </button>
     </header>
   );
@@ -128,6 +133,21 @@ function NotLiveStatus({ capturedAt, now }: { capturedAt: string; now: Date }) {
         </p>
       </div>
     </div>
+  );
+}
+
+function GearIcon() {
+  return (
+    <svg viewBox="0 0 20 20" className="size-5" aria-hidden="true">
+      <path
+        d="M8.6 2h2.8l.4 2.2 1.4.6 1.9-1.3 2 2-1.3 1.9.6 1.4 2.2.4v2.8l-2.2.4-.6 1.4 1.3 1.9-2 2-1.9-1.3-1.4.6-.4 2.2H8.6l-.4-2.2-1.4-.6-1.9 1.3-2-2 1.3-1.9-.6-1.4L1.4 11.4V8.6l2.2-.4.6-1.4-1.3-1.9 2-2 1.9 1.3 1.4-.6Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+      <circle cx="10" cy="10" r="2.6" fill="none" stroke="currentColor" strokeWidth="1.6" />
+    </svg>
   );
 }
 

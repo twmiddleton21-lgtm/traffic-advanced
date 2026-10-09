@@ -6,6 +6,7 @@ import { classificationMeaning, formatRestriction } from "../domain/units.ts";
 import { DiversionBadge } from "./DiversionBadge.tsx";
 import { HgvStatus } from "./HgvStatus.tsx";
 import { RoadShield } from "./RoadShield.tsx";
+import { SafetyNotice } from "./SafetyNotice.tsx";
 import { SignageSymbol } from "./SignageSymbol.tsx";
 
 interface Props {
@@ -216,18 +217,6 @@ function RouteCard({ route: r }: { route: OfficialRoute }) {
         ))}
       </ul>
     </section>
-  );
-}
-
-function SafetyNotice() {
-  return (
-    <aside className="rounded-[4px] bg-raised px-4 py-3 text-[14px]" aria-label="Safety notice">
-      <p className="font-bold">For planning only. Do not use while driving.</p>
-      <p className="mt-1">
-        Always follow road signs, police and National Highways instructions and temporary traffic management. If this app conflicts with signs on
-        the road, the signs take priority.
-      </p>
-    </aside>
   );
 }
 

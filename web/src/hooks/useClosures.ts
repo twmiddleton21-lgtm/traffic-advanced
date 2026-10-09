@@ -63,6 +63,10 @@ export interface ClosuresState {
   refreshError: Error | null;
   /** No data at all could be loaded. */
   loadError: Error | null;
+  /** The publication version of the shown snapshot (the traffic data's version, not the app's); null for the development fallback. */
+  version: string | null;
+  /** When that version was published (from /api/version), once confirmed this visit; otherwise null. */
+  publishedAt: string | null;
   refresh: () => void;
 }
 
@@ -70,14 +74,47 @@ export function deriveClosuresState(api: QueryView<Synced<ClosuresSnapshot>>, fa
   const refresh = () => void api.refetch();
   if (api.data) {
     const s = api.data;
-    return { snapshot: s.data, via: s.via, isLoading: false, isRefreshing: api.isFetching, lastSuccessAt: s.confirmedAt, refreshError: s.refreshError ?? api.error, loadError: null, refresh };
+    return {
+      snapshot: s.data,
+      via: s.via,
+      isLoading: false,
+      isRefreshing: api.isFetching,
+      lastSuccessAt: s.confirmedAt,
+      refreshError: s.refreshError ?? api.error,
+      loadError: null,
+      version: s.version,
+      publishedAt: s.publishedAt,
+      refresh,
+    };
   }
   if (fallback?.data) {
-    return { snapshot: fallback.data, via: "development-fallback", isLoading: false, isRefreshing: api.isFetching, lastSuccessAt: null, refreshError: api.error, loadError: null, refresh };
+    return {
+      snapshot: fallback.data,
+      via: "development-fallback",
+      isLoading: false,
+      isRefreshing: api.isFetching,
+      lastSuccessAt: null,
+      refreshError: api.error,
+      loadError: null,
+      version: null,
+      publishedAt: null,
+      refresh,
+    };
   }
   // Without data, the API's failure is final only once the fallback (if any) has failed too.
   const failed = api.error !== null && (fallback === null || fallback.error !== null);
-  return { snapshot: undefined, via: undefined, isLoading: !failed, isRefreshing: false, lastSuccessAt: null, refreshError: null, loadError: failed ? api.error : null, refresh };
+  return {
+    snapshot: undefined,
+    via: undefined,
+    isLoading: !failed,
+    isRefreshing: false,
+    lastSuccessAt: null,
+    refreshError: null,
+    loadError: failed ? api.error : null,
+    version: null,
+    publishedAt: null,
+    refresh,
+  };
 }
 
 export function useClosures(sync: SnapshotSync<ClosuresSnapshot> = closuresSync, fallback: TrafficDataSource | null = developmentFallback): ClosuresState {

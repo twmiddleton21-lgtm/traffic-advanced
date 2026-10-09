@@ -26,7 +26,7 @@ describe("one filtered collection for the map and the list", () => {
     const app = readFileSync("web/src/App.tsx", "utf8");
     expect(app).toMatch(/closuresOnDay\(closures, day\)/);
     expect(app).toMatch(/applyFilters\(dayClosures, filter, query\)/);
-    expect(app).toMatch(/<MapView closures=\{visible\}/);
+    expect(app).toMatch(/<MapView\s+closures=\{visible\}/);
     expect(app).toMatch(/<ClosureList\s+closures=\{visible\}/);
     expect(app).toMatch(/<FilterBar closures=\{dayClosures\}/);
     // No second date filter anywhere else.

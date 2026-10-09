@@ -43,3 +43,17 @@ export function refreshNotice(state: Pick<ClosuresState, "via" | "refreshError" 
   }
   return null;
 }
+
+/** Where the shown closures came from (ClosuresState.via), for Settings. */
+export function dataOrigin(via: ClosuresState["via"]): string {
+  switch (via) {
+    case "api":
+      return "Confirmed with the Traffic Advanced server this visit";
+    case "device-cache":
+      return "The copy saved on this device (not confirmed with the server this visit)";
+    case "development-fallback":
+      return "The bundled development snapshot (not live)";
+    default:
+      return "No data yet";
+  }
+}

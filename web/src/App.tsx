@@ -1,9 +1,15 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AppHeader, type ThemeChoice } from "./components/AppHeader.tsx";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { appUpdates } from "./app/serviceWorker.ts";
+import { APP_VERSION } from "./app/version.ts";
+import { AppHeader } from "./components/AppHeader.tsx";
 import { ClosureDetail } from "./components/ClosureDetail.tsx";
 import { ClosureList } from "./components/ClosureList.tsx";
 import { DateSelector } from "./components/DateSelector.tsx";
 import { FilterBar } from "./components/FilterBar.tsx";
+import { RestrictionMapControls } from "./components/RestrictionMapControls.tsx";
+import { RestrictionsDialog } from "./components/RestrictionsDialog.tsx";
+import { SettingsDialog } from "./components/settings/SettingsDialog.tsx";
+import { UpdateNotice } from "./components/UpdateNotice.tsx";
 import { appliesOnDay, clampDay, closuresOnDay, firstDayFor, selectableRange, selectionOnDay, ukDayKey, type DayKey } from "./domain/closureDates.ts";
 import { refreshNotice } from "./domain/dataStatus.ts";
 import { applyFilters, type FilterId } from "./domain/filters.ts";
@@ -11,7 +17,12 @@ import { useClosures } from "./hooks/useClosures.ts";
 import { useJunctions } from "./hooks/useJunctions.ts";
 import { useNow } from "./hooks/useNow.ts";
 import { useWideLayout } from "./hooks/useWideLayout.ts";
-import { MapView } from "./map/MapView.tsx";
+import { MapView, type MapViewArea, type RestrictionOverlay } from "./map/MapView.tsx";
+import { sourceAttribution } from "./map/restrictionLayers.ts";
+import { allSources, availableLayers } from "./restrictions/catalog.ts";
+import { useRestrictionData, type LayerStatus } from "./restrictions/useRestrictionData.ts";
+import { RESTRICTION_LAYERS, type RestrictionLayer } from "./settings/preferences.ts";
+import { useSettings } from "./settings/useSettings.ts";
 import { hideSplash, SPLASH_MAX_MS } from "./splash.ts";
 
 const NO_JUNCTIONS: never[] = [];
@@ -27,7 +38,7 @@ export function App() {
   const [filter, setFilter] = useState<FilterId>("all");
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(readSelectedFromUrl);
-  const [theme, setTheme] = useState<ThemeChoice>(() => (document.documentElement.dataset["theme"] === "light" ? "light" : "dark"));
+  const { themeChoice, theme, chooseTheme, restrictions: enabled, setRestriction } = useSettings();
   const wide = useWideLayout();
   // Phones and tablets: the closures list is a drawer over a full-screen map. On desktop it is always shown beside the map.
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -129,24 +140,75 @@ export function App() {
     reopenAfterDetail.current = false;
   };
 
-  const toggleTheme = useCallback(() => {
-    setTheme((t) => {
-      const next = t === "dark" ? "light" : "dark";
-      document.documentElement.dataset["theme"] = next;
-      try {
-        localStorage.setItem("ta-theme", next);
-      } catch {
-        // Storage can be unavailable (private mode). The theme still applies for this visit.
-      }
-      return next;
-    });
+  // Settings and the restrictions list: modal dialogs over the map (the map stays mounted, so its view is kept). Focus goes back to
+  // the button that opened each one.
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const settingsButton = useRef<HTMLButtonElement>(null);
+  const [restrictionsOpen, setRestrictionsOpen] = useState(false);
+  const restrictionsButton = useRef<HTMLButtonElement>(null);
+  const [selectedRestrictionId, setSelectedRestrictionId] = useState<string | null>(null);
+  const [view, setView] = useState<MapViewArea | null>(null);
+  const [baseMapFailed, setBaseMapFailed] = useState(false);
+
+  // App updates (service worker): a notice and Reload, never an automatic reload.
+  const update = useSyncExternalStore(appUpdates.subscribe, appUpdates.getState);
+  const [updateDismissed, setUpdateDismissed] = useState(false);
+
+  // Restriction layers: a switch only for layers this build has data for; each file loads only once its layer is on.
+  const entries = useMemo(() => availableLayers(), []);
+  const entryOf = (layer: RestrictionLayer) => entries.find((e) => e.layer === layer);
+  const statuses: Record<RestrictionLayer, LayerStatus> = {
+    height: useRestrictionData(entryOf("height"), "height", enabled.height),
+    weight: useRestrictionData(entryOf("weight"), "weight", enabled.weight),
+    lez: useRestrictionData(entryOf("lez"), "lez", enabled.lez),
+    ulez: useRestrictionData(entryOf("ulez"), "ulez", enabled.ulez),
+  };
+  const overlayKey = RESTRICTION_LAYERS.map((l) => `${l}:${enabled[l]}:${statuses[l].state}`).join();
+  const overlays = useMemo<RestrictionOverlay[]>(
+    () => entries.map((e) => ({ layer: e.layer, visible: enabled[e.layer], data: statuses[e.layer].data, attribution: sourceAttribution(e.sources) })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- recomputed when a layer's switch or load state changes (overlayKey)
+    [entries, overlayKey],
+  );
+  const pointFiles = RESTRICTION_LAYERS.flatMap((l) => {
+    const d = enabled[l] ? statuses[l].data : null;
+    return d && "points" in d ? [d.points] : [];
+  });
+  const zoneFiles = RESTRICTION_LAYERS.flatMap((l) => {
+    const d = enabled[l] ? statuses[l].data : null;
+    return d && "zones" in d ? [d.zones] : [];
+  });
+  const selectRestriction = useCallback((id: string) => {
+    setSelectedRestrictionId(id);
+    setRestrictionsOpen(true);
   }, []);
+  const closeRestrictions = () => {
+    setRestrictionsOpen(false);
+    setSelectedRestrictionId(null);
+  };
+
+  // Problems for Settings: the same messages shown elsewhere, gathered in one list (not announced again).
+  const warnings = [
+    notice,
+    baseMapFailed ? "The base map couldn't load. The closures list still works." : null,
+    ...RESTRICTION_LAYERS.filter((l) => statuses[l].state === "error").map((l) => `Restriction data (${l}): ${statuses[l].error}`),
+  ].filter((w): w is string => Boolean(w));
 
   const count = data ? (visible.length === dayClosures.length ? `${dayClosures.length}` : `${visible.length} of ${dayClosures.length}`) : null;
 
   return (
     <div className="flex h-full flex-col">
-      <AppHeader data={closuresState} now={now} query={query} onQueryChange={setQuery} theme={theme} onToggleTheme={toggleTheme} inert={drawerModal} />
+      <AppHeader
+        data={closuresState}
+        now={now}
+        query={query}
+        onQueryChange={setQuery}
+        settingsOpen={settingsOpen}
+        onOpenSettings={() => setSettingsOpen(true)}
+        settingsButtonRef={settingsButton}
+        inert={drawerModal}
+      />
+
+      <UpdateNotice update={update} dismissed={updateDismissed} onReload={appUpdates.reload} onDismiss={() => setUpdateDismissed(true)} />
 
       {notice && (
         // A failed refresh is never silent, and never clears the closures already shown.
@@ -235,7 +297,23 @@ export function App() {
 
         {/* --ta-map-top-inset keeps the map's own notices clear of the Closures button on phones and tablets. */}
         <section className="relative min-w-0 flex-1 [--ta-map-top-inset:3.75rem] lg:[--ta-map-top-inset:0px]" aria-label="Map" inert={drawerModal}>
-          <MapView closures={visible} selected={selected} junctions={junctions} onSelect={selectFromMap} onIdle={onMapIdle} theme={theme} />
+          <MapView
+            closures={visible}
+            selected={selected}
+            junctions={junctions}
+            onSelect={selectFromMap}
+            onIdle={onMapIdle}
+            theme={theme}
+            restrictions={overlays}
+            selectedRestrictionId={restrictionsOpen ? selectedRestrictionId : null}
+            onSelectRestriction={selectRestriction}
+            onViewChange={setView}
+            onBaseMapError={setBaseMapFailed}
+          />
+          {/* Below MapLibre's zoom and location buttons. */}
+          <div className="pointer-events-none absolute right-[max(0.75rem,env(safe-area-inset-right))] top-[9.5rem] z-10 flex justify-end">
+            <RestrictionMapControls statuses={Object.values(statuses)} zoom={view?.zoom ?? null} onOpenList={() => setRestrictionsOpen(true)} buttonRef={restrictionsButton} />
+          </div>
           <button
             ref={openButton}
             type="button"
@@ -249,6 +327,27 @@ export function App() {
             {count && <span className="font-normal tabular-nums text-muted">{count}</span>}
           </button>
         </section>
+
+        <SettingsDialog
+          open={settingsOpen}
+          onClose={() => setSettingsOpen(false)}
+          returnFocus={() => settingsButton.current}
+          appearance={{ theme: themeChoice, onTheme: chooseTheme }}
+          restrictions={{ entries, enabled, statuses, onToggle: setRestriction }}
+          appStatus={{ version: APP_VERSION, update, onCheck: () => void appUpdates.checkNow(), onReload: appUpdates.reload, warnings }}
+          dataHelp={{ data: closuresState, now, restrictionSources: allSources(entries) }}
+        />
+        <RestrictionsDialog
+          open={restrictionsOpen}
+          onClose={closeRestrictions}
+          returnFocus={() => restrictionsButton.current}
+          view={view}
+          points={pointFiles}
+          zones={zoneFiles}
+          selectedId={selectedRestrictionId}
+          onSelect={setSelectedRestrictionId}
+          now={now}
+        />
 
         {selected && data && (
           // Desktop: a panel on the right. Phones: a sheet over the lower map (the closure and its diversion stay in view above it),

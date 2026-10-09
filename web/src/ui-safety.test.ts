@@ -20,7 +20,7 @@ describe("UI safety boundary", () => {
     for (const file of files) {
       const imports = [...readFileSync(file, "utf8").matchAll(/from "([^"]+)"/g)].map((m) => m[1]!);
       for (const spec of imports.filter((s) => s.includes("shared/"))) {
-        expect(spec, `${file} imports ${spec}`).toMatch(/shared\/api\/(?:closures|junctions|freshness|version)\.ts$/);
+        expect(spec, `${file} imports ${spec}`).toMatch(/shared\/api\/(?:closures|junctions|freshness|version|restrictions)\.ts$/);
       }
     }
   });
@@ -52,8 +52,11 @@ describe("UI safety boundary", () => {
   });
 
   it("shows the safety notice wording from the spec", () => {
-    const detail = readFileSync("web/src/components/ClosureDetail.tsx", "utf8");
-    expect(detail).toContain("For planning only. Do not use while driving.");
-    expect(detail).toContain("the signs take priority");
+    const notice = readFileSync("web/src/components/SafetyNotice.tsx", "utf8");
+    expect(notice).toContain("For planning only. Do not use while driving.");
+    expect(notice).toContain("the signs take priority");
+    // Shown on every closure's details and in Settings.
+    expect(readFileSync("web/src/components/ClosureDetail.tsx", "utf8")).toMatch(/<SafetyNotice \/>/);
+    expect(readFileSync("web/src/components/settings/DataHelpSection.tsx", "utf8")).toMatch(/<SafetyNotice \/>/);
   });
 });

@@ -32,6 +32,13 @@ wearing gloves, short on time. They need fast answers: *is my road shut, when, w
    - **Layer selector**, a two-state segmented control: **Closures | Traffic** (one state at a time; no duplicate controls).
    - **Road selector**: search/pick a road (e.g. M6, A14), optional direction, My Roads shortcuts.
    - A status chip, "Last updated 14:05", turns amber/red when delayed/stale.
+   - A **Settings** button (header) opens a panel over the map (the map, its view and selection are kept):
+     - Appearance: theme System / Light / Dark, and the map style (Standard; no satellite until a free, licensed provider is approved);
+     - Road restrictions: layer switches (§7.1);
+     - App status: version, updates and current problems;
+     - Data status and help: the data's version and times, where it came from, sources and licences, limitations, privacy and
+       the safety notice;
+     - Contact (reserved).
 3. **Select a road**, and the map fits to that road (Network Model geometry), the list filters to its closures, ordered along the road.
 4. **Select a closure** to open a bottom sheet (side panel on wide screens) with: road, direction, location/junctions, type, reason,
    start, expected end, status, source, last updated, diversion availability (classification badge), and a prominent
@@ -182,6 +189,30 @@ classification label and confidence, and the HGV compatibility panel (§7). Safe
 - Routing layer: a `RoutingProvider` interface (`route(from, to, profile, avoid)`), unused in V1. The future C implementation
   must post-check every calculated route against NH restriction points and label it C. Full A-to-B routing is a later phase.
 
+### 7.1 Restriction layers (information only)
+
+Map overlays, each switched on separately in Settings, all **off by default**; choices are remembered on the device.
+
+| Layer | Sources | Shown as |
+|---|---|---|
+| Height restrictions | NH S4 diversion points and S5 vehicle restrictions (official), TfL low bridges, tunnels and barriers (official, London, height bands), OpenStreetMap (community, unverified; when a build includes it, docs/RESTRICTIONS.md) | Sign-style value markers from zoom 12 |
+| Weight restrictions | NH S4 (official): weight values recorded on emergency diversion routes, with type, scope and exemptions not recorded, so never shown as lorry or all-vehicle limits. OpenStreetMap (community, when included): lorry limits such as 7.5 t kept distinct from all-vehicle (structural) limits | Sign-style value markers from zoom 12: grey border for NH values of unrecorded type, a lorry or bridge glyph for OSM kinds. The key lists only kinds that are loaded |
+| London LEZ | TfL boundary (official) | Dashed green boundary, labelled |
+| London ULEZ | TfL boundary (official; the same boundary as the LEZ since August 2023, with different rules) | Solid blue boundary, labelled |
+
+- **Details.** Selecting a marker (or an item in the keyboard-accessible "Restrictions in this view" list) shows:
+  - the type and recorded value (height in m and ft-in, bands kept as bands);
+  - the location;
+  - the source and whether it is official or community (unverified);
+  - dates, conditions and exemptions, verbatim;
+  - limitations.
+- **Wording.** Shown wherever restriction data is shown, verbatim: "Restrictions data is incomplete. Community-sourced records
+  are unverified. No marker does not mean no restriction. Always follow road signs. This map is not a route check."
+- **What the layers never do.** They don't check a vehicle or a route, never imply a road is clear, and never change closures,
+  diversions or classifications.
+- **Data.** Versioned static files, validated, downloaded only when a layer is switched on. Sources, licences, coverage gaps and
+  the update procedure are in `docs/RESTRICTIONS.md`.
+
 ## 8. Export / satnav strategy (what is realistic)
 
 | Target | Mechanism | Reliability | V1 |
@@ -202,7 +233,7 @@ and D have no route to export.
 - Mobile-first; layouts for phone (bottom sheet), tablet (side panel), desktop/large touchscreen (panel + map),
   **TV/dashboard mode** (`?mode=dashboard`: large type, auto-cycling My Roads, auto-refresh, D-pad focus navigation).
   It's the same app with a responsive mode, not a separate one.
-- Themes: system / light / dark; the map style follows.
+- Themes: system / light / dark (chosen in Settings; System follows the device live); the map style follows.
 - Touch targets ≥ 48 px; WCAG 2.2 AA; full keyboard/remote operation; information never by colour alone.
 - Distinct visual language per source: NH closures, NH incidents, planned roadworks, live traffic, official diversion,
   calculated route (later). A legend is always one tap away.
@@ -211,7 +242,10 @@ and D have no route to export.
 - **Safety notice** on first launch and on every diversion/export screen: "For planning only. Do not use while driving.
   Always follow road signs, police and National Highways instructions and temporary traffic management. If this app
   conflicts with signs on the road, the signs take priority."
-- Attribution screen: National Highways (OGL v3.0), OpenStreetMap/OpenMapTiles/OpenFreeMap, TomTom (if enabled).
+- Attribution screen (Settings → Sources and licences): National Highways (OGL v3.0), OpenStreetMap/OpenMapTiles/OpenFreeMap, every
+  restriction source (docs/RESTRICTIONS.md), TomTom (if enabled).
+- App updates (docs/APP-UPDATES.md): a new build is offered only once it is downloaded, with an explicit Reload. The app never
+  reloads itself while in use. The app's version (commit and build time) is separate from the traffic data's version.
 
 ## 10. Architecture
 
@@ -236,7 +270,8 @@ Browser: React + MapLibre + TanStack Query + service worker
   a refresh that fails validation or drops record counts abnormally is rejected and logged in `meta`.
 - **Frontend:** Vite 8, React 19, TypeScript 6.0 (typescript-eslint doesn't support 7 yet), Tailwind 4, MapLibre GL JS 6,
   TanStack Query 5, vite-plugin-pwa 2, Zod 4. No other runtime dependencies without justification.
-- **Offline:** precached app shell; API responses network-first with cached fallback (timestamps preserved); OpenFreeMap tiles
+- **Offline:** precached app shell (the service worker, docs/APP-UPDATES.md: one build at a time, updates offered with Reload, never
+  forced); API responses network-first with cached fallback (timestamps preserved); OpenFreeMap tiles
   you've viewed cached with a size cap (allowed by its terms). TomTom tiles are not cached beyond their headers. **No complete
   offline England map in V1.** A self-hosted England PMTiles overview pack is a later option.
 - **Future UK coverage:** adapters keyed by authority (`nh-england`, later `traffic-scotland`, `traffic-wales`, `ni`); the normalised
@@ -250,7 +285,7 @@ Browser: React + MapLibre + TanStack Query + service worker
   security headers, no stack traces in responses.
 - Upstream text is rendered as text only. Outbound links come from an allow-listed scheme/host builder.
 - Location: opt-in through the browser's permission prompt, never stored or sent to our server (the map centres locally).
-- No accounts, cookies or analytics. Favourites and the vehicle profile stay on the device.
+- No accounts, cookies or analytics. Favourites, the vehicle profile and Settings (theme, restriction layers) stay on the device.
 - Supply chain: lockfile, `npm audit` + Dependabot, minimal dependencies, GitHub secret scanning and push protection, pinned Actions.
 - ISO-conscious practices (least privilege, documented data flows, refresh audit log, secret rotation), without claiming certification.
 
@@ -283,7 +318,7 @@ Worker contract tests (`@cloudflare/vitest-pool-workers`); header/CORS tests; ma
 | **P6 Export** | GPX, share sheet, Garmin/TomTom guides, deep links | Imports verified on your devices |
 | **P7 Hardening** | Offline/poor signal, iOS install, a11y audit, security headers, Lighthouse | All V1 success criteria pass |
 | **P8 TV/dashboard** | Dashboard mode, D-pad focus | Works on your TV browser |
-| Later | C routing (A-to-B HGV), OSM low-bridge layer (from HGV-Destinations-Pro ideas), offline England pack, Scotland/Wales/NI, NTIS | — |
+| Later | C routing (A-to-B HGV), an official national restriction source (OS RAMI or D-TRO, once licensed), width/length layers, offline England pack, Scotland/Wales/NI, NTIS | — |
 
 ### 13.1 P0 acceptance criteria
 
