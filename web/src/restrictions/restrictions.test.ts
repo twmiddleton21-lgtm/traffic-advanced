@@ -73,7 +73,7 @@ describe("restriction wording", () => {
 
   it("labels community records unverified and official records with their authority", () => {
     expect(sourceLabel(src({}))).toBe("Community record: OpenStreetMap contributors. Unverified.");
-    expect(sourceLabel(src({ kind: "official", authority: "Transport for London" }))).toBe("Official record: Transport for London");
+    expect(sourceLabel(src({ kind: "official", authority: "Transport for London" }))).toBe("Source: Transport for London");
   });
 
   it("says when a position is only approximate", () => {

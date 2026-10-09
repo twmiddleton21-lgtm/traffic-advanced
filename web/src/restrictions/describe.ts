@@ -82,9 +82,13 @@ export function markerText(p: Pick<RestrictionPoint, "kind" | "limit">): string 
   return `${m(min)}–${m(max)}m`;
 }
 
-/** Who recorded it, and how far to trust it. Community records always say they are unverified. */
+/**
+ * Who recorded it, and how far to trust it. Community records always say they are unverified. Official sources are named as the
+ * source only, never "official record", so nothing suggests official status or endorsement (TfL Transport Data Service licence,
+ * "Non-endorsement"). Attribution and licence are shown separately.
+ */
 export function sourceLabel(s: Pick<RestrictionSource, "kind" | "authority">): string {
-  return s.kind === "official" ? `Official record: ${s.authority}` : `Community record: ${s.authority}. Unverified.`;
+  return s.kind === "official" ? `Source: ${s.authority}` : `Community record: ${s.authority}. Unverified.`;
 }
 
 /** Where it is, from the source's own road name, number and area, or a plain fallback. */

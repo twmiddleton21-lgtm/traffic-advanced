@@ -85,7 +85,7 @@ function InViewList({ view, points, zones, onSelect }: { view: MapViewArea | nul
                   </span>
                   <span className="text-[13px]">{locationText(point)}</span>
                   {records.length > 1 && <span className="text-[13px]">{`Recorded ${records.length} times at this place (once per diversion route), shown once`}</span>}
-                  <span className="text-[13px] text-muted">{source.kind === "community" ? "Community record, unverified" : `Official record: ${source.authority}`}</span>
+                  <span className="text-[13px] text-muted">{source.kind === "community" ? "Community record, unverified" : `Source: ${source.authority}`}</span>
                 </button>
               </li>
             ))}

@@ -51,9 +51,18 @@ describe("shipped restriction data", () => {
     expect(weight.sources[0]?.notes.join(" ")).toMatch(/doesn't record whether it is a structural limit or a lorry \(goods vehicle\) limit, which vehicles it applies to, where it starts and ends, or any exemptions/);
   });
 
-  it("claims no Open Government Licence version for the NH diversion points, which don't state one", () => {
+  it("gives the NH diversion points the licence their publisher links to (OGL v3.0), with NH's Ordnance Survey attribution verbatim", () => {
     for (const entry of Object.values(manifest.layers))
-      for (const s of entry.sources.filter((x) => x.id === "nh-s4-diversion-points")) expect(s.licence.name).toBe("Open Government Licence (version not stated by National Highways)");
+      for (const s of entry.sources.filter((x) => x.id === "nh-s4-diversion-points")) {
+        expect(s.licence).toEqual({ name: "Open Government Licence v3.0", url: "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/" });
+        expect(s.attribution).toBe(
+          "Data derived from Ordnance Survey Highway Network, Subject to Crown copyright and database rights 2024. Ordnance Survey Licence: AC0000827444. The data is published under an Open Government Licence.",
+        );
+      }
+  });
+
+  it("never labels a source an \"official record\" (TfL licence, Non-endorsement)", () => {
+    for (const f of ["web/src/restrictions/describe.ts", "web/src/components/RestrictionsDialog.tsx"]) expect(readFileSync(f, "utf8")).not.toMatch(/Official record/);
   });
 
   it("quotes TfL's ULEZ vehicle categories", () => {

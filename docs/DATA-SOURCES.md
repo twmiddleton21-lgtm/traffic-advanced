@@ -100,7 +100,11 @@ than 3 months before relying on it. "SRN" = Strategic Road Network (England's mo
 - `SRNStartNode`/`SRNEndNode` are where the *diversion* leaves and rejoins the SRN, which isn't always the stretch's labelled junction (e.g. `M54/J1/M6/J10A/2` starts at M54 J2).
 - **Licence (verified 2026-10-05, item terms):** Open Government Licence. Required attribution: "Data derived from Ordnance Survey Highway
   Network, Subject to Crown copyright and database rights 2024. Ordnance Survey Licence: AC0000827444."
-  - Re-read 2026-10-09: the item states **no OGL version**, so the restriction layers claim none.
+  - Re-read 2026-10-09 from the item's ArcGIS licence field (`licenseInfo`):
+    - It says "The data is published under an Open Government Licence". The words "Open Government Licence" link to
+      `https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/`, so the publisher identifies **OGL v3.0**.
+    - The visible text alone gives no version, which an earlier reading on the same day relied on.
+    - The restriction layers now say OGL v3.0 and keep NH's Ordnance Survey attribution verbatim.
 - **`DiversionPoint` weights (checked 2026-10-09):**
   - Only `RestrictionType` "weight", `MeasureValue` and `MeasureUnit` "Tonnes". No direction, extent, vehicle class or exemptions.
   - One point per route and direction: 84 records at 75 places.

@@ -29,9 +29,9 @@ import { readOverpass } from "../../shared/sources/osm/restrictions.ts";
 import { readGlaBoundary, readTflBoundary, readTflHeights } from "../../shared/sources/tfl/restrictions.ts";
 import { readFirstSheet } from "../lib/xlsx.ts";
 
+// Both NH items (Diversion Routes Public View and Network Model) give OGL v3.0 in their ArcGIS licence field, checked 2026-10-09. The
+// Diversion Routes field reads "The data is published under an Open Government Licence", linked to this v3 URL.
 const OGL3 = { name: "Open Government Licence v3.0", url: "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/" };
-// The Diversion Routes item says "Open Government Licence" without a version (checked 2026-10-09), so none is claimed.
-const OGL_UNVERSIONED = { name: "Open Government Licence (version not stated by National Highways)", url: "https://www.nationalarchives.gov.uk/doc/open-government-licence/" };
 const TFL_LICENCE = { name: "TfL Transport Data Service licence (based on OGL v2.0)", url: "https://tfl.gov.uk/corporate/terms-and-conditions/transport-data-service" };
 const TFL_ATTRIBUTION = "Powered by TfL Open Data. Contains OS data © Crown copyright and database rights 2016. Geomni UK Map data © and database rights [2019].";
 const ODBL = { name: "Open Database License (ODbL) 1.0", url: "https://opendatacommons.org/licenses/odbl/1-0/" };
@@ -138,7 +138,7 @@ export function buildRestrictions({ tflDir, osmDir, nhDir, generatedAt }: BuildI
     name: "Diversion Routes Public View: diversion points",
     authority: "National Highways",
     kind: "official",
-    licence: OGL_UNVERSIONED,
+    licence: OGL3,
     attribution:
       "Data derived from Ordnance Survey Highway Network, Subject to Crown copyright and database rights 2024. Ordnance Survey Licence: AC0000827444. The data is published under an Open Government Licence.",
     url: "https://www.arcgis.com/home/item.html?id=dcf7f6b642924f00a5410acbbb56b15b",

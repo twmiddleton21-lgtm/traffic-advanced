@@ -60,7 +60,7 @@ routes only. A first OSM build would add both.
 
 | Source | Kind | Used for | Licence and attribution | Date of the data used |
 |---|---|---|---|---|
-| **National Highways, Diversion Routes Public View, layer 3 (DiversionPoint)** | Official | Heights (metres) and weights (tonnes) recorded along NH emergency diversion routes | Open Government Licence: the item terms (re-read 2026-10-09) say "published under the Open Government Licence" **without a version**, so the app doesn't claim one. Attribution (verbatim): "Data derived from Ordnance Survey Highway Network, Subject to Crown copyright and database rights 2024. Ordnance Survey Licence: AC0000827444. The data is published under an Open Government Licence." ([item](https://www.arcgis.com/home/item.html?id=dcf7f6b642924f00a5410acbbb56b15b)) | Existing open-data capture 2026-10-06T0652Z; source last edited 2026-09-30 |
+| **National Highways, Diversion Routes Public View, layer 3 (DiversionPoint)** | Official | Heights (metres) and weights (tonnes) recorded along NH emergency diversion routes | **OGL v3.0**: the item's licence field (re-read 2026-10-09) says "The data is published under an Open Government Licence", with those words linking to the OGL v3.0 page (`nationalarchives.gov.uk/doc/open-government-licence/version/3/`). Attribution (verbatim): "Data derived from Ordnance Survey Highway Network, Subject to Crown copyright and database rights 2024. Ordnance Survey Licence: AC0000827444. The data is published under an Open Government Licence." ([item](https://www.arcgis.com/home/item.html?id=dcf7f6b642924f00a5410acbbb56b15b)) | Existing open-data capture 2026-10-06T0652Z; source last edited 2026-09-30 |
 | **National Highways, Network Model (Public), layer 3 (Vehicle_Restriction)** | Official | Height restrictions on NH's own network (18 records) | OGL v3.0: "Contains public sector information licensed under the Open Government Licence v3.0." ([item](https://www.arcgis.com/home/item.html?id=4b64217e40dc48ebb38315a9a95c96e5)) | Same capture; source last edited 2026-10-06 |
 | **Transport for London, "Bridges, tunnels, road barriers: height restrictions"** (`height-restrictions-in-london.xlsx`) | Official | 877 low bridges, tunnels and barriers within Greater London and the M25 | [TfL Transport Data Service licence](https://tfl.gov.uk/corporate/terms-and-conditions/transport-data-service), based on OGL v2.0. Allows copying, publishing, adapting and commercial use. Required attribution: "Powered by TfL Open Data", "Contains OS data © Crown copyright and database rights 2016", "Geomni UK Map data © and database rights [2019]". Must not suggest TfL endorsement. | File last modified **2019-10-09**: the dataset says it is updated annually, but hasn't been since 2019 |
 | **TfL LEZ boundary** (`Boundaries/lez.json`) | Official | LEZ outline | TfL Transport Data Service licence (as above) | Last modified 2023-07-20 |
@@ -248,7 +248,13 @@ build script changed at 09:15 UTC:
 - **TfL Transport Data Service:** the terms mention information "You provide on registration", but these files are downloaded
   from TfL's open S3 bucket without registering or using a key. Whether registration is needed for this use is **unconfirmed**:
   ask TfL before release, or register.
-- **NH Diversion Routes Public View:** the item says "Open Government Licence" with no version. The app links the current OGL and
-  claims no version. Confirming the version with NH is optional.
+- **Resolved: NH Diversion Routes Public View licence.** OGL v3.0. The item's licence text links "Open Government Licence" to the v3.0
+  page (checked 2026-10-09), and the app says OGL v3.0.
+  - The data is "derived from Ordnance Survey Highway Network" under NH's OS licence. The OGL doesn't cover third-party rights the
+    publisher isn't authorised to license, so the app relies on NH's own statement that it publishes the data under the OGL, and
+    keeps NH's OS attribution verbatim.
+  - Written confirmation from NH is optional.
+- **Wording:** official sources are labelled "Source: <authority>", never "official record". This follows the TfL licence's
+  "Non-endorsement" clause, which forbids suggesting official status or TfL endorsement.
 - **Third-party notices:** the shipped `workbox-window` and Workbox runtime (MIT) are minified without their licence headers, as
   MapLibre (BSD-3-Clause) already is. A notices page would cover all of them. Not yet decided.
