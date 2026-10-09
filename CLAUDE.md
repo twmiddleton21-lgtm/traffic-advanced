@@ -67,7 +67,9 @@ docs/      specification, data-source evidence, reports
 - Validate and bound all request input. Rate-limit the public API.
 - Build outbound links and deep links only from an allow-list of schemes/hosts with encoded parameters. Never from raw upstream text.
   Render upstream text as text, never as HTML.
-- Location is optional, one-shot and user-initiated. Never store or log it server-side.
+- Location is optional. The app asks for it once on launch to set the initial map view (never when the browser already blocks it),
+  and otherwise only when the user presses the location button; the browser's permission prompt decides. It stays on the device:
+  never store, log or send it server-side.
 - No tracking, analytics or cookies unless explicitly approved.
 - Dependency auditing (`npm audit`, Dependabot) and GitHub secret scanning with push protection stay enabled.
 
