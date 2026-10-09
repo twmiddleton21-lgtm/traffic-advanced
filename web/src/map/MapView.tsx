@@ -8,7 +8,16 @@ import type { TrafficClosure } from "../../../shared/api/closures.ts";
 import type { Junction } from "../../../shared/api/junctions.ts";
 import { WIDE_QUERY } from "../hooks/useWideLayout.ts";
 import { addMapImages } from "./images.ts";
-import { GEOLOCATE_OPTIONS, locateOnLaunch, locationErrorMessage, shouldLocateOnLaunch, stopFollowingOnZoom } from "./location.ts";
+import {
+  createLocationErrors,
+  GEOLOCATE_OPTIONS,
+  locateOnLaunch,
+  locationPermission,
+  renewLocationControl,
+  shouldLocateOnLaunch,
+  stopFollowingOnZoom,
+  type LocationNotice,
+} from "./location.ts";
 import { closureBounds, closureLines, closureMarkers, confirmedJunctionNames, diversionEnds, ENGLAND_BOUNDS, junctionPoints, selectedRouteLines } from "./layers.ts";
 import { baseLabelAdjustments, confirmedJunctionFilter, overlayLayers, roadEmphasisBeforeId, roadEmphasisLayers, selectedFilter, type Theme } from "./style.ts";
 
@@ -39,7 +48,7 @@ export function MapView(props: Props) {
   const [baseMapError, setBaseMapError] = useState(false);
   // Location UI state only: whether the map is following the user, and the last error. Never the coordinates (see location.ts).
   const [following, setFollowing] = useState(false);
-  const [locationError, setLocationError] = useState<string | null>(null);
+  const [locationNotice, setLocationNotice] = useState<LocationNotice | null>(null);
 
   // Create the map once.
   useEffect(() => {
@@ -55,7 +64,7 @@ export function MapView(props: Props) {
     map.addControl(new NavigationControl({ visualizePitch: false }), "top-right");
     map.addControl(new ScaleControl({ unit: "imperial" }), "bottom-right");
     // "Show my location": stacks under the zoom/compass buttons. Pressed once for the user on launch (see location.ts).
-    const geolocate = new GeolocateControl(GEOLOCATE_OPTIONS);
+    let geolocate = new GeolocateControl(GEOLOCATE_OPTIONS);
     map.addControl(geolocate, "top-right");
     const launch = locateOnLaunch(
       map,
@@ -69,23 +78,39 @@ export function MapView(props: Props) {
       isFollowing = on;
       setFollowing(on && !launch.locating());
     };
-    geolocate.on("trackuserlocationstart", () => {
-      setLocationError(null);
-      follow(true);
-      // Zoom in to the user's area on the first fix only if the map is zoomed out; otherwise keep the user's zoom.
-      geolocate.options.zoomToUserAccuracy = map.getZoom() < 10;
+    // Launch versus button errors, permission state, stale results and renewal: see createLocationErrors.
+    const errors = createLocationErrors({
+      noteError: launch.noteError,
+      permission: locationPermission,
+      stopFollowing: () => follow(false),
+      showNotice: setLocationNotice,
+      renewControl: (refocus) => renew(refocus),
     });
-    // After the first fix, position updates only re-centre: they never undo a zoom the user chose. (The event's position is
-    // deliberately not read.)
-    geolocate.on("geolocate", () => (geolocate.options.zoomToUserAccuracy = false));
-    geolocate.on("userlocationfocus", () => follow(true));
-    // A manual pan or zoom stops following (MapLibre's "background" state); pressing the button again re-centres and follows.
-    geolocate.on("userlocationlostfocus", () => follow(false));
-    geolocate.on("trackuserlocationend", () => follow(false));
-    geolocate.on("error", (e) => {
-      follow(false);
-      setLocationError(locationErrorMessage(e.code));
-    });
+    const wire = (control: GeolocateControl) => {
+      control.on("trackuserlocationstart", () => {
+        errors.requestStarted();
+        follow(true);
+        // Zoom in to the user's area on the first fix only if the map is zoomed out; otherwise keep the user's zoom.
+        control.options.zoomToUserAccuracy = map.getZoom() < 10;
+      });
+      // After the first fix, position updates only re-centre: they never undo a zoom the user chose. (The event's position is
+      // deliberately not read.)
+      control.on("geolocate", () => (control.options.zoomToUserAccuracy = false));
+      control.on("userlocationfocus", () => follow(true));
+      // A manual pan or zoom stops following (MapLibre's "background" state); pressing the button again re-centres and follows.
+      control.on("userlocationlostfocus", () => follow(false));
+      control.on("trackuserlocationend", () => follow(false));
+      // The control's only error listener.
+      control.on("error", (e) => void errors.handle(e.code));
+    };
+    // After a dismissed prompt the button must work again: a fresh control (see renewLocationControl). Focus goes back to the button
+    // only if the user had just pressed it; MapLibre enables the new button once its support check resolves, so focus waits a turn.
+    const renew = (refocus: boolean) => {
+      geolocate = renewLocationControl<GeolocateControl>(map, geolocate, () => new GeolocateControl(GEOLOCATE_OPTIONS));
+      wire(geolocate);
+      if (refocus) setTimeout(() => errors.active() && container.current?.querySelector<HTMLButtonElement>("button.maplibregl-ctrl-geolocate")?.focus(), 0);
+    };
+    wire(geolocate);
     stopFollowingOnZoom(map, () => isFollowing);
     map.on("style.load", () => installLayers(map, latest));
     const stopFolding = foldAttributionLater(map, container.current);
@@ -103,6 +128,7 @@ export function MapView(props: Props) {
     const observer = new ResizeObserver((entries) => map.resize(entries));
     observer.observe(container.current);
     return () => {
+      errors.dispose();
       launch.cancel();
       stopFolding();
       observer.disconnect();
@@ -147,10 +173,14 @@ export function MapView(props: Props) {
             <span className="block text-[13px]">For planning only. Do not use while driving.</span>
           </p>
         )}
-        {locationError && (
-          <div role="alert" className="pointer-events-auto flex max-w-md items-start gap-2 rounded-[4px] bg-surface py-1 pl-3 pr-1 text-[14px] shadow">
-            <p className="py-2">{locationError}</p>
-            <button type="button" onClick={() => setLocationError(null)} className="min-h-12 min-w-12 shrink-0 rounded-[4px] px-2 font-bold underline">
+        {locationNotice && (
+          // After a press of the location button the message is assertive; after the launch request it never interrupts.
+          <div
+            role={locationNotice.urgent ? "alert" : "status"}
+            className="pointer-events-auto flex max-w-md items-start gap-2 rounded-[4px] bg-surface py-1 pl-3 pr-1 text-[14px] shadow"
+          >
+            <p className="py-2">{locationNotice.text}</p>
+            <button type="button" onClick={() => setLocationNotice(null)} className="min-h-12 min-w-12 shrink-0 rounded-[4px] px-2 font-bold underline">
               Dismiss
             </button>
           </div>
