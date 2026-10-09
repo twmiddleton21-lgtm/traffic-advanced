@@ -8,7 +8,7 @@ import type { TrafficClosure } from "../../../shared/api/closures.ts";
 import type { Junction } from "../../../shared/api/junctions.ts";
 import { WIDE_QUERY } from "../hooks/useWideLayout.ts";
 import { addMapImages } from "./images.ts";
-import { GEOLOCATE_OPTIONS, locationErrorMessage, stopFollowingOnZoom } from "./location.ts";
+import { GEOLOCATE_OPTIONS, locateOnLaunch, locationErrorMessage, shouldLocateOnLaunch, stopFollowingOnZoom } from "./location.ts";
 import { closureBounds, closureLines, closureMarkers, confirmedJunctionNames, diversionEnds, ENGLAND_BOUNDS, junctionPoints, selectedRouteLines } from "./layers.ts";
 import { baseLabelAdjustments, confirmedJunctionFilter, overlayLayers, roadEmphasisBeforeId, roadEmphasisLayers, selectedFilter, type Theme } from "./style.ts";
 
@@ -49,19 +49,25 @@ export function MapView(props: Props) {
       style: STYLE_URL[theme],
       bounds: ENGLAND_BOUNDS,
       fitBoundsOptions: { padding: 24 },
-      // Phones and tablets: the attribution collapses to an (i) button so it doesn't cover the bottom of the map.
-      attributionControl: { compact: !window.matchMedia(WIDE_QUERY).matches, customAttribution: "Closures, diversions and junctions: National Highways, Open Government Licence v3.0" },
+      // At every size the attribution folds to an (i) button, so it doesn't cover the bottom of the map (see foldAttributionLater).
+      attributionControl: { compact: true, customAttribution: "Closures, diversions and junctions: National Highways, Open Government Licence v3.0" },
     });
     map.addControl(new NavigationControl({ visualizePitch: false }), "top-right");
     map.addControl(new ScaleControl({ unit: "imperial" }), "bottom-right");
-    // "Show my location": stacks under the zoom/compass buttons. Asks for location only when pressed.
+    // "Show my location": stacks under the zoom/compass buttons. Pressed once for the user on launch (see location.ts).
     const geolocate = new GeolocateControl(GEOLOCATE_OPTIONS);
     map.addControl(geolocate, "top-right");
-    // Mirrors MapLibre's follow lock for the map's own handlers; React state drives the indicator.
+    const launch = locateOnLaunch(
+      map,
+      geolocate,
+      Promise.all([shouldLocateOnLaunch(), map.once("load")]).then(([ok]) => ok),
+    );
+    // Mirrors MapLibre's follow lock for the map's own handlers; React state drives the indicator (not shown for the launch view,
+    // which stops following as soon as it is set).
     let isFollowing = false;
     const follow = (on: boolean) => {
       isFollowing = on;
-      setFollowing(on);
+      setFollowing(on && !launch.locating());
     };
     geolocate.on("trackuserlocationstart", () => {
       setLocationError(null);
@@ -82,8 +88,7 @@ export function MapView(props: Props) {
     });
     stopFollowingOnZoom(map, () => isFollowing);
     map.on("style.load", () => installLayers(map, latest));
-    // MapLibre opens compact attribution at first; on phones start it closed (still one tap away on the (i) button).
-    map.once("load", () => container.current?.querySelector(".maplibregl-compact-show")?.classList.remove("maplibregl-compact-show"));
+    const stopFolding = foldAttributionLater(map, container.current);
     registerInteractions(map, latest);
     map.on("idle", () => latest.current.onIdle?.());
     map.on("error", (e: ErrorEvent) => {
@@ -98,6 +103,8 @@ export function MapView(props: Props) {
     const observer = new ResizeObserver((entries) => map.resize(entries));
     observer.observe(container.current);
     return () => {
+      launch.cancel();
+      stopFolding();
       observer.disconnect();
       map.remove();
       mapRef.current = null;
@@ -152,6 +159,37 @@ export function MapView(props: Props) {
       <Legend />
     </div>
   );
+}
+
+/** How long the map credits stay open once the map is in view: the OSMF attribution guidelines allow folding them after five seconds. */
+const ATTRIBUTION_SHOWN_MS = 5000;
+
+/**
+ * The map credits and licences (OpenStreetMap/OpenMapTiles/OpenFreeMap, National Highways OGL) open when the map first comes into
+ * view, then fold to MapLibre's (i) button after ATTRIBUTION_SHOWN_MS, or sooner when the map is dragged (MapLibre does that). Both
+ * are collapse triggers the OSMF attribution guidelines allow; folded, the credits are one tap away. The countdown starts at the
+ * first render once the splash has gone (index.html keeps #root inert until then), so the credits are seen. Folding removes the
+ * same class MapLibre's own drag handler removes, so the (i) button opens and closes them as before.
+ */
+function foldAttributionLater(map: MapLibreMap, container: HTMLElement): () => void {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let observer: MutationObserver | undefined;
+  const fold = () => container.querySelector(".maplibregl-compact-show")?.classList.remove("maplibregl-compact-show");
+  const root = container.closest("#root");
+  map.once("idle", () => {
+    const countdown = () => (timer = setTimeout(fold, ATTRIBUTION_SHOWN_MS));
+    if (!root?.hasAttribute("inert")) return countdown();
+    observer = new MutationObserver(() => {
+      if (root.hasAttribute("inert")) return;
+      observer?.disconnect();
+      countdown();
+    });
+    observer.observe(root, { attributes: true, attributeFilter: ["inert"] });
+  });
+  return () => {
+    clearTimeout(timer);
+    observer?.disconnect();
+  };
 }
 
 /**

@@ -206,7 +206,8 @@ and D have no route to export.
 - Touch targets ≥ 48 px; WCAG 2.2 AA; full keyboard/remote operation; information never by colour alone.
 - Distinct visual language per source: NH closures, NH incidents, planned roadworks, live traffic, official diversion,
   calculated route (later). A legend is always one tap away.
-- Location: optional "Near me" button, one-time request with an explanation first, works fully without it.
+- Location: optional, works fully without it. On launch the app asks the browser once (not when location is already blocked) and,
+  if allowed, centres the map on the user at about a 10-mile radius as the initial view only; the location button asks again.
 - **Safety notice** on first launch and on every diversion/export screen: "For planning only. Do not use while driving.
   Always follow road signs, police and National Highways instructions and temporary traffic management. If this app
   conflicts with signs on the road, the signs take priority."
@@ -248,7 +249,7 @@ Browser: React + MapLibre + TanStack Query + service worker
 - Worker: read-only GETs, Zod-validated params, rate limiting, CORS limited to our origin, strict CSP (map/tile hosts allow-listed),
   security headers, no stack traces in responses.
 - Upstream text is rendered as text only. Outbound links come from an allow-listed scheme/host builder.
-- Location: one-shot, opt-in, never stored or sent to our server (the map centres locally).
+- Location: opt-in through the browser's permission prompt, never stored or sent to our server (the map centres locally).
 - No accounts, cookies or analytics. Favourites and the vehicle profile stay on the device.
 - Supply chain: lockfile, `npm audit` + Dependabot, minimal dependencies, GitHub secret scanning and push protection, pinned Actions.
 - ISO-conscious practices (least privilege, documented data flows, refresh audit log, secret rotation), without claiming certification.
