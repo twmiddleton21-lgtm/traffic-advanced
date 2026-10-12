@@ -40,22 +40,29 @@ routes only. A first OSM build would add both. All records are in England (see "
 
 **On the map** (2026-10-12): from zoom 6 to 11, nearby height or weight markers are grouped into a ring with a count (red for
 heights, grey for weights; selecting one zooms in until it splits), and a marker with no near neighbour keeps its plate. From zoom
-12 every marker is separate. Below zoom 6 none is drawn. The "Restrictions" button shows which layers are on, with loading and
-error states under it. Once a layer has loaded, its key rows (loaded layers only), the zoom message and the full disclaimer are a
-"Restrictions" section of the map's one key (`web/src/components/MapKey.tsx`, bottom left); until then the disclaimer is shown
-under the button, so it is on screen whenever any layer is on. The map key folds to one "Map key" line that looks the same whatever
-is switched on; the restriction symbols and meanings are in the opened key (open on desktop, folded on phones and tablets at first; the choice holds while layers and views are
-switched). Owner decision, 2026-10-12: folded, the disclaimer
-is hidden visually only. It stays in the page word for word as the folded control's description for screen readers, shows
-again when the key is opened, and is always shown in "Restrictions in this view". Loading and error states are never folded.
-The "Restrictions in this view" list works from zoom 6, nearest the centre first.
+12 every marker is separate. Below zoom 6 none is drawn. There is no separate "Restrictions" button or list popup (owner decision,
+2026-10-12). Loading and error states show in a small box at the top right while a layer loads or fails. Once a layer has loaded,
+its key rows (loaded layers only), the zoom message and the full disclaimer are a "Restrictions" section of the map's one key
+(`web/src/components/MapKey.tsx`, bottom left); until then the disclaimer is shown with the loading and error states, so it is on
+screen whenever any layer is on. The map key folds to one "Map key" line that looks the same whatever is switched on; the
+restriction symbols and meanings are in the opened key (open on desktop, folded on phones and tablets at first; the choice holds
+while layers and views are switched). Owner decision, 2026-10-12: folded, the disclaimer is hidden visually only. It stays in the
+page word for word as the folded control's description for screen readers, shows again when the key is opened, and is always
+shown in a restriction's details. Loading and error states are never folded.
+
+**Details and the keyboard route.** Tapping a marker opens that restriction's full details. In the opened key, each loaded zone has
+a 48 px "LEZ/ULEZ details and TfL's page" button that opens the zone's details (source, the TfL note, the source notes including
+the ULEZ boundary-accuracy caveat, and the link to TfL's page). Map markers are pointer targets only, so the opened key also holds
+the keyboard and screen-reader route to every restriction: a list of the restrictions in view (from zoom 6, nearest the centre
+first), hidden visually until it has keyboard focus, whose buttons open the same details. An out-of-date data warning shows in the
+key and in the details.
 
 **What the weight values are, and aren't.**
 - Each NH `DiversionPoint` weight record has only a type ("weight"), a value and a unit ("Tonnes"). There's no direction, extent,
   vehicle class, exemption or sign wording.
 - NH records one point per diversion route and direction, so one place can appear several times: the 84 weight records are 75
   places, and the 77 NH heights are 48 places.
-  - The map and the "Restrictions in this view" list show each place once (`web/src/restrictions/group.ts`). Its details list
+  - The map and the key's keyboard list show each place once (`web/src/restrictions/group.ts`). Its details list
     every diversion route it was recorded on, with "Recorded N times at this place (once per diversion route), shown once".
   - Records are merged only when everything describing the restriction is identical: source, kind, value, wording,
     conditions and exact position. Only the record id and the route may differ. Checked on the shipped data: the 26 merged
@@ -113,7 +120,7 @@ The "Restrictions in this view" list works from zoom 6, nearest the centre first
 
   **What the app says about boundary accuracy (checked against the code 2026-10-12).** It never calls a boundary
   "approximate".
-  - **ULEZ:** its source note, shown in the zone's details in "Restrictions in this view" and in Settings → Sources and
+  - **ULEZ:** its source note, shown in the zone's details (opened from the map key) and in Settings → Sources and
     licences, reads: "Checked against the Greater London Authority's copy of the 2023 ULEZ boundary (Open Government Licence
     v2.0): 99% of its points are within 11 m of TfL's boundary. The two copies differ by up to about 111 m in places. Near the
     boundary, follow the zone signs."

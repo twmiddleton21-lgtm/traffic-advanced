@@ -128,7 +128,7 @@ describe("compact map keys", () => {
   });
 
   it("Closures: the key sits bottom left, above the map credits; it scrolls within the map, clear of the restriction controls on phones", () => {
-    expect(app).toMatch(/<MapKey\s+view=\{appView\}\s+open=\{mapKeyOpen\}\s+onOpenChange=\{setMapKeyOpen\}\s+restrictions=\{\{ statuses: Object\.values\(statuses\), zoom: view\?\.zoom \?\? null \}\}\s+className="absolute bottom-\[calc\(2rem\+env\(safe-area-inset-bottom\)\)\] left-\[max\(0\.75rem,env\(safe-area-inset-left\)\)\] z-\[1\] max-h-\[max\(6rem,calc\(100%-15rem\)\)\] w-max max-w-\[min\(22rem,calc\(100%-4\.5rem\)\)\]/);
+    expect(app).toMatch(/<MapKey\s+view=\{appView\}\s+open=\{mapKeyOpen\}\s+onOpenChange=\{setMapKeyOpen\}\s+restrictions=\{\{ statuses: Object\.values\(statuses\), area: view, now, onSelect: openRestriction \}\}\s+className="absolute bottom-\[calc\(2rem\+env\(safe-area-inset-bottom\)\)\] left-\[max\(0\.75rem,env\(safe-area-inset-left\)\)\] z-\[1\] max-h-\[max\(6rem,calc\(100%-15rem\)\)\] w-max max-w-\[min\(22rem,calc\(100%-4\.5rem\)\)\]/);
   });
 
   it("Routes: the Layers button at the top left, clear of the map's buttons; the map key at the bottom left, as in Closures", () => {

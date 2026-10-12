@@ -1,9 +1,12 @@
-import { RESTRICTIONS_DISCLAIMER } from "../../../shared/api/restrictions.ts";
+import { RESTRICTIONS_DISCLAIMER, type RestrictionPointsFile, type ZonesFile } from "../../../shared/api/restrictions.ts";
+import type { MapViewArea } from "../map/MapView.tsx";
+import { isStale } from "../restrictions/describe.ts";
 import { mapControlsState, zoomMessage } from "../restrictions/mapControls.ts";
 import type { LayerStatus } from "../restrictions/useRestrictionData.ts";
 import type { AppView } from "../routemap/view.ts";
 import { GroupDot, Plate, ZoneLine } from "./RestrictionGlyphs.tsx";
 import { DISCLAIMER_ID } from "./RestrictionMapControls.tsx";
+import { InViewButtons, STALE_RESTRICTIONS_TEXT, type RestrictionSelection } from "./RestrictionsDialog.tsx";
 
 /**
  * The map's one key, for the view that's shown. It folds to a single 48 px "Map key" line, so on phones it takes about as little of
@@ -17,6 +20,10 @@ import { DISCLAIMER_ID } from "./RestrictionMapControls.tsx";
  * word, outside the fold, as the folded control's description for screen readers. While restriction layers are on but none has
  * loaded, the disclaimer is shown with their loading and failure messages instead (RestrictionMapControls), so it is always on the
  * page exactly once.
+ *
+ * There is no separate "Restrictions" button or list popup (owner decision, 2026-10-12), so the opened key also gives each loaded
+ * zone a button to its full details (TfL's page and the boundary notes), and holds the keyboard and screen-reader route to every
+ * restriction: the restrictions in view as buttons, hidden visually until they have keyboard focus. Both open RestrictionsDialog.
  */
 export function MapKey({
   view,
@@ -28,15 +35,21 @@ export function MapKey({
   view: AppView;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Closures only: the restriction layers' statuses and the map's zoom. */
-  restrictions?: { statuses: LayerStatus[]; zoom: number | null };
+  /**
+   * Closures only: the restriction layers' statuses, the map's visible area (for the keyboard list of restrictions in view), the
+   * time (for the out-of-date warning), and what opens a restriction's or a zone's details.
+   */
+  restrictions?: { statuses: LayerStatus[]; area: MapViewArea | null; now: Date; onSelect: (selection: RestrictionSelection) => void };
   /** Where it sits on the map (App positions it per view). */
   className?: string;
 }) {
-  const state = view === "closures" && restrictions ? mapControlsState(restrictions.statuses, restrictions.zoom) : null;
+  const state = view === "closures" && restrictions ? mapControlsState(restrictions.statuses, restrictions.area?.zoom ?? null) : null;
   const on = restrictions?.statuses.filter((s) => s.state !== "off") ?? [];
   const withRestrictions = state !== null && on.some((s) => s.state === "ready");
   const message = state && withRestrictions ? zoomMessage(state) : null;
+  const pointFiles: RestrictionPointsFile[] = on.flatMap((s) => (s.state === "ready" && s.data !== null && "points" in s.data ? [s.data.points] : []));
+  const zoneFiles: ZonesFile[] = on.flatMap((s) => (s.state === "ready" && s.data !== null && "zones" in s.data ? [s.data.zones] : []));
+  const stale = restrictions ? [...pointFiles, ...zoneFiles].some((f) => isStale(f.generatedAt, restrictions.now)) : false;
   return (
     <div className={`pointer-events-auto overflow-y-auto overscroll-contain rounded-[4px] border border-line bg-surface/95 text-[13px] shadow-sm ${className}`}>
       <details id="map-key" open={open} onToggle={(e) => onOpenChange(e.currentTarget.open)} className="group">
@@ -57,6 +70,32 @@ export function MapKey({
               <RestrictionRows statuses={on} grouped={state.grouped} />
               {state.community && <p className="text-muted">Dashed: community record, unverified.</p>}
             </div>
+            {stale && <p className="pt-1 font-bold text-stale">{STALE_RESTRICTIONS_TEXT}</p>}
+            {/* Each zone's full details (TfL's page, the boundary notes and their limits), for everyone. */}
+            {zoneFiles.length > 0 && (
+              <ul className="pt-1">
+                {zoneFiles.flatMap((f) => f.zones).map((z) => (
+                  <li key={z.id}>
+                    <button
+                      type="button"
+                      onClick={() => restrictions?.onSelect({ kind: "zone", id: z.id })}
+                      className="flex min-h-12 w-full items-center gap-1.5 rounded-[4px] text-left font-bold underline decoration-2 underline-offset-2 hover:bg-raised"
+                    >
+                      <ZoneLine zone={z.id} />
+                      {`${z.id.toUpperCase()} details and TfL's page`}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {/* The keyboard and screen-reader route to every restriction (map markers are pointer targets only): hidden until it
+                has keyboard focus, so it adds nothing to the key on screen for touch and mouse users. */}
+            {pointFiles.length > 0 && (
+              <div className="sr-only space-y-1 focus-within:not-sr-only focus-within:pt-2">
+                <h4 className="font-bold">Restrictions in this view (keyboard list)</h4>
+                <InViewButtons view={restrictions?.area ?? null} points={pointFiles} onSelect={(id) => restrictions?.onSelect({ kind: "point", id })} />
+              </div>
+            )}
           </section>
         )}
       </details>
