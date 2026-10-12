@@ -2,7 +2,7 @@ import type { RestrictionSource } from "../../../../shared/api/restrictions.ts";
 import { dataOrigin, formatTime, freshnessLine, lastUpdatedLine, NOT_LIVE_TEXT, OFFICIAL_SOURCE_URL } from "../../domain/dataStatus.ts";
 import { formatDateTime } from "../../domain/filters.ts";
 import type { ClosuresState } from "../../hooks/useClosures.ts";
-import { MAP_CREDITS } from "../../map/credits.ts";
+import { GLA_BOUNDARY_CHECK_CREDIT, MAP_CREDITS } from "../../map/credits.ts";
 import { allowedLink, formatDate, sourceLabel } from "../../restrictions/describe.ts";
 import { SafetyNotice } from "../SafetyNotice.tsx";
 import { Fact, SettingsSection } from "./SettingsSection.tsx";
@@ -96,6 +96,13 @@ export function DataHelpSection({ data, now, restrictionSources }: { data: Closu
               )}
             </li>
           ))}
+          {restrictionSources.some((s) => s.id === "tfl-ulez") && (
+            <li>
+              <p className="font-bold">{GLA_BOUNDARY_CHECK_CREDIT.name}</p>
+              <p>{GLA_BOUNDARY_CHECK_CREDIT.text}</p>
+              <External href={GLA_BOUNDARY_CHECK_CREDIT.licenceUrl}>{GLA_BOUNDARY_CHECK_CREDIT.licence}</External>
+            </li>
+          )}
         </ul>
       </SettingsSection>
 

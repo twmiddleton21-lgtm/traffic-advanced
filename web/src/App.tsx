@@ -8,6 +8,7 @@ import { DateSelector } from "./components/DateSelector.tsx";
 import { FilterBar } from "./components/FilterBar.tsx";
 import { RestrictionMapControls } from "./components/RestrictionMapControls.tsx";
 import { RestrictionsDialog } from "./components/RestrictionsDialog.tsx";
+import { RoutesMapControls } from "./components/RoutesMapControls.tsx";
 import { SettingsDialog } from "./components/settings/SettingsDialog.tsx";
 import { UpdateNotice } from "./components/UpdateNotice.tsx";
 import { appliesOnDay, clampDay, closuresOnDay, firstDayFor, selectableRange, selectionOnDay, ukDayKey, type DayKey } from "./domain/closureDates.ts";
@@ -18,10 +19,13 @@ import { useJunctions } from "./hooks/useJunctions.ts";
 import { useNow } from "./hooks/useNow.ts";
 import { useWideLayout } from "./hooks/useWideLayout.ts";
 import { MapView, type MapViewArea, type RestrictionOverlay } from "./map/MapView.tsx";
+import type { RoutesLayerSwitches } from "./map/viewLayers.ts";
 import { sourceAttribution } from "./map/restrictionLayers.ts";
 import { allSources, availableLayers } from "./restrictions/catalog.ts";
 import { useRestrictionData, type LayerStatus } from "./restrictions/useRestrictionData.ts";
 import { RESTRICTION_LAYERS, type RestrictionLayer } from "./settings/preferences.ts";
+import { junctionLabels, junctionLoad } from "./routemap/junctionLabels.ts";
+import { readView, withView, type AppView } from "./routemap/view.ts";
 import { useSettings } from "./settings/useSettings.ts";
 import { hideSplash, SPLASH_MAX_MS } from "./splash.ts";
 
@@ -34,7 +38,8 @@ export function App() {
   const now = useNow();
   const notice = refreshNotice(closuresState);
   // Junction labels are optional context: without them the map still shows closures and diversions.
-  const junctions = useJunctions().data?.junctions ?? NO_JUNCTIONS;
+  const junctionsQuery = useJunctions();
+  const junctions = junctionsQuery.data?.junctions ?? NO_JUNCTIONS;
   const [filter, setFilter] = useState<FilterId>("all");
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(readSelectedFromUrl);
@@ -74,6 +79,20 @@ export function App() {
       else setSelectedId(null);
     }
   }
+
+  // Closures (default) or Routes, kept in the URL like the selected closure (routemap/view.ts). Switching changes only this: the
+  // Closures view's day, filters, search, selection, drawer and map position are all kept for when it's shown again.
+  const [appView, setAppView] = useState<AppView>(() => readView(window.location.search));
+  const closuresView = appView === "closures";
+  useEffect(() => {
+    window.history.replaceState(null, "", withView(window.location.href, appView));
+  }, [appView]);
+  // The Routes view's own layer switches (on by default, for this visit) and the junction labels it may draw. Live traffic is
+  // deferred from the first release (web/src/deferred/traffic/ is not imported).
+  const [routeLayers, setRouteLayers] = useState<RoutesLayerSwitches>({ junctions: true });
+  const [routesPanelOpen, setRoutesPanelOpen] = useState(wide);
+  const routeLabels = useMemo(() => junctionLabels(junctions), [junctions]);
+  const routeJunctionLoad = junctionLoad(routeLayers.junctions, { isPending: junctionsQuery.isPending, isError: junctionsQuery.isError, hasData: Boolean(junctionsQuery.data) }, routeLabels);
 
   // Keep the selected closure in the URL so a link opens it.
   useEffect(() => {
@@ -146,6 +165,9 @@ export function App() {
   const settingsButton = useRef<HTMLButtonElement>(null);
   const [restrictionsOpen, setRestrictionsOpen] = useState(false);
   const restrictionsButton = useRef<HTMLButtonElement>(null);
+  // The restrictions key starts open where there's room and closed on phones and tablets, as the map key does; the choice then
+  // holds while layers are switched (and off and on again) until the app is reloaded.
+  const [restrictionKeyOpen, setRestrictionKeyOpen] = useState(wide);
   const [selectedRestrictionId, setSelectedRestrictionId] = useState<string | null>(null);
   const [view, setView] = useState<MapViewArea | null>(null);
   const [baseMapFailed, setBaseMapFailed] = useState(false);
@@ -181,17 +203,26 @@ export function App() {
     setSelectedRestrictionId(id);
     setRestrictionsOpen(true);
   }, []);
+  // Switching a layer off also drops a selected marker, so it can't reappear selected when the layer comes back.
+  const toggleRestriction = (layer: RestrictionLayer, on: boolean) => {
+    setRestriction(layer, on);
+    if (!on) setSelectedRestrictionId(null);
+  };
   const closeRestrictions = () => {
     setRestrictionsOpen(false);
     setSelectedRestrictionId(null);
   };
 
-  // Problems for Settings: the same messages shown elsewhere, gathered in one list (not announced again).
+  // Problems for Settings: the same messages shown elsewhere, gathered in one list (not announced again). Each view lists only its
+  // own layers' problems.
   const warnings = [
     notice,
-    baseMapFailed ? "The base map couldn't load. The closures list still works." : null,
-    ...RESTRICTION_LAYERS.filter((l) => statuses[l].state === "error").map((l) => `Restriction data (${l}): ${statuses[l].error}`),
+    baseMapFailed ? (closuresView ? "The base map couldn't load. The closures list still works." : "The base map couldn't load.") : null,
+    ...(closuresView ? RESTRICTION_LAYERS.filter((l) => statuses[l].state === "error").map((l) => `Restriction data (${l}): ${statuses[l].error}`) : []),
+    !closuresView && routeJunctionLoad.state === "error" ? "Junction numbers couldn't be loaded." : null,
   ].filter((w): w is string => Boolean(w));
+  const toggleRouteLayer = (layer: keyof RoutesLayerSwitches, on: boolean) => setRouteLayers((l) => ({ ...l, [layer]: on }));
+  const retryJunctions = () => void junctionsQuery.refetch();
 
   const count = data ? (visible.length === dayClosures.length ? `${dayClosures.length}` : `${visible.length} of ${dayClosures.length}`) : null;
 
@@ -206,6 +237,8 @@ export function App() {
         onOpenSettings={() => setSettingsOpen(true)}
         settingsButtonRef={settingsButton}
         inert={drawerModal}
+        view={appView}
+        onViewChange={setAppView}
       />
 
       <UpdateNotice update={update} dismissed={updateDismissed} onReload={appUpdates.reload} onDismiss={() => setUpdateDismissed(true)} />
@@ -218,7 +251,7 @@ export function App() {
         </p>
       )}
 
-      {data && <DateSelector range={range} selected={day} today={today} onSelect={changeDay} inert={drawerModal} />}
+      {data && closuresView && <DateSelector range={range} selected={day} today={today} onSelect={changeDay} inert={drawerModal} />}
 
       <main className="relative flex min-h-0 flex-1">
         <aside
@@ -227,6 +260,8 @@ export function App() {
           role={wide ? undefined : "dialog"}
           aria-modal={drawerModal || undefined}
           inert={!wide && !drawerOpen}
+          // Hidden, not removed, in the Routes view, so the list keeps its place.
+          hidden={!closuresView}
           className={`flex min-h-0 flex-col border-line bg-surface max-lg:absolute max-lg:inset-y-0 max-lg:left-0 max-lg:z-30 max-lg:w-[min(24rem,calc(100%-3.5rem))] max-lg:border-r max-lg:pb-[env(safe-area-inset-bottom)] max-lg:pl-[env(safe-area-inset-left)] max-lg:transition-[translate] max-lg:duration-200 max-lg:ease-out lg:w-[380px] lg:flex-none lg:border-r ${
             // Closed: slid fully off-screen and inert (out of the tab order and the accessibility tree). No visibility toggle, so focus
             // can move straight in when it opens; the shadow is only drawn while open so nothing shows at the screen edge.
@@ -296,9 +331,16 @@ export function App() {
         />
 
         {/* --ta-map-top-inset keeps the map's own notices clear of the Closures button on phones and tablets. */}
-        <section className="relative min-w-0 flex-1 [--ta-map-top-inset:3.75rem] lg:[--ta-map-top-inset:0px]" aria-label="Map" inert={drawerModal}>
+        <section
+          className={`relative min-w-0 flex-1 lg:[--ta-map-top-inset:0px] ${closuresView ? "[--ta-map-top-inset:3.75rem]" : "[--ta-map-top-inset:0px]"}`}
+          aria-label="Map"
+          inert={drawerModal}
+        >
           <MapView
             closures={visible}
+            view={appView}
+            routeLayers={routeLayers}
+            routeJunctions={routeLabels.labels}
             selected={selected}
             junctions={junctions}
             onSelect={selectFromMap}
@@ -310,11 +352,30 @@ export function App() {
             onViewChange={setView}
             onBaseMapError={setBaseMapFailed}
           />
-          {/* Below MapLibre's zoom and location buttons. */}
-          <div className="pointer-events-none absolute right-[max(0.75rem,env(safe-area-inset-right))] top-[9.5rem] z-10 flex justify-end">
-            <RestrictionMapControls statuses={Object.values(statuses)} zoom={view?.zoom ?? null} onOpenList={() => setRestrictionsOpen(true)} buttonRef={restrictionsButton} />
+          {/* Below MapLibre's zoom and location buttons, and above the map credits: an opened key scrolls rather than run off the map. */}
+          <div className="pointer-events-none absolute bottom-[calc(2rem+env(safe-area-inset-bottom))] right-[max(0.75rem,env(safe-area-inset-right))] top-[9.5rem] z-10 flex items-start justify-end">
+            {closuresView ? (
+              <RestrictionMapControls
+                statuses={Object.values(statuses)}
+                zoom={view?.zoom ?? null}
+                onOpenList={() => setRestrictionsOpen(true)}
+                buttonRef={restrictionsButton}
+                keyOpen={restrictionKeyOpen}
+                onKeyOpenChange={setRestrictionKeyOpen}
+              />
+            ) : (
+              <RoutesMapControls
+                layers={routeLayers}
+                onToggle={toggleRouteLayer}
+                junctions={routeJunctionLoad}
+                onRetry={retryJunctions}
+                open={routesPanelOpen}
+                onOpenChange={setRoutesPanelOpen}
+              />
+            )}
           </div>
           <button
+            hidden={!closuresView}
             ref={openButton}
             type="button"
             onClick={() => setDrawerOpen(true)}
@@ -332,10 +393,13 @@ export function App() {
           open={settingsOpen}
           onClose={() => setSettingsOpen(false)}
           returnFocus={() => settingsButton.current}
+          view={appView}
           appearance={{ theme: themeChoice, onTheme: chooseTheme }}
-          restrictions={{ entries, enabled, statuses, onToggle: setRestriction }}
+          restrictions={{ entries, enabled, statuses, onToggle: toggleRestriction }}
+          routes={{ layers: routeLayers, onToggle: toggleRouteLayer, junctions: routeJunctionLoad, onRetry: retryJunctions }}
           appStatus={{ version: APP_VERSION, update, onCheck: () => void appUpdates.checkNow(), onReload: appUpdates.reload, warnings }}
-          dataHelp={{ data: closuresState, now, restrictionSources: allSources(entries) }}
+          // Restriction sources are credited where their data can be shown: the Closures view.
+          dataHelp={{ data: closuresState, now, restrictionSources: closuresView ? allSources(entries) : [] }}
         />
         <RestrictionsDialog
           open={restrictionsOpen}
@@ -349,7 +413,7 @@ export function App() {
           now={now}
         />
 
-        {selected && data && (
+        {selected && data && closuresView && (
           // Desktop: a panel on the right. Phones: a sheet over the lower map (the closure and its diversion stay in view above it),
           // or on the right when the phone is sideways.
           <div

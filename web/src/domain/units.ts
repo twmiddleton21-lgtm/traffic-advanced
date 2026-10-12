@@ -18,6 +18,12 @@ export function formatRestriction(r: { kind: string; value: number | null; unit:
 
 const capitalise = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
 
+/**
+ * What a route card says when NH records no restrictions on a route (SPECIFICATION §7), whatever its HGV status: absence of data
+ * is not clearance. The same sentence the frozen evaluator gives as the reason for "no-restrictions-recorded".
+ */
+export const NO_RESTRICTIONS_RECORDED = "National Highways records no restrictions on this route. This does not guarantee there are none.";
+
 /** NH route classification in GG 903 terms. */
 export function classificationMeaning(c: string | null): string {
   switch (c) {

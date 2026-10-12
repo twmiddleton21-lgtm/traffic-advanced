@@ -91,6 +91,13 @@ export function sourceLabel(s: Pick<RestrictionSource, "kind" | "authority">): s
   return s.kind === "official" ? `Source: ${s.authority}` : `Community record: ${s.authority}. Unverified.`;
 }
 
+/**
+ * Shown for a LEZ or ULEZ zone in place of TfL's own rule sentences, which are tfl.gov.uk website text (personal use only under
+ * TfL's website terms), not TfL open data. The zone's details link to TfL's page for the rules (docs/RESTRICTIONS.md).
+ */
+export const ZONE_RULES_TEXT =
+  "Transport for London sets this zone's rules and can change them. This app doesn't show the rules and isn't a check of your vehicle or route. TfL's page has the rules.";
+
 /** Where it is, from the source's own road name, number and area, or a plain fallback. */
 export function locationText(p: Pick<RestrictionPoint, "road" | "position" | "approximate">): string {
   const parts = [p.road.ref, p.road.name, p.road.area].filter((x): x is string => Boolean(x));

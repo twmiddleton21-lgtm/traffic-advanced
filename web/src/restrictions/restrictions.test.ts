@@ -6,11 +6,11 @@ import { RESTRICTIONS_DISCLAIMER, type RestrictionPoint, type RestrictionPointsF
 import { PointDetails, RestrictionsDialog } from "../components/RestrictionsDialog.tsx";
 import { getRestrictionFile, TrafficApiError } from "../data/trafficService.ts";
 import { availableLayers } from "./catalog.ts";
-import { allowedLink, heightWordingNote, isStale, kindLabel, limitText, locationText, markerText, osmElementUrl, sourceLabel, wordingImperialHeight } from "./describe.ts";
+import { allowedLink, heightWordingNote, isStale, kindLabel, limitText, locationText, markerText, osmElementUrl, sourceLabel, wordingImperialHeight, ZONE_RULES_TEXT } from "./describe.ts";
 import { formatHeight } from "../domain/units.ts";
 import { groupPoints } from "./group.ts";
 import { findPoint, LIST_LIMIT, pointsInView } from "./inView.ts";
-import { restrictionPointsFileSchema } from "../../../shared/api/restrictions.ts";
+import { restrictionPointsFileSchema, zonesFileSchema } from "../../../shared/api/restrictions.ts";
 
 const src = (over: Partial<RestrictionSource>): RestrictionSource => ({
   id: "osm",
@@ -127,11 +127,16 @@ describe("restrictions in view (the keyboard and screen-reader route)", () => {
     expect(out).toContain(RESTRICTIONS_DISCLAIMER.replace(/'/g, "&#x27;"));
   });
 
-  it("asks to zoom in rather than listing restrictions at a wide view", () => {
-    const out = renderToStaticMarkup(
-      h(RestrictionsDialog, { open: false, onClose: () => undefined, returnFocus: () => null, view: { bounds: [-1, 51, 1, 52], centre: [0, 51.5], zoom: 8 }, points: [f], zones: [], selectedId: null, onSelect: () => undefined, now: new Date() }),
-    );
-    expect(out).toContain("Zoom in on the map to list height and weight restrictions here.");
+  it("asks to zoom in at a whole-country view, naming only the loaded layer, and lists from the zoom the map draws them", () => {
+    const at = (zoom: number) =>
+      renderToStaticMarkup(
+        h(RestrictionsDialog, { open: false, onClose: () => undefined, returnFocus: () => null, view: { bounds: [-1, 51, 1, 52], centre: [0, 51.5], zoom }, points: [f], zones: [], selectedId: null, onSelect: () => undefined, now: new Date() }),
+      );
+    expect(f.layer).toBe("weight");
+    expect(at(5)).toContain("Zoom in on the map to list weight restrictions here.");
+    expect(at(5)).not.toContain("height restrictions");
+    expect(at(8)).not.toContain("Zoom in on the map");
+    expect(at(8)).toContain("recorded in this view");
   });
 });
 
@@ -333,5 +338,29 @@ describe("heights whose source wording gives feet and inches", () => {
     expect(heightWordingNote(higher)).toContain("is higher than 13′6″ (about 4.11 m). Use the lower figure, 13′6″, and follow the sign.");
     // A band never takes a single worded figure.
     expect(limitText(point({ kind: "height", limit: { min: 3.6, max: 4 }, sourceText: "14ft 0ins" }))).toBe("Between 3.6 m (11′9″) and 4 m (13′1″)");
+  });
+});
+
+describe("LEZ and ULEZ details", () => {
+  const zones = (["lez", "ulez"] as const).map((z) => zonesFileSchema.parse(JSON.parse(readFileSync(`web/src/restrictions/data/${z}.json`, "utf8"))));
+  // react-dom/server escapes apostrophes.
+  const esc = (s: string) => s.replace(/'/g, "&#x27;");
+  const out = renderToStaticMarkup(
+    h(RestrictionsDialog, { open: false, onClose: () => undefined, returnFocus: () => null, view: { bounds: [-0.2, 51.45, 0, 51.55], centre: [-0.1, 51.5], zoom: 12 }, points: [], zones, selectedId: null, onSelect: () => undefined, now: new Date("2026-10-12T10:00:00Z") }),
+  );
+
+  it("don't show TfL's website rule sentences (kept in the data files), but say TfL sets the rules and link to TfL's pages", () => {
+    const rules = zones.flatMap((f) => f.zones.flatMap((z) => z.rules));
+    expect(rules.length).toBeGreaterThan(0);
+    for (const r of rules) expect(out).not.toContain(esc(r));
+    expect(out).not.toContain("TfL says");
+    expect(out.split(esc(ZONE_RULES_TEXT)).length - 1).toBe(2);
+    expect(out).toContain('href="https://tfl.gov.uk/modes/driving/low-emission-zone"');
+    expect(out).toContain('href="https://tfl.gov.uk/modes/driving/ultra-low-emission-zone"');
+  });
+
+  it("keep each zone's source notes and the disclaimer", () => {
+    for (const n of zones.flatMap((f) => f.sources.flatMap((s) => s.notes))) expect(out).toContain(esc(n));
+    expect(out).toContain(RESTRICTIONS_DISCLAIMER);
   });
 });

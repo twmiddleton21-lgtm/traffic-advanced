@@ -18,3 +18,15 @@ export const MAP_CREDITS: { name: string; text: string; licence: string; licence
     licenceUrl: "https://www.openstreetmap.org/copyright",
   },
 ];
+
+/**
+ * The ULEZ layer's boundary-comparison figures (its source note) come from the GLA's copy of the boundary, which is used for that
+ * check only and not shipped. Listed in Settings with the ULEZ source. OGL v2.0's default attribution statement: the dataset page
+ * specifies none (checked 2026-10-12).
+ */
+export const GLA_BOUNDARY_CHECK_CREDIT = {
+  name: "Greater London Authority",
+  text: "ULEZ boundary comparison figures: from the Greater London Authority's London Wide Ultra Low Emission Zone 2023 dataset. Contains public sector information licensed under the Open Government Licence v2.0.",
+  licence: "Open Government Licence v2.0",
+  licenceUrl: "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/2/",
+};

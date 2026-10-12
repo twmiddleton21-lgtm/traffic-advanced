@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import type { ClosuresSnapshot, OfficialRoute, TrafficClosure } from "../../../shared/api/closures.ts";
 import { NOT_LIVE_TEXT } from "../domain/dataStatus.ts";
 import { confirmedJunctions, directionLabel, formatDateTime, formatWindow } from "../domain/filters.ts";
-import { classificationMeaning, formatRestriction } from "../domain/units.ts";
+import { classificationMeaning, formatRestriction, NO_RESTRICTIONS_RECORDED } from "../domain/units.ts";
 import { DiversionBadge } from "./DiversionBadge.tsx";
 import { HgvStatus } from "./HgvStatus.tsx";
 import { RoadShield } from "./RoadShield.tsx";
@@ -184,7 +184,7 @@ function MatchedRoute({ route }: { route: NonNullable<TrafficClosure["matchedRou
   );
 }
 
-function RouteCard({ route: r }: { route: OfficialRoute }) {
+export function RouteCard({ route: r }: { route: OfficialRoute }) {
   return (
     <section className="space-y-3 rounded-[4px] border border-line p-3" aria-label={`Route ${r.routeId}`}>
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -207,12 +207,13 @@ function RouteCard({ route: r }: { route: OfficialRoute }) {
               ))}
             </ul>
           ) : (
-            "None recorded by National Highways"
+            NO_RESTRICTIONS_RECORDED
           )}
         </Fact>
       </Facts>
       <ul className="space-y-1 text-[14px]">
-        {r.hgvReasons.map((reason) => (
+        {/* The no-restrictions sentence is already the Restrictions fact; it isn't repeated as a reason. */}
+        {r.hgvReasons.filter((reason) => reason !== NO_RESTRICTIONS_RECORDED).map((reason) => (
           <li key={reason}>{reason}</li>
         ))}
       </ul>

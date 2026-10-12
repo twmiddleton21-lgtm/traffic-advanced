@@ -58,12 +58,14 @@ function addArrow(map: MapLibreMap): void {
 const RESTRICTION_RED = "#c8102e";
 
 /**
- * Restriction plates, sign-style: white with a red border (a grey border when NH doesn't record the limit's type), the value as
- * text. Lorry limits carry a lorry glyph and structural limits a bridge glyph, so the kinds differ by shape as well as by colour.
- * Community (OpenStreetMap) records have a dashed border. Only the plain middle stretches, so glyphs and corners keep their shape.
+ * Restriction plates, sign-style: white with a red border (a grey border when NH doesn't record the limit's type), a glyph for the
+ * kind and the value as text. Heights carry up-and-down arrows, weights of unrecorded type a weight, lorry limits a lorry and
+ * structural limits a bridge, so the kinds differ by shape as well as by colour. Community (OpenStreetMap) records have a dashed
+ * border. Only the plain middle stretches, so glyphs and corners keep their shape. The same glyphs are drawn in the app's key
+ * (components/RestrictionGlyphs.tsx).
  */
-function addPlate(map: MapLibreMap, id: string, options: { border: string; dashed: boolean; glyph: "lorry" | "bridge" | null }): void {
-  const glyphWidth = options.glyph ? 16 : 0;
+function addPlate(map: MapLibreMap, id: string, options: { border: string; dashed: boolean; glyph: "height" | "weight" | "lorry" | "bridge" }): void {
+  const glyphWidth = 16;
   const width = glyphWidth + 16;
   const height = 20;
   const image = draw(width, height, (ctx) => {
@@ -78,7 +80,35 @@ function addPlate(map: MapLibreMap, id: string, options: { border: string; dashe
     ctx.setLineDash([]);
     ctx.fillStyle = COLOURS.ink;
     ctx.strokeStyle = COLOURS.ink;
-    if (options.glyph === "lorry") {
+    if (options.glyph === "height") {
+      // A vertical double-headed arrow between two bars: the clearance.
+      ctx.fillRect(4, 3.5, 10, 1.6);
+      ctx.fillRect(4, 14.9, 10, 1.6);
+      ctx.beginPath();
+      ctx.moveTo(9, 5.6);
+      ctx.lineTo(12, 8.6);
+      ctx.lineTo(6, 8.6);
+      ctx.closePath();
+      ctx.moveTo(9, 14.4);
+      ctx.lineTo(12, 11.4);
+      ctx.lineTo(6, 11.4);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillRect(8.2, 8, 1.6, 4);
+    } else if (options.glyph === "weight") {
+      // A weight: a ring handle on a trapezoid.
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.arc(9, 6.2, 2.1, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(5.5, 8.6);
+      ctx.lineTo(12.5, 8.6);
+      ctx.lineTo(14.5, 15.5);
+      ctx.lineTo(3.5, 15.5);
+      ctx.closePath();
+      ctx.fill();
+    } else if (options.glyph === "lorry") {
       // Trailer, cab and two wheels.
       ctx.fillRect(4, 6, 8, 6);
       ctx.fillRect(12.5, 8, 3.5, 4);
@@ -103,10 +133,10 @@ function addPlate(map: MapLibreMap, id: string, options: { border: string; dashe
 
 function addRestrictionPlates(map: MapLibreMap): void {
   const kinds = [
-    { kind: "height", border: RESTRICTION_RED, glyph: null },
+    { kind: "height", border: RESTRICTION_RED, glyph: "height" },
     { kind: "weight-goods", border: RESTRICTION_RED, glyph: "lorry" },
     { kind: "weight-structural", border: RESTRICTION_RED, glyph: "bridge" },
-    { kind: "weight-unrecorded-type", border: "#5b6770", glyph: null },
+    { kind: "weight-unrecorded-type", border: "#5b6770", glyph: "weight" },
   ] as const;
   for (const k of kinds) {
     addPlate(map, `ta-r-${k.kind}`, { border: k.border, dashed: false, glyph: k.glyph });

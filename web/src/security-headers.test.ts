@@ -34,7 +34,10 @@ const sourceFiles: string[] = [];
 const walk = (dir: string): void => {
   for (const name of readdirSync(dir)) {
     const path = join(dir, name);
-    if (statSync(path).isDirectory()) walk(path);
+    // web/src/deferred/ holds work kept out of the release: nothing in the app imports it (ui-safety.test.ts), so it isn't shipped.
+    if (statSync(path).isDirectory()) {
+      if (path.replaceAll("\\", "/") !== "web/src/deferred") walk(path);
+    }
     else if (/\.(ts|tsx)$/.test(name) && !/\.test\.ts$/.test(name)) sourceFiles.push(path);
   }
 };

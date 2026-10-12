@@ -97,6 +97,7 @@ version: `npx wrangler rollback <version-id>`. Only on the owner's instruction.
 | `160046f5-c009-44a2-a497-927c89c2bc33` | 2026-10-07 23:24:55 | `068936c` | Closures date selector (PR #9) |
 | `665cb5d4-3885-447e-9fb6-231b9326fa7f` | 2026-10-08 00:09:07 | `6dfe9eb` | Date selector can go back to yesterday (PR #11) |
 | `d5dae9fe-0916-4a47-9f33-d9df9f890484` | 2026-10-08 22:02:34 | `bb29aec` | Traffic Advanced brand identity (PR #13) |
+| `f7a9a816-42d6-4588-8723-c16d28d63d9a` | 2026-10-09 03:23:32 | not recorded | Not recorded at the time; found afterwards (see below) |
 
 ### 2026-10-06 16:46 UTC: map location control
 
@@ -243,6 +244,26 @@ Worker configuration, security-header or theme-colour changes.
 - The banner showed "Offline/stale. Check official sources." because the snapshot was captured at 17:54 UTC, over four hours earlier (see
   "Scheduled ingestion"). That is the existing data's age, not a problem with this deployment.
 - **Not yet checked:** real Safari (iOS and macOS), the Apple touch icon via "Add to Home Screen", and real phones and tablets.
+
+### 2026-10-09 03:23 UTC: unrecorded deployment (found 2026-10-12)
+
+This deployment wasn't logged when it was made. It was found on 2026-10-12 by a read-only review of Cloudflare's deployment history
+(`npx wrangler deployments status`, `deployments list` and `versions view`, all with `--name traffic-advanced`; nothing was changed).
+
+- **Verified from Cloudflare:** Worker version `f7a9a816-42d6-4588-8723-c16d28d63d9a`, created 2026-10-09 03:23:32 UTC and deployed
+  03:23:33 UTC (Wrangler's timestamps; 04:23 UK time), uploaded with Wrangler and with no deployment message. On 2026-10-12 it was the
+  current deployment, serving 100% of traffic. Handler `fetch`, compatibility date 2026-10-01, bindings `ASSETS` and `SNAPSHOTS`
+  (R2 bucket `traffic-advanced-snapshots`) only. It has **no** `TRAFFIC_USAGE` Durable Object binding, and neither has any earlier
+  deployed version (all 8 listed by `deployments list`).
+- **Not verified: which commit was deployed.** The deployment has no message. PR #15 (branch `fix/map-location-attribution-ux`) was merged
+  as `9e243b4` at 2026-10-09 03:18:09 UTC, five minutes before, so `9e243b4` is a possible match on timing alone. That hasn't been
+  confirmed, for example by comparing the live files with a build of that commit.
+- **Not recorded:** the checks run before deploying, the files uploaded, and any live checks afterwards.
+- **Not established:** whether a Durable Object migration has ever been applied to this Worker, or whether a `TrafficUsage` namespace
+  exists. Wrangler's version details don't show migrations, and Wrangler 4.147.0 has no read-only command that lists Durable Object
+  namespaces.
+- On 2026-10-12, the live `GET /api/traffic/status` returned 404 (the traffic routes aren't deployed), and `/api/version` served snapshot
+  `20261012T091216Z-ea6ca93a797f` (726 closures).
 
 ## Scheduled ingestion
 

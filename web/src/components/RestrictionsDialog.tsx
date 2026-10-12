@@ -1,10 +1,11 @@
 import type { ReactNode } from "react";
 import { RESTRICTIONS_DISCLAIMER, type RestrictionPointsFile, type ZonesFile } from "../../../shared/api/restrictions.ts";
-import { allowedLink, formatDate, heightWordingNote, isStale, kindLabel, limitText, locationText, osmElementUrl, sourceLabel, UNRECORDED_WEIGHT_NOTE, wordingImperialHeight } from "../restrictions/describe.ts";
+import { allowedLink, formatDate, heightWordingNote, isStale, kindLabel, limitText, locationText, markerText, osmElementUrl, sourceLabel, UNRECORDED_WEIGHT_NOTE, wordingImperialHeight, ZONE_RULES_TEXT } from "../restrictions/describe.ts";
 import { findPoint, LIST_LIMIT, pointsInView, zonesInView, type ListedPoint, type ListedZone } from "../restrictions/inView.ts";
-import { RESTRICTION_MIN_ZOOM } from "../map/restrictionLayers.ts";
+import { RESTRICTION_OVERVIEW_ZOOM } from "../map/restrictionLayers.ts";
 import type { MapViewArea } from "../map/MapView.tsx";
 import { ModalDialog } from "./ModalDialog.tsx";
+import { Plate } from "./RestrictionGlyphs.tsx";
 
 const link = "inline-flex min-h-12 items-center font-bold text-motorway underline decoration-2 underline-offset-2 hover:no-underline dark:text-sign";
 
@@ -59,14 +60,16 @@ export function RestrictionsDialog({
 function InViewList({ view, points, zones, onSelect }: { view: MapViewArea | null; points: RestrictionPointsFile[]; zones: ZonesFile[]; onSelect: (id: string) => void }) {
   if (!view) return <p className="text-[14px]">The map is still loading.</p>;
   const listedZones = zonesInView(zones, view.bounds);
-  const zoomedIn = view.zoom >= RESTRICTION_MIN_ZOOM;
+  // Listed from the zoom the map starts drawing them at, nearest the centre first; only the loaded layers are named.
+  const zoomedIn = view.zoom >= RESTRICTION_OVERVIEW_ZOOM;
   const { items, total } = zoomedIn ? pointsInView(points, view.bounds, view.centre) : { items: [], total: 0 };
+  const loaded = [...new Set(points.map((f) => f.layer))].join(" and ");
   return (
     <>
       {listedZones.map((z) => (
         <ZoneDetails key={z.zone.id} item={z} />
       ))}
-      {points.length > 0 && !zoomedIn && <p className="text-[14px]">Zoom in on the map to list height and weight restrictions here.</p>}
+      {points.length > 0 && !zoomedIn && <p className="text-[14px]">{`Zoom in on the map to list ${loaded} restrictions here.`}</p>}
       {points.length > 0 && zoomedIn && (
         <>
           <p className="text-[14px]" role="status">
@@ -79,13 +82,18 @@ function InViewList({ view, points, zones, onSelect }: { view: MapViewArea | nul
           <ul className="divide-y divide-line rounded-[4px] border border-line">
             {items.map(({ point, records, source }) => (
               <li key={point.id}>
-                <button type="button" onClick={() => onSelect(point.id)} className="flex min-h-12 w-full flex-col items-start px-3 py-2 text-left hover:bg-raised">
-                  <span className="font-bold">
-                    {kindLabel(point)}: {limitText(point)}
+                <button type="button" onClick={() => onSelect(point.id)} className="flex min-h-12 w-full items-start gap-3 px-3 py-2 text-left hover:bg-raised">
+                  <span className="pt-0.5">
+                    <Plate kind={point.kind} text={markerText(point)} community={source.kind === "community"} />
                   </span>
-                  <span className="text-[13px]">{locationText(point)}</span>
-                  {records.length > 1 && <span className="text-[13px]">{`Recorded ${records.length} times at this place (once per diversion route), shown once`}</span>}
-                  <span className="text-[13px] text-muted">{source.kind === "community" ? "Community record, unverified" : `Source: ${source.authority}`}</span>
+                  <span className="flex min-w-0 flex-col">
+                    <span className="font-bold">
+                      {kindLabel(point)}: {limitText(point)}
+                    </span>
+                    <span className="text-[13px]">{locationText(point)}</span>
+                    {records.length > 1 && <span className="text-[13px]">{`Recorded ${records.length} times at this place (once per diversion route), shown once`}</span>}
+                    <span className="text-[13px] text-muted">{source.kind === "community" ? "Community record, unverified" : `Source: ${source.authority}`}</span>
+                  </span>
                 </button>
               </li>
             ))}
@@ -113,7 +121,11 @@ export function PointDetails({ item: { point: p, records, source } }: { item: Li
   const contexts = [...new Set(records.map((r) => r.context).filter((c): c is string => Boolean(c)))];
   return (
     <div className="space-y-2">
-      <p className="text-[22px] font-bold">{limitText(p)}</p>
+      <div className="flex flex-wrap items-center gap-3">
+        <Plate kind={p.kind} text={markerText(p)} community={source.kind === "community"} large />
+        {/* The plate is decorative (hidden from screen readers); the value in words is always given. */}
+        <p className="text-[22px] font-bold">{limitText(p)}</p>
+      </div>
       {worded && (
         <p className="rounded-[4px] border-l-4 border-sign bg-raised px-3 py-2 text-[16px] font-bold">
           {`Wording recorded by ${source.authority}: “${p.sourceText}”`}
@@ -188,12 +200,9 @@ function ZoneDetails({ item: { zone, source } }: { item: ListedZone }) {
   return (
     <section className="space-y-1 rounded-[4px] border border-line px-3 py-2 text-[14px]" aria-label={zone.name}>
       <p className="font-bold">This view includes part of the {zone.name}</p>
-      <p>{sourceLabel(source)}. TfL says:</p>
-      {zone.rules.map((r) => (
-        <blockquote key={r} className="border-l-2 border-line pl-2">
-          {r}
-        </blockquote>
-      ))}
+      <p>{sourceLabel(source)}.</p>
+      {/* TfL's rule sentences stay in the data file but aren't shown: they are tfl.gov.uk website text, not TfL open data. */}
+      <p>{ZONE_RULES_TEXT}</p>
       <ul className="list-disc pl-5 text-[13px]">
         {source.notes.map((n) => (
           <li key={n}>{n}</li>

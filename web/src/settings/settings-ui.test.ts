@@ -52,6 +52,8 @@ describe("Settings button (replaces the theme button)", () => {
     settingsOpen: false,
     onOpenSettings: () => undefined,
     settingsButtonRef: null,
+    view: "closures",
+    onViewChange: () => undefined,
   };
   const out = html(h(AppHeader, props));
 
@@ -98,7 +100,7 @@ describe("Road restrictions", () => {
     expect(out).toMatch(/aria-describedby="restriction-height-description"[\s\S]*id="restriction-height-description"/);
   });
 
-  it("describes weight values as NH diversion-route records of unrecorded type, and the ULEZ with TfL's vehicle categories", () => {
+  it("describes weight values as NH diversion-route records of unrecorded type, and the ULEZ in original wording, not TfL's vehicle list", () => {
     const all = html(
       h(RestrictionsSection, {
         entries: [
@@ -113,7 +115,8 @@ describe("Road restrictions", () => {
     expect(all).toContain("Weight values National Highways records on its emergency diversion routes.");
     expect(all).toContain("so none is a confirmed lorry limit or limit for all vehicles");
     expect(all).not.toMatch(/including 7\.5 tonne limits/);
-    expect(all).toContain("cars, motorcycles, vans and specialist vehicles up to and including 3.5 tonnes, and minibuses up to and including 5 tonnes");
+    expect(all).not.toContain("cars, motorcycles, vans and specialist vehicles");
+    expect(all).toContain("This app doesn&#x27;t check your vehicle against them: check with TfL.");
     expect(all).not.toContain("For vehicles up to 3.5 tonnes");
   });
 
@@ -208,6 +211,17 @@ describe("Data status and help", () => {
     expect(out).toMatch(/rel="noopener noreferrer"/);
   });
 
+  it("credits the GLA, under OGL v2.0, for the ULEZ boundary comparison only when the ULEZ source is listed", () => {
+    expect(out).not.toContain("Greater London Authority");
+    const withUlez = html(h(DataHelpSection, { data: state, now: new Date(), restrictionSources: [source(), source({ id: "tfl-ulez", name: "Ultra Low Emission Zone (ULEZ) boundary" })] }));
+    expect(withUlez).toContain("Greater London Authority");
+    expect(withUlez).toContain("Contains public sector information licensed under the Open Government Licence v2.0.");
+    expect(withUlez).toContain('href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/2/"');
+    // Every existing credit stays.
+    expect(withUlez).toContain("Closures, diversions and junctions: National Highways, Open Government Licence v3.0");
+    expect(withUlez).toContain("Powered by TfL Open Data.");
+  });
+
   it("includes the safety notice and privacy information, and a reserved Contact section with no form or address", () => {
     expect(out).toContain("For planning only. Do not use while driving.");
     expect(out).toContain("Your settings are saved on this device only");
@@ -219,10 +233,10 @@ describe("Data status and help", () => {
 
 describe("Restrictions on the map", () => {
   it("show nothing while every layer is off", () => {
-    expect(html(h(RestrictionMapControls, { statuses: Object.values(statuses), zoom: 14, onOpenList: () => undefined, buttonRef: null }))).toBe("");
+    expect(html(h(RestrictionMapControls, { statuses: Object.values(statuses), zoom: 14, onOpenList: () => undefined, buttonRef: null, keyOpen: true, onKeyOpenChange: () => undefined }))).toBe("");
   });
 
-  it("offer the Restrictions list button (48px), loading and failure states, and a zoom hint", () => {
+  it("offer the Restrictions list button (48px), showing which layers are on, with loading and failure states", () => {
     const out = html(
       h(RestrictionMapControls, {
         statuses: [
@@ -233,19 +247,47 @@ describe("Restrictions on the map", () => {
         zoom: 9,
         onOpenList: () => undefined,
         buttonRef: null,
+        keyOpen: true,
+        onKeyOpenChange: () => undefined,
       }),
     );
-    expect(out).toMatch(/<button[^>]*class="[^"]*\bh-12\b[^"]*"[^>]*>[\s\S]*Restrictions<\/button>/);
+    expect(out).toMatch(/<button[^>]*class="[^"]*\bh-12\b[^"]*"[^>]*>[\s\S]*Restrictions<span class="sr-only"> \(height restrictions, weight restrictions, london low emission zone \(lez\) on\): list what&#x27;s in view<\/span><\/button>/);
     expect(out).toContain("Loading weight restrictions…");
     expect(out).toContain("Try again");
-    expect(out).toContain("Zoom in to see height and weight restrictions.");
+    // No zoom message: no height or weight data has loaded (height is "ready" with no data here).
+    expect(out).not.toContain("Zoom in");
+    expect(out).not.toContain("Circles group");
     // Only community data gets the dashed-border explanation (none of these layers has loaded community data).
     expect(out).not.toContain("Dashed: community record");
   });
 
+  it("show the complete restrictions disclaimer once, outside the live status region, whenever any layer is on", () => {
+    const weight = restrictionPointsFileSchema.parse(JSON.parse(readFileSync("web/src/restrictions/data/weight.json", "utf8")));
+    // Synthetic: the shipped file relabelled as community data, to reach the dashed-border key (no community data ships yet).
+    const community = { ...weight, sources: weight.sources.map((s) => ({ ...s, kind: "community" as const })) };
+    const cases: LayerStatus[][] = [
+      [{ ...off("height"), state: "loading" }],
+      [{ ...off("lez"), state: "error", error: "Restriction data can't be loaded." }],
+      [{ ...off("weight"), state: "ready", data: { layer: "weight", points: weight } }],
+      [{ ...off("ulez"), state: "ready", data: null }],
+      [{ ...off("weight"), state: "ready", data: { layer: "weight", points: community } }],
+    ];
+    for (const statusesOn of cases) {
+      const out = html(h(RestrictionMapControls, { statuses: statusesOn, zoom: 14, onOpenList: () => undefined, buttonRef: null, keyOpen: true, onKeyOpenChange: () => undefined }));
+      expect(out.split(RESTRICTIONS_DISCLAIMER).length - 1, statusesOn[0]!.state).toBe(1);
+      // The live region holds no nested <div>, so its content ends at the first </div>.
+      const status = /<div role="status"[^>]*>([\s\S]*?)<\/div>/.exec(out)?.[1];
+      expect(status).toBeDefined();
+      expect(status).not.toContain(RESTRICTIONS_DISCLAIMER);
+    }
+    const withCommunity = html(h(RestrictionMapControls, { statuses: cases[4]!, zoom: 14, onOpenList: () => undefined, buttonRef: null, keyOpen: true, onKeyOpenChange: () => undefined }));
+    expect(withCommunity).toContain("Dashed: community record, unverified.");
+    expect(withCommunity.indexOf("Dashed: community record")).toBeLessThan(withCommunity.indexOf(RESTRICTIONS_DISCLAIMER));
+  });
+
   it("key the shipped weight data as NH diversion-route values of unrecorded type, never as lorry or all-vehicle limits", () => {
     const points = restrictionPointsFileSchema.parse(JSON.parse(readFileSync("web/src/restrictions/data/weight.json", "utf8")));
-    const key = (file: typeof points) => html(h(RestrictionMapControls, { statuses: [{ ...off("weight"), state: "ready", data: { layer: "weight", points: file } }], zoom: 14, onOpenList: () => undefined, buttonRef: null }));
+    const key = (file: typeof points) => html(h(RestrictionMapControls, { statuses: [{ ...off("weight"), state: "ready", data: { layer: "weight", points: file } }], zoom: 14, onOpenList: () => undefined, buttonRef: null, keyOpen: true, onKeyOpenChange: () => undefined }));
     const out = key(points);
     expect(out).toContain("Weight value on a National Highways diversion route. Type, scope and");
     expect(out).toContain("exemptions not recorded.");

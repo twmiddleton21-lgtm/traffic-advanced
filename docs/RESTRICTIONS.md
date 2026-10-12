@@ -32,7 +32,17 @@ files" below).
 | ULEZ | 1 zone | TfL |
 
 So outside London, height coverage is National Highways' network and diversion routes only. Weight coverage is diversion
-routes only. A first OSM build would add both.
+routes only. A first OSM build would add both. All records are in England (see "Coverage gaps").
+
+**On the map** (2026-10-12): from zoom 6 to 11, nearby height or weight markers are grouped into a ring with a count (red for
+heights, grey for weights; selecting one zooms in until it splits), and a marker with no near neighbour keeps its plate. From zoom
+12 every marker is separate. Below zoom 6 none is drawn. The "Restrictions" button shows which layers are on; its panel shows a
+zoom message, loading and error states and key rows for the loaded layers only, and the full disclaimer whenever any layer is on.
+The key, its zoom message and the disclaimer fold to one "Restrictions key" line, like the map key (open on desktop, folded
+on phones and tablets at first; the choice holds while layers are switched). Owner decision, 2026-10-12: folded, the disclaimer
+is hidden visually only. It stays in the page word for word as the folded control's description for screen readers, shows
+again when the key is opened, and is always shown in "Restrictions in this view". Loading and error states are never folded.
+The "Restrictions in this view" list works from zoom 6, nearest the centre first.
 
 **What the weight values are, and aren't.**
 - Each NH `DiversionPoint` weight record has only a type ("weight"), a value and a unit ("Tonnes"). There's no direction, extent,
@@ -65,7 +75,7 @@ routes only. A first OSM build would add both.
 | **Transport for London, "Bridges, tunnels, road barriers: height restrictions"** (`height-restrictions-in-london.xlsx`) | Official | 877 low bridges, tunnels and barriers within Greater London and the M25 | [TfL Transport Data Service licence](https://tfl.gov.uk/corporate/terms-and-conditions/transport-data-service), based on OGL v2.0. Allows copying, publishing, adapting and commercial use. Required attribution: "Powered by TfL Open Data", "Contains OS data © Crown copyright and database rights 2016", "Geomni UK Map data © and database rights [2019]". Must not suggest TfL endorsement. | File last modified **2019-10-09**: the dataset says it is updated annually, but hasn't been since 2019 |
 | **TfL LEZ boundary** (`Boundaries/lez.json`) | Official | LEZ outline | TfL Transport Data Service licence (as above) | Last modified 2023-07-20 |
 | **TfL ULEZ boundary** (`Boundaries/ULEZ_Boundary_20230829.json`) | Official | ULEZ outline (London-wide since 29 August 2023) | TfL Transport Data Service licence (as above) | Last modified 2023-09-13 |
-| GLA, "London Wide Ultra Low Emission Zone 2023" (GeoJSON, EPSG:27700) | Official (authored by TfL) | **Check only**: the ULEZ boundary is compared with it; not shipped | OGL v2.0 ([dataset](https://data.london.gov.uk/dataset/london-wide-ultra-low-emission-zone-2023-vd455)); publisher GLA, author TfL | The dataset page (2026-10-09) says it was last updated "over 2 years ago" and is a one-off. The downloaded file's HTTP `Last-Modified` is 2025-10-21, probably a re-upload: it can't be read as a data date. |
+| GLA, "London Wide Ultra Low Emission Zone 2023" (GeoJSON, EPSG:27700) | Official (authored by TfL) | **Check only**: the ULEZ boundary is compared with it; not shipped | OGL v2.0 ([dataset](https://data.london.gov.uk/dataset/london-wide-ultra-low-emission-zone-2023-vd455)); publisher GLA, author TfL. The check's figures (in the ULEZ note) are credited in Settings → Sources and licences: "Contains public sector information licensed under the Open Government Licence v2.0." | The dataset page (2026-10-09) says it was last updated "over 2 years ago" and is a one-off. The downloaded file's HTTP `Last-Modified` is 2025-10-21, probably a re-upload: it can't be read as a data date. |
 | **OpenStreetMap** (`maxheight`, `maxheight:physical`, `maxweight`, `maxweightrating`, `maxweightrating:hgv`, `maxweight:hgv`, and their `:conditional` forms) | **Community, unverified** | Heights and weights across England | [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/). Attribution "© OpenStreetMap contributors" | One Overpass download; date in the data file |
 | ONS "Countries (December 2023) Boundaries UK BFE", England, simplified to 10 m by the service | Official | **Filter only**: keeps OSM records that lie in England. Extent of the realm, so seafront and harbour roads stay in. Not shipped. | OGL v3.0: "Source: Office for National Statistics licensed under the Open Government Licence v3.0. Contains OS data © Crown copyright and database right 2023." ([licences](https://www.ons.gov.uk/methodology/geography/licences)) | Downloaded with the OSM tiles |
 
@@ -83,8 +93,8 @@ routes only. A first OSM build would add both.
   dated 2021-10-25.
 - The GLA's "London Wide ULEZ 2023" GeoJSON labels its polygons `BOUNDARY: "Low Emission Zone"`.
 - TfL's LEZ page says the ULEZ "operates in the same zone".
-- So since August 2023 the two zones share one boundary, with **different rules**. The app shows them as separate layers with
-  their own TfL wording (below), never as one zone.
+- So since August 2023 the two zones share one boundary, with **different rules**. The app shows them as separate layers, each
+  linking to its own TfL page for the rules (below), never as one zone.
 - TfL's boundary (encoded polylines, about 1 m precision) against the GLA's (converted from British National Grid):
   - 22 rings in each;
   - **GLA → TfL** (24,857 GLA vertices; this direction is the build's pass/fail check): median 2.3 m, 99% within 10.6 m, all
@@ -95,8 +105,29 @@ routes only. A first OSM build would add both.
   - The cause of the Heathrow stretch is **not verified**: TfL's line is rounded and simplified, and TfL says the ULEZ "does not
     include the M25", which the two copies may draw differently there.
 
-  The app says boundaries are approximate near their edges.
-- **Rules, quoted from TfL** (tfl.gov.uk, read 2026-10-09; prices left out because they change):
+  **What the app says about boundary accuracy (checked against the code 2026-10-12).** It never calls a boundary
+  "approximate".
+  - **ULEZ:** its source note, shown in the zone's details in "Restrictions in this view" and in Settings → Sources and
+    licences, reads: "Checked against the Greater London Authority's copy of the 2023 ULEZ boundary (Open Government Licence
+    v2.0): 99% of its points are within 11 m of TfL's boundary. The two copies differ by up to about 111 m in places. Near the
+    boundary, follow the zone signs."
+  - **LEZ:** shows **no** boundary-accuracy note, although its geometry is identical to the ULEZ's. Adding one is a wording
+    change for the owner to approve, and needs a data rebuild (the notes are in the data files).
+  - Wherever restriction layers are shown, including on the map, the disclaimer ends "Always follow road signs. This map is not a
+    route check."
+- **Rules, quoted from TfL** (tfl.gov.uk, read 2026-10-09; prices left out because they change). **Not shown in the app since
+  2026-10-12:** these sentences are tfl.gov.uk website text, which TfL's website terms allow for personal non-commercial use
+  only, and are not TfL open data (see "Unresolved licence questions"). They stay in `lez.json`/`ulez.json` (the schema requires
+  them) and in the build script until the next data rebuild. The zone's details instead say: "Transport for London sets this
+  zone's rules and can change them. This app doesn't show the rules and isn't a check of your vehicle or route. TfL's page has
+  the rules.", followed by the link to TfL's LEZ or ULEZ page. The Settings layer descriptions (`RestrictionsSection.tsx`)
+  are original wording (2026-10-12; the ULEZ one previously reproduced TfL's vehicle list almost word for word):
+  - LEZ: "TfL's boundary. TfL says lorries over 3.5 tonnes that don't meet the LEZ emissions standard need to pay the LEZ
+    charge." (a summary of TfL's ULEZ page, not a quotation);
+  - ULEZ: "TfL's boundary, the same as the LEZ's, but the ULEZ has different rules, set by TfL. This app doesn't check your
+    vehicle against them: check with TfL."
+
+  The quoted sentences in the data files and build script are to be reconsidered at the next data rebuild.
   - **LEZ:** "The Low Emission Zone (LEZ) operates to encourage the most polluting heavy diesel vehicles driving in London to
     become cleaner. The LEZ covers most of Greater London and is in operation 24 hours a day, every day of the year."
   - **ULEZ:** "This applies to cars, motorcycles, vans and specialist vehicles (up to and including 3.5 tonnes) and minibuses (up
@@ -142,6 +173,27 @@ routes only. A first OSM build would add both.
 
 ## Coverage gaps
 
+**Where the shipped records are (checked 2026-10-12).** Every record was tested against the ONS England boundary (extent of the
+realm) from the 2026-10-09 download, with `inEngland` (`shared/sources/ons/england.ts`):
+
+| Area | Height records | Weight records |
+|---|---|---|
+| England | 972: TfL 877 (London only), NH diversion points 77 (48 places), NH network 18 | 84 at 75 places, NH diversion points only |
+| Wales | 0 | 0 |
+| Scotland | 0 | 0 |
+| Northern Ireland | 0 | 0 |
+
+- Outside London, England has 95 height records and 84 weight records, all on National Highways' network or its emergency
+  diversion routes. Local roads outside London have **none**.
+- Nothing in the app limits markers to London or any area: the map layers filter only by grouping, and the list by the view.
+  Weight markers looked missing because they were drawn only from zoom 12 and are few and far apart; since 2026-10-12 they are
+  grouped or shown individually from zoom 6 (`web/src/map/restrictionLayers.ts`).
+- **Not UK-wide.** Covering Wales, Scotland and Northern Ireland, and local roads in England, needs new sources, none of which
+  is verified for this app yet:
+  - OpenStreetMap (community, unverified): the pipeline exists; the build clips to England, so other nations need that changed;
+  - OS MasterMap Highways Network RAMI (Great Britain, not Northern Ireland; paid for commercial use, see below);
+  - national and local road authorities for each nation (their datasets, licences and access are **not checked**).
+
 - **No official national dataset is used.**
   - OS MasterMap Highways Network RAMI has GB-wide height, width and weight restrictions, but costs money to use commercially
     (free only to the public sector).
@@ -170,7 +222,7 @@ files: Vite gives each a content hash (`/assets/height-<hash>.json`), so a new b
 |---|---|
 | `manifest.json` | Bundled with the app (a few KB): which layers have data, and every source's metadata and attribution. A layer without data has no switch. |
 | `height.json`, `weight.json` | Restriction points with source, kind, recorded value and range, conditions, position, road, source wording and dates. OSM records also keep element id, version and relevant tags. |
-| `lez.json`, `ulez.json` | One zone each: polygons (WGS84), TfL's rules verbatim, sources. |
+| `lez.json`, `ulez.json` | One zone each: polygons (WGS84), TfL's rules verbatim (kept in the file but not shown in the app), the link to TfL's page for the zone, sources. |
 
 Every file:
 - has `schemaVersion` and `generatedAt`, plus each source's licence, attribution, dataset date and download time;
@@ -245,14 +297,43 @@ build script changed at 09:15 UTC:
 
 ## Unresolved licence questions
 
-- **TfL Transport Data Service:** the terms mention information "You provide on registration", but these files are downloaded
-  from TfL's open S3 bucket without registering or using a key. Whether registration is needed for this use is **unconfirmed**:
-  ask TfL before release, or register.
+Checked 2026-10-12 against TfL's and the GLA's own pages (evidence in `docs/DATA-SOURCES.md` S11). The owner accepts the first
+three uncertainties below (registration, the demonstration notice and the `lez.json` basis) for release; TfL has not been asked.
+
+- **TfL registration (accepted uncertainty).** The Transport Data Service licence "shall apply from the date of registration" and
+  asks You to "Ensure the information You provide on registration is accurate", so it assumes registration. But no TfL page
+  requires it for these files: "Our open data" says "You need to register…" only for live feeds and APIs, its Roads entries
+  (height restrictions; CC, LEZ and ULEZ boundaries) say nothing about registering, the London Datastore lists the heights file
+  with no account needed, and the bucket is public with no key. Recorded as: no registration requirement published for these
+  static files; the licence wording assumes registration; **not confirmed with TfL**.
+- **"Demonstration purposes only" (accepted uncertainty).** Near the top of "Our open data": "The example data listed below are not
+  updated and are for demonstration purposes only. Please visit our portal to access our data." Whether this covers the Roads
+  static files is unclear: their own entries describe usable data ("You can add the data as a layer to any mapping or routing
+  product"), the Datastore lists the heights file as a dataset under the TDS licence, and the sample feeds that are
+  demonstration-only say so in their own entries. The app shows the heights' 2019 date and treats them as bands, not clearances.
+- **TDS basis for `Boundaries/lez.json` (inferred).** No TfL page links this file. It is in TfL's public Roads bucket, whose data
+  "Our open data" puts under the TDS licence ("Using our data is subject to our terms and conditions"), and it is byte-identical
+  to `ULEZ_Boundary_20230829.json`, whose dated release TfL does link (as a shapefile zip). TfL's own LEZ link is a 2007 shapefile.
+  Pointing the LEZ source at the linked 2023 release needs a data rebuild: deferred to the next one.
+- **TfL rules text (no longer shown).** The LEZ/ULEZ rule sentences came from tfl.gov.uk web pages, not open data. TfL's website
+  terms: TfL material "may not be printed, copied, reproduced, republished … except for your own personal non-commercial use. You
+  must gain our permission for any other type of use." The app now shows its own wording and a link to TfL's page instead
+  (`ZONE_RULES_TEXT`, `web/src/restrictions/describe.ts`). The sentences remain in `lez.json`/`ulez.json` (publicly
+  downloadable from the app's origin), in `scripts/restrictions/build-restrictions.ts` and in this file, until the next data
+  rebuild removes them, which also needs a decision on the schema's required `rules`.
+- **GLA comparison figures.** The ULEZ note publishes figures derived from the GLA's dataset (OGL v2.0; the dataset page,
+  re-checked 2026-10-12, specifies no attribution statement). OGL v2.0: "acknowledge the source of the Information by including
+  any attribution statement specified by the Information Provider(s) and, where possible, provide a link to this licence", with
+  the default "Contains public sector information licensed under the Open Government Licence v2.0." Settings → Sources and
+  licences lists the Greater London Authority with that statement and a link to the licence whenever the ULEZ source is listed.
 - **Resolved: NH Diversion Routes Public View licence.** OGL v3.0. The item's licence text links "Open Government Licence" to the v3.0
   page (checked 2026-10-09), and the app says OGL v3.0.
   - The data is "derived from Ordnance Survey Highway Network" under NH's OS licence. The OGL doesn't cover third-party rights the
     publisher isn't authorised to license, so the app relies on NH's own statement that it publishes the data under the OGL, and
     keeps NH's OS attribution verbatim.
+  - **Caveat:** the app relies on National Highways' published OGL v3.0 statement. Underlying third-party rights, including Ordnance
+    Survey rights, have **not** been independently verified.
+  - The owner accepted this remaining rights risk for release on 2026-10-12. Accepting it doesn't verify the rights.
   - Written confirmation from NH is optional.
 - **Wording:** official sources are labelled "Source: <authority>", never "official record". This follows the TfL licence's
   "Non-endorsement" clause, which forbids suggesting official status or TfL endorsement.

@@ -13,12 +13,12 @@ export const LAYER_TEXT: Record<RestrictionLayer, { label: string; description: 
     description:
       "Weight values National Highways records on its emergency diversion routes. It doesn't record the restriction type, which vehicles it applies to, where it starts and ends, or exemptions, so none is a confirmed lorry limit or limit for all vehicles. Weight limits elsewhere aren't shown.",
   },
-  // Vehicle categories from TfL's ULEZ page (tfl.gov.uk/modes/driving/ultra-low-emission-zone, checked 2026-10-09).
+  // Original wording, not TfL's: the LEZ line summarises TfL's ULEZ page (tfl.gov.uk/modes/driving/ultra-low-emission-zone, checked
+  // 2026-10-09); TfL's website text isn't reproduced (docs/RESTRICTIONS.md). The zones' details link to TfL's pages.
   lez: { label: "London Low Emission Zone (LEZ)", description: "TfL's boundary. TfL says lorries over 3.5 tonnes that don't meet the LEZ emissions standard need to pay the LEZ charge." },
   ulez: {
     label: "London Ultra Low Emission Zone (ULEZ)",
-    description:
-      "TfL's boundary. TfL says the ULEZ applies to cars, motorcycles, vans and specialist vehicles up to and including 3.5 tonnes, and minibuses up to and including 5 tonnes. Lorries over 3.5 tonnes don't pay the ULEZ charge; the LEZ applies to them.",
+    description: "TfL's boundary, the same as the LEZ's, but the ULEZ has different rules, set by TfL. This app doesn't check your vehicle against them: check with TfL.",
   },
 };
 
@@ -93,7 +93,7 @@ export function RestrictionsSection({
 /** When the newest source in a layer was downloaded for this build. */
 const latest = (e: LayerEntry) => e.sources.map((s) => s.fetchedAt).sort().at(-1)!;
 
-function SwitchGlyph({ on }: { on: boolean }) {
+export function SwitchGlyph({ on }: { on: boolean }) {
   return (
     <span className="flex items-center gap-2 text-[14px]" aria-hidden="true">
       <span>{on ? "On" : "Off"}</span>

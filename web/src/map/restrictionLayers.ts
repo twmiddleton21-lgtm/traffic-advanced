@@ -15,8 +15,21 @@ import type { RestrictionLayer } from "../settings/preferences.ts";
  */
 export const RESTRICTION_SOURCES: Record<RestrictionLayer, string> = { height: "restrictions-height", weight: "restrictions-weight", lez: "zone-lez", ulez: "zone-ulez" };
 
-/** Markers appear from this zoom: below it they would clutter the map, and positions this precise need a close view. */
+/**
+ * Each restriction is its own marker from this zoom. Below it, nearby markers are grouped into a count (MapLibre's GeoJSON
+ * clustering) so the map stays readable; a restriction with no near neighbour keeps its own marker at every zoom, so the sparse
+ * National Highways records outside London can be found without already knowing where they are.
+ */
 export const RESTRICTION_MIN_ZOOM = 12;
+
+/** Below this zoom no height or weight markers or groups are drawn at all (a whole-country view would be noise). */
+export const RESTRICTION_OVERVIEW_ZOOM = 6;
+
+/** Clustering for the height and weight sources: groups dissolve at RESTRICTION_MIN_ZOOM. */
+export const POINT_SOURCE_CLUSTER = { cluster: true, clusterMaxZoom: RESTRICTION_MIN_ZOOM - 1, clusterRadius: 44 } as const;
+
+/** Group colours: the plate border of each layer's markers (images.ts), so a group reads as "heights" or "weights". */
+export const POINT_LAYER_COLOURS = { height: "#c8102e", weight: "#5b6770" } as const;
 
 export const ZONE_COLOURS = { lez: "#1b7d3a", ulez: "#2453a6" } as const;
 
@@ -113,22 +126,51 @@ export function zoneLayers(): LayerSpecification[] {
   ];
 }
 
-/** Height or weight markers: a sign-style plate with the recorded value, from RESTRICTION_MIN_ZOOM, plus the selection ring. */
+const isGroup: ExpressionSpecification = ["has", "point_count"];
+
+/**
+ * Height or weight markers: groups of nearby restrictions (a ring in the layer's colour with the count) below RESTRICTION_MIN_ZOOM,
+ * and a sign-style plate with the recorded value for every restriction not in a group, plus the selection ring.
+ */
 export function pointLayers(layer: "height" | "weight"): LayerSpecification[] {
   const source = RESTRICTION_SOURCES[layer];
-  const size: ExpressionSpecification = ["interpolate", ["linear"], ["zoom"], 12, 11, 16, 13];
+  const size: ExpressionSpecification = ["interpolate", ["linear"], ["zoom"], 6, 11, 12, 12, 16, 13];
   return [
+    {
+      id: `restriction-${layer}-group`,
+      type: "circle",
+      source,
+      minzoom: RESTRICTION_OVERVIEW_ZOOM,
+      filter: isGroup,
+      layout: hidden,
+      paint: {
+        "circle-color": "#ffffff",
+        "circle-radius": ["step", ["get", "point_count"], 13, 10, 16, 100, 20],
+        "circle-stroke-color": POINT_LAYER_COLOURS[layer],
+        "circle-stroke-width": 3,
+      },
+    },
+    {
+      id: `restriction-${layer}-group-count`,
+      type: "symbol",
+      source,
+      minzoom: RESTRICTION_OVERVIEW_ZOOM,
+      filter: isGroup,
+      layout: { ...hidden, "text-field": ["get", "point_count_abbreviated"], "text-font": FONT_BOLD, "text-size": 12, "text-allow-overlap": true },
+      paint: { "text-color": "#14191e" },
+    },
     {
       id: `restriction-${layer}`,
       type: "symbol",
       source,
-      minzoom: RESTRICTION_MIN_ZOOM,
+      minzoom: RESTRICTION_OVERVIEW_ZOOM,
+      filter: ["!", isGroup],
       layout: {
         ...hidden,
         "symbol-sort-key": ["get", "sort"],
         "icon-image": ["get", "icon"],
         "icon-text-fit": "both",
-        "icon-text-fit-padding": [3, 5, 3, layer === "weight" ? 5 : 5],
+        "icon-text-fit-padding": [3, 5, 3, 5],
         "text-field": ["get", "text"],
         "text-font": FONT_BOLD,
         "text-size": size,
@@ -150,7 +192,7 @@ export function pointLayers(layer: "height" | "weight"): LayerSpecification[] {
 /** Every map layer belonging to a restriction layer, for switching it on and off. */
 export function layerIds(layer: RestrictionLayer): string[] {
   if (layer === "lez" || layer === "ulez") return [`zone-${layer}-fill`, `zone-${layer}-line`, `zone-${layer}-label`];
-  return [`restriction-${layer}`, `restriction-${layer}-selected`];
+  return [`restriction-${layer}-group`, `restriction-${layer}-group-count`, `restriction-${layer}`, `restriction-${layer}-selected`];
 }
 
 /** The map credit for a restriction source, shown in MapLibre's attribution while its layer is on. */

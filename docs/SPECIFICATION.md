@@ -29,15 +29,30 @@ wearing gloves, short on time. They need fast answers: *is my road shut, when, w
 1. **Launch.** The app shell opens instantly from cache. A short splash shows refresh progress (Closures · Diversions · Traffic)
    and **never blocks more than ~3 s**. On a slow/no network it opens with cached data and a "Data may be delayed" banner.
 2. **Main screen.** Full-screen map with two separate controls:
-   - **Layer selector**, a two-state segmented control: **Closures | Traffic** (one state at a time; no duplicate controls).
+   - **View switch** in the header, a two-part control: **Closures | Routes** (one view at a time; built 2026-10-12, details in
+     `ROUTES-MAP.md`). Closures is the default. Routes is a route-awareness map: base map, road numbers and National Highways
+     junction numbers. It doesn't plan routes, check whether roads suit a vehicle, give directions or show live traffic (no traffic
+     source is connected; see §4).
+     - One map serves both views. Each view shows only its own layers and returns to its own last map position.
+     - The view is kept in the URL (`?view=routes`; no parameter means Closures), so reloads and shared links open the same view.
+     - Switching keeps each view's state: Closures' day, filters, search, selected closure and restriction switches; Routes'
+       junction switch and map position.
+     - Closures-only on screen: the closures list and drawer, the day selector, the road search, closure details, the restrictions
+       panel and list. Routes-only: the "Route map layers" panel (junction numbers, the data's state, scope and no-traffic notes).
+     - Each view has its own map key.
    - **Road selector**: search/pick a road (e.g. M6, A14), optional direction, My Roads shortcuts.
    - A status chip, "Last updated 14:05", turns amber/red when delayed/stale.
    - A **Settings** button (header) opens a panel over the map (the map, its view and selection are kept):
-     - Appearance: theme System / Light / Dark, and the map style (Standard; no satellite until a free, licensed provider is approved);
-     - Road restrictions: layer switches (§7.1);
+     - A line saying which view's settings are shown;
+     - Appearance (shared by both views): theme System / Light / Dark, and the map style (Standard; no satellite until a free,
+       licensed provider is approved);
+     - The shown view's own settings, never the other view's:
+       - Closures: Road restrictions: layer switches (§7.1);
+       - Routes: Route map: the junction-number switch (the same switch as the map's Routes panel, for this visit only, not saved),
+         the junction data's loading and error states, and the scope note. No restriction, vehicle, routing or traffic settings;
      - App status: version, updates and current problems;
      - Data status and help: the data's version and times, where it came from, sources and licences, limitations, privacy and
-       the safety notice;
+       the safety notice. Restriction sources are listed in Closures only, and App status lists only the shown view's problems;
      - Contact (reserved).
 3. **Select a road**, and the map fits to that road (Network Model geometry), the list filters to its closures, ordered along the road.
 4. **Select a closure** to open a bottom sheet (side panel on wide screens) with: road, direction, location/junctions, type, reason,
@@ -54,8 +69,8 @@ wearing gloves, short on time. They need fast answers: *is my road shut, when, w
 | NH unplanned closures/incidents | S1 `closureType=unplanned` | every 2–5 min | "Incident — National Highways" |
 | Official diversion routes | S4 | daily (dataset changes rarely) | per classification (§5) |
 | Road geometry / junctions | S5 | weekly | road selector |
-| Official speed restrictions | S6 Speed Managed Areas | every 5 min | "Variable speed limit — National Highways" (Traffic state) |
-| Live congestion | S9 TomTom flow tiles (optional) | client-side, per TomTom cache headers | "Live traffic — TomTom" (Traffic state, opt-in) |
+| Official speed restrictions | S6 Speed Managed Areas | every 5 min | "Variable speed limit — National Highways" (planned for a later Routes traffic layer; not built) |
+| Live congestion | S9 TomTom flow tiles (optional) | client-side, per TomTom cache headers | Deferred from the first release: not shown, not routed, not configured. Built and tested locally, kept apart (web/src/deferred/traffic/, worker/src/traffic/); TomTom's terms, attribution and wording are unresolved (LIVE-TRAFFIC-RESEARCH.md, "Implementation status") |
 | Base map | S10 OpenFreeMap | n/a | light/dark style |
 
 Freshness rules (shown everywhere data appears):
@@ -195,8 +210,8 @@ Map overlays, each switched on separately in Settings, all **off by default**; c
 
 | Layer | Sources | Shown as |
 |---|---|---|
-| Height restrictions | NH S4 diversion points and S5 vehicle restrictions (official), TfL low bridges, tunnels and barriers (official, London, height bands), OpenStreetMap (community, unverified; when a build includes it, docs/RESTRICTIONS.md) | Sign-style value markers from zoom 12 |
-| Weight restrictions | NH S4 (official): weight values recorded on emergency diversion routes, with type, scope and exemptions not recorded, so never shown as lorry or all-vehicle limits. OpenStreetMap (community, when included): lorry limits such as 7.5 t kept distinct from all-vehicle (structural) limits | Sign-style value markers from zoom 12: grey border for NH values of unrecorded type, a lorry or bridge glyph for OSM kinds. The key lists only kinds that are loaded |
+| Height restrictions | NH S4 diversion points and S5 vehicle restrictions (official), TfL low bridges, tunnels and barriers (official, London, height bands), OpenStreetMap (community, unverified; when a build includes it, docs/RESTRICTIONS.md) | Sign-style value markers with a height glyph. From zoom 6 to 11, nearby markers are grouped into a count (red ring); a marker with no near neighbour keeps its plate. Every marker is separate from zoom 12 |
+| Weight restrictions | NH S4 (official): weight values recorded on emergency diversion routes, with type, scope and exemptions not recorded, so never shown as lorry or all-vehicle limits. OpenStreetMap (community, when included): lorry limits such as 7.5 t kept distinct from all-vehicle (structural) limits | Sign-style value markers, grouped from zoom 6 to 11 as for heights (grey ring), separate from zoom 12: a weight glyph and grey border for NH values of unrecorded type, a lorry or bridge glyph for OSM kinds. The key lists only kinds that are loaded |
 | London LEZ | TfL boundary (official) | Dashed green boundary, labelled |
 | London ULEZ | TfL boundary (official; the same boundary as the LEZ since August 2023, with different rules) | Solid blue boundary, labelled |
 
@@ -208,6 +223,8 @@ Map overlays, each switched on separately in Settings, all **off by default**; c
   - limitations.
 - **Wording.** Shown wherever restriction data is shown, verbatim: "Restrictions data is incomplete. Community-sourced records
   are unverified. No marker does not mean no restriction. Always follow road signs. This map is not a route check."
+  On the map it sits in the restrictions key, which folds like the map key; folded, the disclaimer is hidden visually but
+  kept for screen readers (owner decision, 2026-10-12, docs/RESTRICTIONS.md). The "Restrictions in this view" list always shows it.
 - **What the layers never do.** They don't check a vehicle or a route, never imply a road is clear, and never change closures,
   diversions or classifications.
 - **Data.** Versioned static files, validated, downloaded only when a layer is switched on. Sources, licences, coverage gaps and

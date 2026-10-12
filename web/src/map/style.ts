@@ -1,5 +1,6 @@
 import type { ExpressionSpecification, FilterSpecification, LayerSpecification, StyleSpecification } from "maplibre-gl";
 import { pointLayers, zoneLayers } from "./restrictionLayers.ts";
+import { routesJunctionLayer } from "./routesLayers.ts";
 
 /**
  * Traffic Advanced map layers as plain data, so they can be tested without a browser.
@@ -9,6 +10,7 @@ import { pointLayers, zoneLayers } from "./restrictionLayers.ts";
  *   base map → road emphasis lines → [London zones] → closures → closure markers → B-road/A-road numbers → junction numbers →
  *   primary-route and motorway numbers → [weight and height restriction markers] → diversion route → direction arrows → diversion
  *   start/rejoin → selected closure → its confirmed junctions        ([…] hidden until switched on in Settings)
+ * The Routes view's junction numbers sit with the Closures view's (Routes only); viewLayers.ts says which view shows what.
  */
 export type Theme = "light" | "dark";
 
@@ -285,6 +287,7 @@ export function overlayLayers(): LayerSpecification[] {
     ...closure.base,
     ...roads.low,
     junctionLayer,
+    routesJunctionLayer,
     ...roads.high,
     ...pointLayers("weight"),
     ...pointLayers("height"),

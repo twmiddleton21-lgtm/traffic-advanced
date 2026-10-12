@@ -1,7 +1,9 @@
 import type { Ref } from "react";
 import { freshnessLine, formatTime, lastUpdatedLine, NOT_LIVE_TEXT, OFFICIAL_SOURCE_URL } from "../domain/dataStatus.ts";
 import type { ClosuresState } from "../hooks/useClosures.ts";
+import type { AppView } from "../routemap/view.ts";
 import { BrandLogo } from "./BrandLogo.tsx";
+import { ViewSwitch } from "./ViewSwitch.tsx";
 
 interface Props {
   data: ClosuresState;
@@ -13,11 +15,15 @@ interface Props {
   settingsButtonRef: Ref<HTMLButtonElement>;
   /** Set while the closures drawer is open as a modal on phones and tablets. */
   inert?: boolean;
+  view: AppView;
+  onViewChange: (view: AppView) => void;
 }
 
-export function AppHeader({ data, now, query, onQueryChange, settingsOpen, onOpenSettings, settingsButtonRef, inert }: Props) {
+export function AppHeader({ data, now, query, onQueryChange, settingsOpen, onOpenSettings, settingsButtonRef, inert, view, onViewChange }: Props) {
   // Phones and tablets: brand and Settings on one row, data status (always visible) below; the search box moves into the closures
-  // drawer. Desktop keeps one row. Safe-area padding keeps it clear of notches and rounded corners.
+  // drawer. Desktop keeps one row. Safe-area padding keeps it clear of notches and rounded corners. The Closures / Routes switch
+  // sits beside the brand from tablet width up; on phones it has its own full-width row under the brand, above the data status.
+  // The road search filters closures, so it's in the Closures view only.
   return (
     <header
       inert={inert}
@@ -25,11 +31,13 @@ export function AppHeader({ data, now, query, onQueryChange, settingsOpen, onOpe
     >
       <BrandLogo />
 
+      <ViewSwitch view={view} onChange={onViewChange} className="max-sm:order-1 max-sm:basis-full sm:w-[15rem]" />
+
       <div className="order-last basis-full lg:order-none lg:basis-auto">
         <DataStatus data={data} now={now} />
       </div>
 
-      <label className="ml-auto hidden min-w-0 flex-1 items-center gap-2 lg:flex lg:max-w-xs">
+      <label className={`ml-auto hidden min-w-0 flex-1 items-center gap-2 lg:max-w-xs ${view === "closures" ? "lg:flex" : ""}`}>
         <span className="sr-only">Find a road</span>
         <input
           type="search"
@@ -48,7 +56,7 @@ export function AppHeader({ data, now, query, onQueryChange, settingsOpen, onOpe
         aria-haspopup="dialog"
         aria-expanded={settingsOpen}
         aria-controls="settings-dialog"
-        className="flex h-12 min-w-12 items-center justify-center gap-2 rounded-[4px] border border-line px-3 text-[14px] font-bold hover:bg-raised max-lg:ml-auto"
+        className={`flex h-12 min-w-12 items-center justify-center gap-2 rounded-[4px] border border-line px-3 text-[14px] font-bold hover:bg-raised max-lg:ml-auto ${view === "routes" ? "lg:ml-auto" : ""}`}
       >
         <GearIcon />
         <span className="max-lg:sr-only">Settings</span>

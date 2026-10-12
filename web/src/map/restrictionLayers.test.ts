@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import type { LayerSpecification, SymbolLayerSpecification } from "maplibre-gl";
 import { describe, expect, it } from "vitest";
 import { restrictionPointsFileSchema, type RestrictionPointsFile } from "../../../shared/api/restrictions.ts";
-import { iconFor, layerIds, RESTRICTION_MIN_ZOOM, RESTRICTION_SOURCES, restrictionFeatures, sourceAttribution } from "./restrictionLayers.ts";
+import { iconFor, layerIds, POINT_SOURCE_CLUSTER, RESTRICTION_MIN_ZOOM, RESTRICTION_OVERVIEW_ZOOM, RESTRICTION_SOURCES, restrictionFeatures, sourceAttribution } from "./restrictionLayers.ts";
 import { overlayLayers } from "./style.ts";
 
 const layers = overlayLayers();
@@ -45,20 +45,40 @@ describe("restriction layers in the map style", () => {
     }
   });
 
-  it("show markers only when zoomed in, with readable values on sign-style plates", () => {
+  it("draw readable sign-style plates for every restriction not in a group, from the overview zoom, with no area filter", () => {
     for (const id of ["restriction-height", "restriction-weight"]) {
       const l = byId(id) as SymbolLayerSpecification;
-      expect(l.minzoom).toBe(RESTRICTION_MIN_ZOOM);
-      expect(RESTRICTION_MIN_ZOOM).toBeGreaterThanOrEqual(12);
+      expect(l.minzoom).toBe(RESTRICTION_OVERVIEW_ZOOM);
+      // The only filter: not a group. Nothing limits markers to London or any other area.
+      expect(l.filter).toEqual(["!", ["has", "point_count"]]);
       expect(l.layout?.["text-field"]).toEqual(["get", "text"]);
       expect(l.layout?.["icon-text-fit"]).toBe("both");
     }
   });
 
+  it("group nearby markers below RESTRICTION_MIN_ZOOM (a count in the layer's colour), and never at or above it", () => {
+    expect(POINT_SOURCE_CLUSTER).toMatchObject({ cluster: true, clusterMaxZoom: RESTRICTION_MIN_ZOOM - 1 });
+    expect(RESTRICTION_MIN_ZOOM).toBeGreaterThanOrEqual(12);
+    for (const layer of ["height", "weight"] as const) {
+      expect(byId(`restriction-${layer}-group`)).toMatchObject({ type: "circle", minzoom: RESTRICTION_OVERVIEW_ZOOM, filter: ["has", "point_count"] });
+      expect(byId(`restriction-${layer}-group-count`)).toMatchObject({ type: "symbol", filter: ["has", "point_count"] });
+      expect(order(`restriction-${layer}-group`)).toBeLessThan(order(`restriction-${layer}`));
+    }
+    const ring = (id: string) => (byId(id) as { paint: Record<string, unknown> }).paint["circle-stroke-color"];
+    expect(ring("restriction-height-group")).not.toBe(ring("restriction-weight-group"));
+    // Both point sources are created with the clustering (MapView installLayers), and a group zooms in when selected.
+    const view = readFileSync("web/src/map/MapView.tsx", "utf8");
+    expect(view).toMatch(/layer === "height" \|\| layer === "weight" \? POINT_SOURCE_CLUSTER : \{\}/);
+    expect(view).toMatch(/getClusterExpansionZoom\(clusterId\)/);
+  });
+
   it("are reinstalled with closures after every style change, hidden or shown as the switches say", () => {
     const view = readFileSync("web/src/map/MapView.tsx", "utf8");
     expect(view).toMatch(/map\.on\("style\.load", \(\) => installLayers\(map, latest\)\)/);
-    expect(view).toMatch(/applySelection\(map, selected\);\s*applyRestrictions\(map, latest\.current\.restrictions, latest\.current\.selectedRestrictionId\);/);
+    // The view (Closures or Routes) is applied too: restrictions are shown in the Closures view only.
+    expect(view).toMatch(
+      /applySelection\(map, selected\);\s*applyView\(map, latest\.current\.view, latest\.current\.routeLayers\);\s*applyRestrictions\(map, latest\.current\.restrictions, latest\.current\.selectedRestrictionId, latest\.current\.view\);/,
+    );
     // A new style starts with no data: each source's data is handed over again.
     expect(view).toMatch(/shownData\.delete\(map\);/);
   });
@@ -110,6 +130,6 @@ describe("restriction features", () => {
 
   it("credit each source with its licence while its layer is on", () => {
     expect(sourceAttribution(f.sources)).toBe("OpenStreetMap contributors: © OpenStreetMap contributors (ODbL) · National Highways: OGL (OGL)");
-    expect(readFileSync("web/src/map/MapView.tsx", "utf8")).toMatch(/map\.addSource\(RESTRICTION_SOURCES\[r\.layer\], \{ type: "geojson", data: EMPTY, attribution: r\.attribution \}\)/);
+    expect(readFileSync("web/src/map/MapView.tsx", "utf8")).toMatch(/map\.addSource\(RESTRICTION_SOURCES\[r\.layer\], \{ type: "geojson", data: EMPTY, attribution: r\.attribution, \.\.\.clusterFor\(r\.layer\) \}\)/);
   });
 });
