@@ -98,6 +98,7 @@ version: `npx wrangler rollback <version-id>`. Only on the owner's instruction.
 | `665cb5d4-3885-447e-9fb6-231b9326fa7f` | 2026-10-08 00:09:07 | `6dfe9eb` | Date selector can go back to yesterday (PR #11) |
 | `d5dae9fe-0916-4a47-9f33-d9df9f890484` | 2026-10-08 22:02:34 | `bb29aec` | Traffic Advanced brand identity (PR #13) |
 | `f7a9a816-42d6-4588-8723-c16d28d63d9a` | 2026-10-09 03:23:32 | not recorded | Not recorded at the time; found afterwards (see below) |
+| `4d03b164-0dc7-4e01-b496-314a9a37abe9` | 2026-10-12 16:43:34 | `82020c7` | Routes view, settings, app updates (service worker), restriction layers (PR #16); live traffic deferred |
 
 ### 2026-10-06 16:46 UTC: map location control
 
@@ -264,6 +265,43 @@ This deployment wasn't logged when it was made. It was found on 2026-10-12 by a 
   namespaces.
 - On 2026-10-12, the live `GET /api/traffic/status` returned 404 (the traffic routes aren't deployed), and `/api/version` served snapshot
   `20261012T091216Z-ea6ca93a797f` (726 closures).
+
+### 2026-10-12 16:43 UTC: Routes view, settings, updates and restriction layers (PR #16)
+
+PR #16 merged 2026-10-12 16:40:30 UTC with a normal merge commit, `82020c70d5cad19932c9a8fecf5831103fe3f396` (parents `9e243b4`
+and `2c39f8c`), after the owner approved merging and deploying it with licensing, attribution, wording and device review deferred
+("Open review items" below). Contents: the Closures / Routes switch with 596 NH junction numbers, Settings, app versions and
+updates with the first service worker (`docs/APP-UPDATES.md`), the height, weight, LEZ and ULEZ restriction layers, and the
+removal of TfL website rule text from the zone files. Live TomTom traffic is deferred: not routed, not shown, no binding.
+
+- Deployed 2026-10-12 16:43:34 UTC (Wrangler's timestamp; 17:43 UK time) as Worker version
+  `4d03b164-0dc7-4e01-b496-314a9a37abe9`, from a clean worktree of `main` `82020c7`, with the message "Deploy main 82020c7: Routes
+  view and restriction layers (PR #16); live traffic deferred". Bindings `ASSETS` and `SNAPSHOTS` only, compatibility date
+  2026-10-01. Wrangler uploaded 10 changed static files (including `/sw.js`, `/workbox-*.js` and the four restriction files).
+- Before deploying, on `82020c7` in the clean worktree: `npm ci`, `npm run check` (typecheck, lint, 699/699 tests in 58 files,
+  build), the rules-freeze test (15/15), `npm audit` (0 vulnerabilities) and `npm run worker:check` (bindings `SNAPSHOTS` and
+  `ASSETS` only) all passed. The build identity reads commit `82020c70d5ca`, `dirty: false`. CI passed on the PR head
+  (`2c39f8c`).
+- Before the deploy the live version was `f7a9a816`; `/sw.js` returned the app page (no service worker had been deployed).
+- The R2 `current.json` pointer was byte-identical before and after (SHA-256 `661a7657…`); the live snapshot stayed
+  `20261012T091216Z-ea6ca93a797f` (726 closures). No ingestion run, capture or upload was triggered by the release.
+- Checked live on `https://trafficadvanced.uk` and the workers.dev URL (plain and conditional GET requests):
+  - `/` 200 with the security headers; `index.html`, the app script and stylesheet, `/sw.js` (`text/javascript`,
+    `max-age=0, must-revalidate`, with the CSP), the Workbox files and the four restriction files were all byte-identical to the
+    release build;
+  - `/api/version`, `/api/closures` (726) and `/api/junctions` (596) 200, the closures and junctions SHA-256 matching
+    `/api/version`, and 304 on conditional requests; `/api/traffic/status` 404;
+  - both zone files have no `rules` field.
+- Checked live in desktop Chrome: the service worker installed and activated with 14 precache entries (no restriction files) and
+  the `ta-snapshots-v1` device copy; Closures, the restrictions key and list (height and LEZ layers), the LEZ details' TfL note and
+  link, and the Routes view (596 junction labels, one switch, the scope and not-connected notes, no TomTom text). No console errors.
+  The test browser's layer settings were restored afterwards.
+- Worker log during the checks (`wrangler tail`): 20 API requests, all `ok`, no exceptions or error logs, CPU at most 7 ms.
+- **Observed, not investigated:** the live data was captured at 09:12 UTC and was about 7.5 hours old at the time of the checks,
+  so the banner showed the stale state. The release didn't touch ingestion; see "Scheduled ingestion".
+- **Rollback:** this is the first deploy with the service worker. Don't use `wrangler rollback` to `f7a9a816` or any earlier
+  version; follow `docs/APP-UPDATES.md`, "Rollback".
+- **Not yet checked:** real phones and tablets, Safari and Firefox, and the update prompt on the next deploy (open follow-ups).
 
 ## Scheduled ingestion
 
