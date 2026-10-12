@@ -8,9 +8,9 @@ export const ROUTES_SCOPE_TEXT = "Routes is for route awareness only. It doesn't
 export const NO_TRAFFIC_TEXT = "Live traffic isn't connected yet. Road closures are in the Closures view.";
 
 /**
- * The Routes view's layer panel, in the place the Closures view keeps its restrictions panel: its own switch, the junction data's
- * state, what the layer covers, and room for future overlays. It folds to one line like the map key; the junction data's loading
- * and failure messages stay outside the fold.
+ * The Routes view's layer panel, beside the map key at the top left of the map: its own switch, the junction data's state, what
+ * the layer covers, the scope and not-connected notes, and room for future overlays. Folded, it is one 48 px line as compact as the
+ * map key; open, it widens to show its contents. The junction data's loading and failure messages stay outside the fold.
  */
 export function RoutesMapControls({
   layers,
@@ -28,7 +28,7 @@ export function RoutesMapControls({
   onOpenChange: (open: boolean) => void;
 }) {
   return (
-    <div className="pointer-events-auto flex max-h-full w-[min(20rem,calc(100vw-5rem))] flex-col">
+    <div className={`pointer-events-auto flex max-h-full flex-col ${open ? "w-[min(20rem,calc(100vw-5.5rem))]" : "max-w-full"}`}>
       <div className="min-h-0 overflow-y-auto overscroll-contain rounded-[4px] border border-line bg-surface/95 text-[13px] shadow-sm">
         <div role="status" className="space-y-1 px-3 *:pt-2">
           {junctions.state === "loading" && <p>Loading junction numbers…</p>}
@@ -42,7 +42,7 @@ export function RoutesMapControls({
           )}
         </div>
         <details id="routes-layers" open={open} onToggle={(e) => onOpenChange(e.currentTarget.open)} className="group">
-          <summary className="flex min-h-12 cursor-pointer select-none items-center justify-between gap-2 px-3 font-bold">
+          <summary className="flex min-h-12 cursor-pointer select-none items-center justify-between gap-1.5 px-2.5 font-bold focus-visible:-outline-offset-3!">
             Route map layers
             <Chevron />
           </summary>

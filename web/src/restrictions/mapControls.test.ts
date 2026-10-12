@@ -1,9 +1,10 @@
 import { readFileSync } from "node:fs";
 import { QueryClient } from "@tanstack/react-query";
-import { createElement as h, isValidElement, type ReactElement, type ReactNode } from "react";
+import { createElement as h, Fragment, isValidElement, type ReactElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { RESTRICTIONS_DISCLAIMER, restrictionPointsFileSchema } from "../../../shared/api/restrictions.ts";
+import { MapKey } from "../components/MapKey.tsx";
 import { RestrictionMapControls } from "../components/RestrictionMapControls.tsx";
 import { RESTRICTION_MIN_ZOOM, RESTRICTION_OVERVIEW_ZOOM, restrictionFeatures } from "../map/restrictionLayers.ts";
 import type { RestrictionLayer } from "../settings/preferences.ts";
@@ -21,8 +22,13 @@ const retry = vi.fn();
 const status = (layer: RestrictionLayer, state: LayerStatus["state"], data: LayerData | null = null, error: string | null = null): LayerStatus => ({ layer, state, data, error, retry });
 const ready = (layer: "height" | "weight") => status(layer, "ready", { layer, points: layer === "height" ? height : weight });
 const off = (layer: RestrictionLayer) => status(layer, "off");
-const props = (statuses: LayerStatus[], zoom: number, keyOpen = true, onKeyOpenChange: (open: boolean) => void = () => undefined) => ({ statuses, zoom, onOpenList: () => undefined, buttonRef: null, keyOpen, onKeyOpenChange });
-const render = (statuses: LayerStatus[], zoom: number, keyOpen = true) => renderToStaticMarkup(h(RestrictionMapControls, props(statuses, zoom, keyOpen)));
+const controls = (statuses: LayerStatus[], zoom: number) => ({ statuses, zoom, onOpenList: () => undefined, buttonRef: null });
+const keyProps = (statuses: LayerStatus[], zoom: number, open = true, onOpenChange: (open: boolean) => void = () => undefined) => ({ view: "closures" as const, open, onOpenChange, restrictions: { statuses, zoom } });
+/** What App draws on the Closures map: the restriction controls (top right) and the map's one key, which carries the restriction key. */
+const render = (statuses: LayerStatus[], zoom: number, keyOpen = true) =>
+  renderToStaticMarkup(h(Fragment, null, h(RestrictionMapControls, controls(statuses, zoom)), h(MapKey, keyProps(statuses, zoom, keyOpen))));
+const restrictionControls = (statuses: LayerStatus[], zoom: number) => renderToStaticMarkup(h(RestrictionMapControls, controls(statuses, zoom)));
+const restrictionSection = (html: string) => /<section aria-label="Restrictions key"[\s\S]*?<\/section>/.exec(html)?.[0] ?? "";
 // Everything in the live regions (the loading and failure messages, and the key with its zoom message).
 const liveRegion = (html: string) => [...html.matchAll(/<div role="status"[^>]*>([\s\S]*?)<\/div>/g)].map((m) => m[1]).join("");
 const keyPart = (html: string) => /<details[^>]*>[\s\S]*?<\/details>/.exec(html)?.[0] ?? "";
@@ -77,8 +83,11 @@ describe("restriction map controls as layers are switched", () => {
     expect(html.split(RESTRICTIONS_DISCLAIMER).length - 1).toBe(1);
   });
 
-  it("every layer off: nothing at all", () => {
-    expect(render([off("height"), off("weight"), off("lez"), off("ulez")], grouped)).toBe("");
+  it("every layer off: no restriction controls, and the map key has no restriction rows or disclaimer", () => {
+    expect(restrictionControls([off("height"), off("weight"), off("lez"), off("ulez")], grouped)).toBe("");
+    const html = render([off("height"), off("weight"), off("lez"), off("ulez")], grouped);
+    expect(restrictionSection(html)).toBe("");
+    expect(html).not.toContain(RESTRICTIONS_DISCLAIMER);
     expect(mapControlsState([off("height")], grouped).active).toEqual([]);
   });
 
@@ -91,13 +100,16 @@ describe("restriction map controls as layers are switched", () => {
   });
 });
 
-describe("the restrictions key folds like the map key", () => {
+describe("the restriction key is part of the map's one key, which folds to a compact line", () => {
   const both = [ready("height"), ready("weight"), off("lez"), off("ulez")];
 
   it("folded: only the compact control is seen; the hint, key and disclaimer are kept, not removed", () => {
     const html = render(both, grouped, false);
     expect(isOpen(html)).toBe(false);
-    expect(keyPart(html)).toMatch(/<summary[^>]*>Restrictions key/);
+    expect(keyPart(html)).toMatch(/<summary[^>]*>Map key/);
+    // Folded, the summary shows which restriction symbols are inside (visually) and says so (screen readers).
+    expect(keyPart(html)).toMatch(/<summary[^>]*>Map key<span class="flex items-center gap-1" aria-hidden="true">[\s\S]*?<\/span><span class="sr-only">, including restrictions<\/span>/);
+    expect(restrictionSection(html)).not.toBe("");
     // The guidance is still there, inside the folded key: reopening shows it again.
     expect(keyPart(html)).toContain("Circles group nearby height and weight restrictions.");
     expect(keyPart(html)).toContain("Height restriction");
@@ -135,24 +147,27 @@ describe("the restrictions key folds like the map key", () => {
     expect(outsideKey(html)).toContain("Height restrictions: Restriction data can");
     expect(outsideKey(html)).toContain("Try again");
     expect(outsideKey(html)).toContain("Loading weight restrictions…");
-    // Nothing loaded yet, so there is no key to fold; the disclaimer is shown, not hidden.
-    expect(keyPart(html)).toBe("");
+    // Nothing loaded yet, so the map key has no restriction rows; the disclaimer is shown with the messages, not hidden.
+    expect(restrictionSection(html)).toBe("");
+    expect(outsideKey(html)).toContain(RESTRICTIONS_DISCLAIMER);
     expect(html.split(RESTRICTIONS_DISCLAIMER).length - 1).toBe(1);
     expect(disclaimer(html)?.[1]).not.toMatch(/sr-only/);
   });
 
   it("opening or folding it reports the new state to App, which holds it", () => {
     const changed = vi.fn();
-    const details = findElement(RestrictionMapControls(props(both, grouped, true, changed)), "details");
+    const details = findElement(MapKey(keyProps(both, grouped, true, changed)), "details");
     const onToggle = (details.props as { onToggle: (e: { currentTarget: { open: boolean } }) => void }).onToggle;
     onToggle({ currentTarget: { open: false } });
     onToggle({ currentTarget: { open: true } });
     expect(changed.mock.calls).toEqual([[false], [true]]);
-    // App keeps the choice across layer switches, starting open where there's room and folded on phones, like the map key.
+    // App keeps the one key's choice across layer and view switches, starting open where there's room and folded on phones.
     const app = readFileSync("web/src/App.tsx", "utf8");
-    expect(app).toMatch(/const \[restrictionKeyOpen, setRestrictionKeyOpen\] = useState\(wide\);/);
-    expect(app).toMatch(/keyOpen=\{restrictionKeyOpen\}\s+onKeyOpenChange=\{setRestrictionKeyOpen\}/);
-    expect(readFileSync("web/src/map/MapView.tsx", "utf8")).toMatch(/useState\(\(\) => window\.matchMedia\(WIDE_QUERY\)\.matches\)/);
+    expect(app).toMatch(/const \[mapKeyOpen, setMapKeyOpen\] = useState\(wide\);/);
+    expect(app.match(/<MapKey\b[^>]*open=\{mapKeyOpen\} onOpenChange=\{setMapKeyOpen\}/g)).toHaveLength(1);
+    expect(app.match(/open=\{mapKeyOpen\}\s+onOpenChange=\{setMapKeyOpen\}/g)).toHaveLength(2);
+    // The map itself no longer draws a key of its own.
+    expect(readFileSync("web/src/map/MapView.tsx", "utf8")).not.toMatch(/Map key|<Legend/);
   });
 
   it("stays folded while layers are switched, and its contents follow the layers on now", () => {
@@ -173,8 +188,9 @@ describe("the restrictions key folds like the map key", () => {
       expect(html.split(RESTRICTIONS_DISCLAIMER).length - 1).toBe(1);
       expect(disclaimer(html)?.[1]).toBe("sr-only");
     }
-    // Every layer off: nothing on the map. Switched on again, the key is as the user left it (App's state), folded or open.
-    expect(render([off("height"), off("weight"), off("lez"), off("ulez")], grouped, false)).toBe("");
+    // Every layer off: no restriction controls or rows. Switched on again, the key is as the user left it (App's state).
+    expect(restrictionControls([off("height"), off("weight"), off("lez"), off("ulez")], grouped)).toBe("");
+    expect(restrictionSection(render([off("height"), off("weight"), off("lez"), off("ulez")], grouped, false))).toBe("");
     expect(isOpen(render([ready("weight")], grouped, false))).toBe(false);
     expect(isOpen(render([ready("weight")], grouped, true))).toBe(true);
   });

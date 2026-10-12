@@ -6,6 +6,7 @@ import { junctionsSnapshotSchema, type Junction } from "../../../shared/api/junc
 import { RESTRICTIONS_DISCLAIMER } from "../../../shared/api/restrictions.ts";
 import { APP_VERSION } from "../app/version.ts";
 import { AppHeader } from "../components/AppHeader.tsx";
+import { MapKey } from "../components/MapKey.tsx";
 import { JunctionNumbersSwitch, NO_TRAFFIC_TEXT, ROUTES_SCOPE_TEXT, RoutesMapControls } from "../components/RoutesMapControls.tsx";
 import { SettingsDialog } from "../components/settings/SettingsDialog.tsx";
 import { ViewSwitch } from "../components/ViewSwitch.tsx";
@@ -59,7 +60,7 @@ describe("Closures / Routes view state", () => {
     expect(app).toMatch(/hidden=\{!closuresView\}\s*className=\{`flex min-h-0 flex-col/);
     expect(app).toMatch(/\{data && closuresView && <DateSelector/);
     expect(app).toMatch(/\{selected && data && closuresView && \(/);
-    for (const state of ["filter", "query", "selectedId", "chosenDay", "drawerOpen", "restrictionKeyOpen"]) expect(app).toMatch(new RegExp(`const \\[${state}, `));
+    for (const state of ["filter", "query", "selectedId", "chosenDay", "drawerOpen", "mapKeyOpen"]) expect(app).toMatch(new RegExp(`const \\[${state}, `));
   });
 
   it("uses one map for both views: no second map container or instance", () => {
@@ -106,7 +107,44 @@ describe("each view's own map layers", () => {
 
   it("restriction layers are shown in the Closures view only (their switches and data are kept)", () => {
     expect(mapView).toMatch(/const visible = view === "closures" && o\.visible && o\.data !== null;/);
-    expect(app).toMatch(/\{closuresView \? \(\s*<RestrictionMapControls/);
+    expect(app).toMatch(/\{closuresView \? \(\s*<>[\s\S]*?<RestrictionMapControls[\s\S]*?\) : \(/);
+  });
+});
+
+describe("compact map keys", () => {
+  const key = (view: AppView, open: boolean) => renderToStaticMarkup(h(MapKey, { view, open, onOpenChange: () => undefined }));
+
+  it("one key per view, folding to a single 48 px 'Map key' line; open, it shows that view's own rows", () => {
+    for (const view of ["closures", "routes"] as const) {
+      const folded = key(view, false);
+      expect(folded).toMatch(/<summary class="[^"]*\bmin-h-12\b[^"]*">Map key<svg/);
+      expect(folded).not.toMatch(/<details[^>]*\sopen=""/);
+    }
+    expect(key("routes", true)).toContain("Junction number (National Highways roads only)");
+    expect(key("routes", true)).not.toContain("Closed carriageway");
+    expect(key("closures", true)).toContain("Closed carriageway");
+    // Without restriction layers there is no restriction section or disclaimer in it.
+    expect(key("closures", true)).not.toMatch(/Restrictions key|restrictions-disclaimer/);
+  });
+
+  it("Closures: the key sits bottom left, above the map credits; it scrolls within the map, clear of the restriction controls on phones", () => {
+    expect(app).toMatch(/<MapKey\s+view=\{appView\}\s+open=\{mapKeyOpen\}\s+onOpenChange=\{setMapKeyOpen\}\s+restrictions=\{\{ statuses: Object\.values\(statuses\), zoom: view\?\.zoom \?\? null \}\}\s+className="absolute bottom-\[calc\(2rem\+env\(safe-area-inset-bottom\)\)\] left-\[max\(0\.75rem,env\(safe-area-inset-left\)\)\] z-\[1\] max-h-\[max\(6rem,calc\(100%-15rem\)\)\] w-max max-w-\[min\(22rem,calc\(100%-4\.5rem\)\)\]/);
+  });
+
+  it("Routes: the key and the layer panel sit side by side at the top left, clear of the map's buttons, wrapping when opened", () => {
+    expect(app).toMatch(/<div className="pointer-events-none absolute [^"]*\bleft-\[max\(0\.75rem,env\(safe-area-inset-left\)\)\] right-14 top-3 z-10 flex flex-wrap content-start items-start gap-1\.5">\s*<MapKey view=\{appView\} open=\{mapKeyOpen\} onOpenChange=\{setMapKeyOpen\} className="max-h-full max-w-full" \/>\s*<RoutesMapControls /);
+    // The map's own notices start below that row in Routes, at every width.
+    expect(app).toMatch(/className=\{`relative min-w-0 flex-1 \[--ta-map-top-inset:3\.75rem\] \$\{closuresView \? "lg:\[--ta-map-top-inset:0px\]" : ""\}`\}/);
+  });
+
+  it("Routes panel: folded it is one compact 48 px line with no fixed width; open, it widens to show its notes", () => {
+    const panel = (open: boolean) =>
+      renderToStaticMarkup(h(RoutesMapControls, { layers: { junctions: true }, onToggle: () => undefined, junctions: { state: "ready", count: 596, leftOut: 0 }, onRetry: () => undefined, open, onOpenChange: () => undefined }));
+    expect(panel(false)).toMatch(/^<div class="pointer-events-auto flex max-h-full flex-col max-w-full">/);
+    expect(panel(false)).toMatch(/<summary class="[^"]*\bmin-h-12\b/);
+    expect(panel(true)).toMatch(/^<div class="pointer-events-auto flex max-h-full flex-col w-\[min\(20rem,calc\(100vw-5\.5rem\)\)\]">/);
+    // The scope note keeps its full wording inside the panel.
+    expect(panel(true)).toContain(ROUTES_SCOPE_TEXT.replaceAll("'", "&#x27;"));
   });
 });
 
