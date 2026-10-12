@@ -8,7 +8,7 @@ import { DateSelector } from "./components/DateSelector.tsx";
 import { FilterBar } from "./components/FilterBar.tsx";
 import { MapKey } from "./components/MapKey.tsx";
 import { RestrictionMapControls } from "./components/RestrictionMapControls.tsx";
-import { RestrictionsDialog } from "./components/RestrictionsDialog.tsx";
+import { RestrictionsDialog, type RestrictionSelection } from "./components/RestrictionsDialog.tsx";
 import { RoutesMapControls } from "./components/RoutesMapControls.tsx";
 import { SettingsDialog } from "./components/settings/SettingsDialog.tsx";
 import { UpdateNotice } from "./components/UpdateNotice.tsx";
@@ -160,16 +160,16 @@ export function App() {
     reopenAfterDetail.current = false;
   };
 
-  // Settings and the restrictions list: modal dialogs over the map (the map stays mounted, so its view is kept). Focus goes back to
-  // the button that opened each one.
+  // Settings and a restriction's details: modal dialogs over the map (the map stays mounted, so its view is kept). Focus goes back to
+  // what opened each one.
   const [settingsOpen, setSettingsOpen] = useState(false);
   const settingsButton = useRef<HTMLButtonElement>(null);
-  const [restrictionsOpen, setRestrictionsOpen] = useState(false);
-  const restrictionsButton = useRef<HTMLButtonElement>(null);
+  // The restriction or zone whose details are open (none: closed), and the key button that opened them (none: a marker on the map).
+  const [selectedRestriction, setSelectedRestriction] = useState<RestrictionSelection | null>(null);
+  const restrictionOpener = useRef<HTMLElement | null>(null);
   // The map's one key (MapKey.tsx, which also carries the restriction key in Closures) starts open where there's room and folded on
   // phones and tablets; the choice then holds across view and layer switches until the app is reloaded.
   const [mapKeyOpen, setMapKeyOpen] = useState(wide);
-  const [selectedRestrictionId, setSelectedRestrictionId] = useState<string | null>(null);
   const [view, setView] = useState<MapViewArea | null>(null);
   const [baseMapFailed, setBaseMapFailed] = useState(false);
 
@@ -200,19 +200,22 @@ export function App() {
     const d = enabled[l] ? statuses[l].data : null;
     return d && "zones" in d ? [d.zones] : [];
   });
+  // A marker tapped on the map: its details, with focus going back to the map when they close.
   const selectRestriction = useCallback((id: string) => {
-    setSelectedRestrictionId(id);
-    setRestrictionsOpen(true);
+    restrictionOpener.current = null;
+    setSelectedRestriction({ kind: "point", id });
   }, []);
-  // Switching a layer off also drops a selected marker, so it can't reappear selected when the layer comes back.
+  // A restriction or zone chosen in the map key: its details, with focus going back to that button.
+  const openRestriction = (selection: RestrictionSelection) => {
+    restrictionOpener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setSelectedRestriction(selection);
+  };
+  // Switching a layer off also closes what was selected, so it can't reappear selected when the layer comes back.
   const toggleRestriction = (layer: RestrictionLayer, on: boolean) => {
     setRestriction(layer, on);
-    if (!on) setSelectedRestrictionId(null);
+    if (!on) setSelectedRestriction(null);
   };
-  const closeRestrictions = () => {
-    setRestrictionsOpen(false);
-    setSelectedRestrictionId(null);
-  };
+  const closeRestrictions = () => setSelectedRestriction(null);
 
   // Problems for Settings: the same messages shown elsewhere, gathered in one list (not announced again). Each view lists only its
   // own layers' problems.
@@ -348,7 +351,7 @@ export function App() {
             onIdle={onMapIdle}
             theme={theme}
             restrictions={overlays}
-            selectedRestrictionId={restrictionsOpen ? selectedRestrictionId : null}
+            selectedRestrictionId={selectedRestriction?.kind === "point" ? selectedRestriction.id : null}
             onSelectRestriction={selectRestriction}
             onViewChange={setView}
             onBaseMapError={setBaseMapFailed}
@@ -357,7 +360,7 @@ export function App() {
             <>
               {/* Below MapLibre's zoom and location buttons, and above the map credits: it scrolls rather than run off the map. */}
               <div className="pointer-events-none absolute bottom-[calc(2rem+env(safe-area-inset-bottom))] right-[max(0.75rem,env(safe-area-inset-right))] top-[9.5rem] z-10 flex items-start justify-end">
-                <RestrictionMapControls statuses={Object.values(statuses)} zoom={view?.zoom ?? null} onOpenList={() => setRestrictionsOpen(true)} buttonRef={restrictionsButton} />
+                <RestrictionMapControls statuses={Object.values(statuses)} />
               </div>
               {/* Bottom left, above the map credits; opened, it scrolls within the map, clear of the restrictions button above it and
                   of the map credits beside it on phones (at least 6rem tall, so a short landscape map can't squeeze it away). Under
@@ -366,7 +369,7 @@ export function App() {
                 view={appView}
                 open={mapKeyOpen}
                 onOpenChange={setMapKeyOpen}
-                restrictions={{ statuses: Object.values(statuses), zoom: view?.zoom ?? null }}
+                restrictions={{ statuses: Object.values(statuses), area: view, now, onSelect: openRestriction }}
                 className="absolute bottom-[calc(2rem+env(safe-area-inset-bottom))] left-[max(0.75rem,env(safe-area-inset-left))] z-[1] max-h-[max(6rem,calc(100%-15rem))] w-max max-w-[min(22rem,calc(100%-4.5rem))] lg:max-h-[calc(100%-3rem)]"
               />
             </>
@@ -417,14 +420,11 @@ export function App() {
           dataHelp={{ data: closuresState, now, restrictionSources: closuresView ? allSources(entries) : [] }}
         />
         <RestrictionsDialog
-          open={restrictionsOpen}
           onClose={closeRestrictions}
-          returnFocus={() => restrictionsButton.current}
-          view={view}
+          returnFocus={() => restrictionOpener.current ?? document.querySelector<HTMLElement>(".maplibregl-canvas")}
           points={pointFiles}
           zones={zoneFiles}
-          selectedId={selectedRestrictionId}
-          onSelect={setSelectedRestrictionId}
+          selection={selectedRestriction}
           now={now}
         />
 

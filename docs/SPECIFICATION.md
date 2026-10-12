@@ -41,7 +41,7 @@ wearing gloves, short on time. They need fast answers: *is my road shut, when, w
        panel and list. Routes-only: the "Layers" button and panel (junction numbers, the data's state, scope and no-traffic notes).
      - One map key, with each view's own rows. It folds to a single 48 px "Map key" line (open on desktop, folded on phones and
        tablets at first; the choice holds across view and layer switches). Closures: bottom left; while restriction layers are on
-       it also carries the restriction key, and folded it shows their symbols. Routes: bottom left too; the "Layers" control is
+       it also carries the restriction key, shown when opened (the folded line never changes). Routes: bottom left too; the "Layers" control is
        a separate square map button at the top left whose panel opens under it.
    - **Road selector**: search/pick a road (e.g. M6, A14), optional direction, My Roads shortcuts.
    - A status chip, "Last updated 14:05", turns amber/red when delayed/stale.
@@ -218,7 +218,8 @@ Map overlays, each switched on separately in Settings, all **off by default**; c
 | London LEZ | TfL boundary (official) | Dashed green boundary, labelled |
 | London ULEZ | TfL boundary (official; the same boundary as the LEZ since August 2023, with different rules) | Solid blue boundary, labelled |
 
-- **Details.** Selecting a marker (or an item in the keyboard-accessible "Restrictions in this view" list) shows:
+- **Details.** Selecting a marker (or an item in the map key's keyboard list of restrictions in view, hidden visually until it has
+  keyboard focus) shows:
   - the type and recorded value (height in m and ft-in, bands kept as bands);
   - the location;
   - the source and whether it is official or community (unverified);
@@ -227,7 +228,9 @@ Map overlays, each switched on separately in Settings, all **off by default**; c
 - **Wording.** Shown wherever restriction data is shown, verbatim: "Restrictions data is incomplete. Community-sourced records
   are unverified. No marker does not mean no restriction. Always follow road signs. This map is not a route check."
   On the map it sits in the map key's restriction section (Closures); folded, the disclaimer is hidden visually but
-  kept for screen readers (owner decision, 2026-10-12, docs/RESTRICTIONS.md). The "Restrictions in this view" list always shows it.
+  kept for screen readers (owner decision, 2026-10-12, docs/RESTRICTIONS.md). A restriction's or zone's details always show it.
+  LEZ/ULEZ details (TfL note, source notes, TfL's page) open from the zone's button in the opened map key. There is no separate
+  "Restrictions" button or list popup (owner decision, 2026-10-12).
 - **What the layers never do.** They don't check a vehicle or a route, never imply a road is clear, and never change closures,
   diversions or classifications.
 - **Data.** Versioned static files, validated, downloaded only when a layer is switched on. Sources, licences, coverage gaps and

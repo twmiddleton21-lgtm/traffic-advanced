@@ -3,7 +3,7 @@ import { createElement as h } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { RESTRICTIONS_DISCLAIMER, type RestrictionPoint, type RestrictionPointsFile, type RestrictionSource } from "../../../shared/api/restrictions.ts";
-import { PointDetails, RestrictionsDialog } from "../components/RestrictionsDialog.tsx";
+import { InViewButtons, PointDetails, RestrictionsDialog } from "../components/RestrictionsDialog.tsx";
 import { getRestrictionFile, TrafficApiError } from "../data/trafficService.ts";
 import { availableLayers } from "./catalog.ts";
 import { allowedLink, heightWordingNote, isStale, kindLabel, limitText, locationText, markerText, osmElementUrl, sourceLabel, wordingImperialHeight, ZONE_RULES_TEXT } from "./describe.ts";
@@ -95,7 +95,7 @@ describe("restriction wording", () => {
   });
 });
 
-describe("restrictions in view (the keyboard and screen-reader route)", () => {
+describe("restrictions in view (the map key's keyboard and screen-reader route)", () => {
   const near = point({ id: "osm/way/1/weight-goods", position: [-0.1, 51.5] });
   const far = point({ id: "osm/way/2/weight-goods", position: [-0.12, 51.51] });
   const outside = point({ id: "osm/way/3/weight-goods", position: [1, 52] });
@@ -120,18 +120,12 @@ describe("restrictions in view (the keyboard and screen-reader route)", () => {
   });
 
   it("an empty view says nothing is recorded, not that there is nothing there", () => {
-    const out = renderToStaticMarkup(
-      h(RestrictionsDialog, { open: false, onClose: () => undefined, returnFocus: () => null, view: { bounds: [1.5, 52.5, 1.6, 52.6], centre: [1.55, 52.55], zoom: 14 }, points: [f], zones: [], selectedId: null, onSelect: () => undefined, now: new Date("2026-10-09T10:00:00Z") }),
-    );
+    const out = renderToStaticMarkup(h(InViewButtons, { view: { bounds: [1.5, 52.5, 1.6, 52.6], centre: [1.55, 52.55], zoom: 14 }, points: [f], onSelect: () => undefined }));
     expect(out).toContain("No restrictions are recorded in this view. That does not mean there are none.");
-    expect(out).toContain(RESTRICTIONS_DISCLAIMER.replace(/'/g, "&#x27;"));
   });
 
   it("asks to zoom in at a whole-country view, naming only the loaded layer, and lists from the zoom the map draws them", () => {
-    const at = (zoom: number) =>
-      renderToStaticMarkup(
-        h(RestrictionsDialog, { open: false, onClose: () => undefined, returnFocus: () => null, view: { bounds: [-1, 51, 1, 52], centre: [0, 51.5], zoom }, points: [f], zones: [], selectedId: null, onSelect: () => undefined, now: new Date() }),
-      );
+    const at = (zoom: number) => renderToStaticMarkup(h(InViewButtons, { view: { bounds: [-1, 51, 1, 52], centre: [0, 51.5], zoom }, points: [f], onSelect: () => undefined }));
     expect(f.layer).toBe("weight");
     expect(at(5)).toContain("Zoom in on the map to list weight restrictions here.");
     expect(at(5)).not.toContain("height restrictions");
@@ -273,7 +267,7 @@ describe("the same restriction recorded on several NH diversion routes", () => {
     expect(items[0]!.records.map((r) => r.id).sort()).toEqual(m56.map((r) => r.id).sort());
     for (const r of m56) expect(findPoint([weight], r.id)?.point.id).toBe(items[0]!.point.id);
     const listHtml = renderToStaticMarkup(
-      h(RestrictionsDialog, { open: false, onClose: () => undefined, returnFocus: () => null, view: { bounds: [-2.55, 53.345, -2.54, 53.355], centre: [-2.545119, 53.350447], zoom: 14 }, points: [weight], zones: [], selectedId: null, onSelect: () => undefined, now: new Date("2026-10-09T15:00:00Z") }),
+      h(InViewButtons, { view: { bounds: [-2.55, 53.345, -2.54, 53.355], centre: [-2.545119, 53.350447], zoom: 14 }, points: [weight], onSelect: () => undefined }),
     );
     expect(listHtml.match(/<li>/g)).toHaveLength(1);
     expect(listHtml).toContain("1 recorded in this view");
@@ -341,13 +335,14 @@ describe("heights whose source wording gives feet and inches", () => {
   });
 });
 
-describe("LEZ and ULEZ details", () => {
+describe("LEZ and ULEZ details (opened from the map key)", () => {
   const zones = (["lez", "ulez"] as const).map((z) => zonesFileSchema.parse(JSON.parse(readFileSync(`web/src/restrictions/data/${z}.json`, "utf8"))));
   // react-dom/server escapes apostrophes.
   const esc = (s: string) => s.replace(/'/g, "&#x27;");
-  const out = renderToStaticMarkup(
-    h(RestrictionsDialog, { open: false, onClose: () => undefined, returnFocus: () => null, view: { bounds: [-0.2, 51.45, 0, 51.55], centre: [-0.1, 51.5], zoom: 12 }, points: [], zones, selectedId: null, onSelect: () => undefined, now: new Date("2026-10-12T10:00:00Z") }),
-  );
+  // Each zone's details, as the map key's zone buttons open them.
+  const out = (["lez", "ulez"] as const)
+    .map((id) => renderToStaticMarkup(h(RestrictionsDialog, { onClose: () => undefined, returnFocus: () => null, points: [], zones, selection: { kind: "zone", id }, now: new Date("2026-10-12T10:00:00Z") })))
+    .join("");
 
   it("say TfL sets the rules and link to TfL's pages; the zone data carries no rule text to show (TfL's is website text)", () => {
     for (const z of ["lez", "ulez"]) {
@@ -358,6 +353,13 @@ describe("LEZ and ULEZ details", () => {
     expect(out.split(esc(ZONE_RULES_TEXT)).length - 1).toBe(2);
     expect(out).toContain('href="https://tfl.gov.uk/modes/driving/low-emission-zone"');
     expect(out).toContain('href="https://tfl.gov.uk/modes/driving/ultra-low-emission-zone"');
+  });
+
+  it("are titled with the zone's name, with its source, the TfL note and the link to TfL's page", () => {
+    expect(out).toContain('<h2 id="restrictions-title"');
+    expect(out).toMatch(/London Low Emission Zone \(LEZ\)<\/h2>/);
+    expect(out).toMatch(/London Ultra Low Emission Zone \(ULEZ\)<\/h2>/);
+    expect(out.split("Source: Transport for London.").length - 1).toBe(2);
   });
 
   it("keep each zone's source notes and the disclaimer", () => {

@@ -235,12 +235,14 @@ describe("Data status and help", () => {
 describe("Restrictions on the map", () => {
   /** What App draws on the Closures map: the restriction controls and the map's one key (which carries the restriction key). */
   const onMap = (statusesOn: LayerStatus[], zoom: number) =>
-    html(h(Fragment, null, h(RestrictionMapControls, { statuses: statusesOn, zoom, onOpenList: () => undefined, buttonRef: null }), h(MapKey, { view: "closures", open: true, onOpenChange: () => undefined, restrictions: { statuses: statusesOn, zoom } })));
+    html(
+      h(Fragment, null, h(RestrictionMapControls, { statuses: statusesOn }), h(MapKey, { view: "closures", open: true, onOpenChange: () => undefined, restrictions: { statuses: statusesOn, area: { bounds: [-3, 52, -1, 54], centre: [-2, 53], zoom }, now: new Date("2026-10-12T12:00:00Z"), onSelect: () => undefined } })),
+    );
   it("show nothing while every layer is off", () => {
-    expect(html(h(RestrictionMapControls, { statuses: Object.values(statuses), zoom: 14, onOpenList: () => undefined, buttonRef: null }))).toBe("");
+    expect(html(h(RestrictionMapControls, { statuses: Object.values(statuses) }))).toBe("");
   });
 
-  it("offer the Restrictions list button (48px), showing which layers are on, with loading and failure states", () => {
+  it("show loading and failure states with Try again, and no Restrictions button or list", () => {
     const out = html(
       h(RestrictionMapControls, {
         statuses: [
@@ -248,12 +250,9 @@ describe("Restrictions on the map", () => {
           { ...off("weight"), state: "loading" },
           { ...off("lez"), state: "error", error: "Restriction data can't be loaded." },
         ],
-        zoom: 9,
-        onOpenList: () => undefined,
-        buttonRef: null,
       }),
     );
-    expect(out).toMatch(/<button[^>]*class="[^"]*\bh-12\b[^"]*"[^>]*>[\s\S]*Restrictions<span class="sr-only"> \(height restrictions, weight restrictions, london low emission zone \(lez\) on\): list what&#x27;s in view<\/span><\/button>/);
+    expect(out).not.toMatch(/list what|<button[^>]*>[\s\S]*?Restrictions<span/);
     expect(out).toContain("Loading weight restrictions…");
     expect(out).toContain("Try again");
     // No zoom message: no height or weight data has loaded (height is "ready" with no data here).
@@ -318,7 +317,8 @@ describe("Settings dialog wiring", () => {
     expect(src).toMatch(/if \(!open && wasOpen\.current\) returnTo\.current\(\)\?\.focus\(\);/);
     const app = readFileSync("web/src/App.tsx", "utf8");
     expect(app).toMatch(/returnFocus=\{\(\) => settingsButton\.current\}/);
-    expect(app).toMatch(/returnFocus=\{\(\) => restrictionsButton\.current\}/);
+    // A restriction's details return focus to the key button that opened them, or to the map after a marker was tapped.
+    expect(app).toMatch(/returnFocus=\{\(\) => restrictionOpener\.current \?\? document\.querySelector<HTMLElement>\("\.maplibregl-canvas"\)\}/);
   });
 
   it("keeps the map mounted: Settings renders beside the map and never moves it", () => {

@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { RESTRICTIONS_DISCLAIMER, type RestrictionPointsFile, type ZonesFile } from "../../../shared/api/restrictions.ts";
 import { allowedLink, formatDate, heightWordingNote, isStale, kindLabel, limitText, locationText, markerText, osmElementUrl, sourceLabel, UNRECORDED_WEIGHT_NOTE, wordingImperialHeight, ZONE_RULES_TEXT } from "../restrictions/describe.ts";
-import { findPoint, LIST_LIMIT, pointsInView, zonesInView, type ListedPoint, type ListedZone } from "../restrictions/inView.ts";
+import { findPoint, findZone, LIST_LIMIT, pointsInView, type ListedPoint, type ListedZone } from "../restrictions/inView.ts";
 import { RESTRICTION_OVERVIEW_ZOOM } from "../map/restrictionLayers.ts";
 import type { MapViewArea } from "../map/MapView.tsx";
 import { ModalDialog } from "./ModalDialog.tsx";
@@ -9,98 +9,88 @@ import { Plate } from "./RestrictionGlyphs.tsx";
 
 const link = "inline-flex min-h-12 items-center font-bold text-motorway underline decoration-2 underline-offset-2 hover:no-underline dark:text-sign";
 
+/** What the details dialog shows: one restriction (any of its records' ids) or one LEZ/ULEZ zone. */
+export type RestrictionSelection = { kind: "point"; id: string } | { kind: "zone"; id: "lez" | "ulez" };
+
 /**
- * Restrictions in the current view, and one restriction's details. This is how keyboard and screen-reader users reach every
- * restriction (map markers are pointer targets only); tapping a marker opens the same details. The disclaimer is always shown.
+ * One restriction's or one zone's full details, with the full disclaimer. Opened by tapping a marker on the map, or from the map
+ * key: a zone's row there, or the key's keyboard list of restrictions in view (MapKey.tsx), which is how keyboard and screen-reader
+ * users reach every restriction (map markers are pointer targets only).
  */
 export function RestrictionsDialog({
-  open,
   onClose,
   returnFocus,
-  view,
   points,
   zones,
-  selectedId,
-  onSelect,
+  selection,
   now,
 }: {
-  open: boolean;
   onClose: () => void;
   returnFocus: () => HTMLElement | null | undefined;
-  view: MapViewArea | null;
   points: RestrictionPointsFile[];
   zones: ZonesFile[];
-  selectedId: string | null;
-  onSelect: (id: string | null) => void;
+  selection: RestrictionSelection | null;
   now: Date;
 }) {
-  const selected = selectedId ? findPoint(points, selectedId) : null;
-  const files = [...points, ...zones];
-  const stale = files.some((f) => isStale(f.generatedAt, now));
+  const point = selection?.kind === "point" ? findPoint(points, selection.id) : null;
+  const zone = selection?.kind === "zone" ? findZone(zones, selection.id) : null;
+  const stale = [...points, ...zones].some((f) => isStale(f.generatedAt, now));
+  const title = point ? kindLabel(point.point) : zone ? zone.zone.name : "Restriction";
   return (
-    <ModalDialog id="restrictions-dialog" open={open} onClose={onClose} titleId="restrictions-title" title={selected ? kindLabel(selected.point) : "Restrictions in this view"} returnFocus={returnFocus}>
+    <ModalDialog id="restrictions-dialog" open={point !== null || zone !== null} onClose={onClose} titleId="restrictions-title" title={title} returnFocus={returnFocus}>
       <div className="space-y-3 px-4 py-4">
         <p className="rounded-[4px] border-l-4 border-sign bg-raised px-3 py-2 text-[14px] font-bold">{RESTRICTIONS_DISCLAIMER}</p>
-        {stale && <p className="text-[14px] font-bold text-stale">This restriction data was downloaded more than four months ago and may be out of date.</p>}
-        {selected ? (
-          <>
-            <button type="button" onClick={() => onSelect(null)} className="min-h-12 rounded-[4px] border border-line px-4 font-bold hover:bg-raised">
-              Back to the list
-            </button>
-            <PointDetails item={selected} />
-          </>
-        ) : (
-          <InViewList view={view} points={points} zones={zones} onSelect={onSelect} />
-        )}
+        {stale && <p className="text-[14px] font-bold text-stale">{STALE_RESTRICTIONS_TEXT}</p>}
+        {point && <PointDetails item={point} />}
+        {zone && <ZoneDetails item={zone} />}
       </div>
     </ModalDialog>
   );
 }
 
-function InViewList({ view, points, zones, onSelect }: { view: MapViewArea | null; points: RestrictionPointsFile[]; zones: ZonesFile[]; onSelect: (id: string) => void }) {
-  if (!view) return <p className="text-[14px]">The map is still loading.</p>;
-  const listedZones = zonesInView(zones, view.bounds);
-  // Listed from the zoom the map starts drawing them at, nearest the centre first; only the loaded layers are named.
+export const STALE_RESTRICTIONS_TEXT = "This restriction data was downloaded more than four months ago and may be out of date.";
+
+/**
+ * The restrictions in the map's current view as buttons that open their details: the keyboard and screen-reader route to every
+ * restriction, inside the opened map key. Listed from the zoom the map starts drawing them at, nearest the centre first.
+ */
+export function InViewButtons({ view, points, onSelect }: { view: MapViewArea | null; points: RestrictionPointsFile[]; onSelect: (id: string) => void }) {
+  if (points.length === 0) return null;
+  if (!view) return <p>The map is still loading.</p>;
   const zoomedIn = view.zoom >= RESTRICTION_OVERVIEW_ZOOM;
-  const { items, total } = zoomedIn ? pointsInView(points, view.bounds, view.centre) : { items: [], total: 0 };
   const loaded = [...new Set(points.map((f) => f.layer))].join(" and ");
+  if (!zoomedIn) return <p>{`Zoom in on the map to list ${loaded} restrictions here.`}</p>;
+  const { items, total } = pointsInView(points, view.bounds, view.centre);
   return (
     <>
-      {listedZones.map((z) => (
-        <ZoneDetails key={z.zone.id} item={z} />
-      ))}
-      {points.length > 0 && !zoomedIn && <p className="text-[14px]">{`Zoom in on the map to list ${loaded} restrictions here.`}</p>}
-      {points.length > 0 && zoomedIn && (
-        <>
-          <p className="text-[14px]" role="status">
-            {total === 0
-              ? "No restrictions are recorded in this view. That does not mean there are none."
-              : total > LIST_LIMIT
-                ? `${total} recorded in this view. The ${LIST_LIMIT} nearest the centre are listed; zoom in to narrow the list.`
-                : `${total} recorded in this view, nearest the centre first.`}
-          </p>
-          <ul className="divide-y divide-line rounded-[4px] border border-line">
-            {items.map(({ point, records, source }) => (
-              <li key={point.id}>
-                <button type="button" onClick={() => onSelect(point.id)} className="flex min-h-12 w-full items-start gap-3 px-3 py-2 text-left hover:bg-raised">
-                  <span className="pt-0.5">
-                    <Plate kind={point.kind} text={markerText(point)} community={source.kind === "community"} />
+      <p>
+        {total === 0
+          ? "No restrictions are recorded in this view. That does not mean there are none."
+          : total > LIST_LIMIT
+            ? `${total} recorded in this view. The ${LIST_LIMIT} nearest the centre are listed; zoom in to narrow the list.`
+            : `${total} recorded in this view, nearest the centre first.`}
+      </p>
+      {items.length > 0 && (
+        <ul className="divide-y divide-line rounded-[4px] border border-line">
+          {items.map(({ point, records, source }) => (
+            <li key={point.id}>
+              <button type="button" onClick={() => onSelect(point.id)} className="flex min-h-12 w-full items-start gap-3 px-3 py-2 text-left hover:bg-raised">
+                <span className="pt-0.5">
+                  <Plate kind={point.kind} text={markerText(point)} community={source.kind === "community"} />
+                </span>
+                <span className="flex min-w-0 flex-col">
+                  <span className="font-bold">
+                    {kindLabel(point)}: {limitText(point)}
                   </span>
-                  <span className="flex min-w-0 flex-col">
-                    <span className="font-bold">
-                      {kindLabel(point)}: {limitText(point)}
-                    </span>
-                    <span className="text-[13px]">{locationText(point)}</span>
-                    {records.length > 1 && <span className="text-[13px]">{`Recorded ${records.length} times at this place (once per diversion route), shown once`}</span>}
-                    <span className="text-[13px] text-muted">{source.kind === "community" ? "Community record, unverified" : `Source: ${source.authority}`}</span>
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </>
+                  <span className="text-[13px]">{locationText(point)}</span>
+                  {records.length > 1 && <span className="text-[13px]">{`Recorded ${records.length} times at this place (once per diversion route), shown once`}</span>}
+                  <span className="text-[13px] text-muted">{source.kind === "community" ? "Community record, unverified" : `Source: ${source.authority}`}</span>
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
       )}
-      {points.length === 0 && listedZones.length === 0 && <p className="text-[14px]">Nothing from the restriction layers you switched on is in this view.</p>}
     </>
   );
 }
@@ -196,10 +186,9 @@ export function PointDetails({ item: { point: p, records, source } }: { item: Li
   );
 }
 
-function ZoneDetails({ item: { zone, source } }: { item: ListedZone }) {
+export function ZoneDetails({ item: { zone, source } }: { item: ListedZone }) {
   return (
-    <section className="space-y-1 rounded-[4px] border border-line px-3 py-2 text-[14px]" aria-label={zone.name}>
-      <p className="font-bold">This view includes part of the {zone.name}</p>
+    <section className="space-y-1 text-[14px]" aria-label={zone.name}>
       <p>{sourceLabel(source)}.</p>
       {/* TfL's rule sentences stay in the data file but aren't shown: they are tfl.gov.uk website text, not TfL open data. */}
       <p>{ZONE_RULES_TEXT}</p>

@@ -2,9 +2,9 @@ import type { RestrictionPoint, RestrictionPointsFile, RestrictionSource, Zone, 
 import { groupPoints } from "./group.ts";
 
 /**
- * The keyboard and screen-reader route to restriction details: the restrictions in the current map view as a list, nearest the
- * centre first. Computed on the device from files already downloaded, so no request reveals the view. Records of the same
- * restriction (group.ts) are listed once, with all of them kept in `records`.
+ * The keyboard and screen-reader route to restriction details (the map key's list of restrictions in view, MapKey.tsx): the
+ * restrictions in the current map view, nearest the centre first. Computed on the device from files already downloaded, so no
+ * request reveals the view. Records of the same restriction (group.ts) are listed once, with all of them kept in `records`.
  */
 export const LIST_LIMIT = 50;
 
@@ -36,18 +36,13 @@ export function pointsInView(files: RestrictionPointsFile[], bounds: [number, nu
   return { items: all.slice(0, LIST_LIMIT), total: all.length };
 }
 
-/** A zone is listed when any of its outline's bounding box overlaps the view (enough to say "this view includes part of the zone"). */
-export function zonesInView(files: ZonesFile[], bounds: [number, number, number, number]): ListedZone[] {
-  const out: ListedZone[] = [];
+/** Finds a zone (LEZ or ULEZ) in the loaded zone files, with its source. */
+export function findZone(files: ZonesFile[], id: string): ListedZone | null {
   for (const f of files) {
-    const sources = new Map(f.sources.map((s) => [s.id, s]));
-    for (const z of f.zones) {
-      const pts = z.geometry.flat(2);
-      const box: [number, number, number, number] = [Math.min(...pts.map((p) => p[0])), Math.min(...pts.map((p) => p[1])), Math.max(...pts.map((p) => p[0])), Math.max(...pts.map((p) => p[1]))];
-      if (box[0] <= bounds[2] && box[2] >= bounds[0] && box[1] <= bounds[3] && box[3] >= bounds[1]) out.push({ zone: z, source: sources.get(z.source)! });
-    }
+    const zone = f.zones.find((z) => z.id === id);
+    if (zone) return { zone, source: f.sources.find((s) => s.id === zone.source)! };
   }
-  return out;
+  return null;
 }
 
 /** Finds the restriction a record id belongs to (any of its records' ids) in the loaded files, with its source. */
