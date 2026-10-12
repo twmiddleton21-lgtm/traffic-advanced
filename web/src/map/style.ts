@@ -1,6 +1,7 @@
 import type { ExpressionSpecification, FilterSpecification, LayerSpecification, StyleSpecification } from "maplibre-gl";
 import { pointLayers, zoneLayers } from "./restrictionLayers.ts";
 import { routesJunctionLayer } from "./routesLayers.ts";
+import { routesOverlayLayers } from "./routesOverlayLayers.ts";
 
 /**
  * Traffic Advanced map layers as plain data, so they can be tested without a browser.
@@ -287,6 +288,8 @@ export function overlayLayers(): LayerSpecification[] {
     ...closure.base,
     ...roads.low,
     junctionLayer,
+    // Routes' OpenStreetMap layers (hidden in Closures): under the junction labels, which they never hide.
+    ...routesOverlayLayers(),
     routesJunctionLayer,
     ...roads.high,
     ...pointLayers("weight"),

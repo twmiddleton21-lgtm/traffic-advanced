@@ -45,7 +45,34 @@ describe("splash", () => {
   });
 
   it("stops its progress animation for reduced motion", () => {
-    const css = readFileSync("web/src/styles.css", "utf8");
-    expect(css).toMatch(/@media \(prefers-reduced-motion: reduce\) \{\s*\/\*[^*]*\*\/\s*\.ta-splash-progress::after \{[^}]*animation: none;/);
+    const css = readFileSync("web/src/splash.css", "utf8");
+    expect(css).toMatch(/@media \(prefers-reduced-motion: reduce\) \{[^@]*\.ta-splash-progress::after \{[^}]*animation: none;/);
+  });
+
+  it("is styled before the first paint, at its final size: its own stylesheet is linked in <head>, before the app's script", () => {
+    const html = readFileSync("web/index.html", "utf8");
+    const head = html.slice(0, html.indexOf("</head>"));
+    expect(head).toMatch(/<link rel="stylesheet" href="\/src\/splash\.css" \/>/);
+    expect(html.indexOf('href="/src/splash.css"')).toBeLessThan(html.indexOf('<script type="module"'));
+    // The splash's rules live only there, so the bundle's later CSS can't resize it once it arrives.
+    expect(readFileSync("web/src/styles.css", "utf8")).not.toMatch(/\.ta-splash[\w-]*\s*\{/);
+    // The banner's box keeps the image's own ratio before the image loads, and the text's line box is fixed for the font swap.
+    const css = readFileSync("web/src/splash.css", "utf8");
+    expect(css).toMatch(/\.ta-splash-banner \{[^}]*aspect-ratio: 1186 \/ 400;/);
+    expect(css).toMatch(/\.ta-splash-text \{[^}]*height: 20px;[^}]*line-height: 20px;/);
+  });
+
+  it("uses the theme's own colours in both themes (its copies match styles.css)", () => {
+    const tokens = readFileSync("web/src/styles.css", "utf8");
+    const css = readFileSync("web/src/splash.css", "utf8");
+    const value = (block: string, name: string) => new RegExp(`--ta-${name}: (#[0-9a-f]{6})`).exec(block)?.[1];
+    const light = tokens.slice(tokens.indexOf(":root {"), tokens.indexOf("[data-theme=\"dark\"] {"));
+    const dark = tokens.slice(tokens.indexOf("[data-theme=\"dark\"] {"));
+    const splashLight = css.slice(css.indexOf(".ta-splash {"), css.indexOf("[data-theme=\"dark\"] .ta-splash {"));
+    const splashDark = css.slice(css.indexOf("[data-theme=\"dark\"] .ta-splash {"));
+    for (const name of ["bg", "line", "focus", "muted"]) {
+      expect(value(splashLight, `splash-${name}`), `light ${name}`).toBe(value(light, name));
+      expect(value(splashDark, `splash-${name}`), `dark ${name}`).toBe(value(dark, name));
+    }
   });
 });

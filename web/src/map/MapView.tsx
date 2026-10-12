@@ -24,6 +24,10 @@ import type { RestrictionLayer } from "../settings/preferences.ts";
 import type { LayerData } from "../restrictions/useRestrictionData.ts";
 import { EMPTY, layerIds, POINT_SOURCE_CLUSTER, RESTRICTION_MIN_ZOOM, RESTRICTION_SOURCES, restrictionFeatures, zoneFeatures } from "./restrictionLayers.ts";
 import { ROUTES_JUNCTION_SOURCE } from "./routesLayers.ts";
+import { ROUTES_HIGHLIGHT_SOURCES, routesHighlightFeatures, ROUTES_OSM_ATTRIBUTION, ROUTES_OVERLAY_SOURCES, ROUTES_TAP_LAYERS, routesPointFeatures, routesSectionFeatures } from "./routesOverlayLayers.ts";
+import { ROUTES_HIGHLIGHT_LAYERS, type RoutesHighlightsFile } from "../../../shared/api/routes-highlights.ts";
+import { ROUTES_DATA_LAYERS, type RoutesDataLayer } from "../../../shared/api/routes-layers.ts";
+import type { RoutesLayerData } from "../routemap/useRoutesLayerData.ts";
 import { viewLayerVisibility, type RoutesLayerSwitches } from "./viewLayers.ts";
 import { baseLabelAdjustments, confirmedJunctionFilter, overlayLayers, roadEmphasisBeforeId, roadEmphasisLayers, selectedFilter, type Theme } from "./style.ts";
 
@@ -51,6 +55,10 @@ interface Props {
   onViewChange?: (view: MapViewArea) => void;
   /** Whether the base map failed to load, for Settings' warnings. */
   onBaseMapError?: (failed: boolean) => void;
+  /** Routes' OpenStreetMap layers: each layer's data once loaded (shown while its switch is on, in Routes only). */
+  routesOverlays: RoutesOverlay[];
+  /** A Routes marker or section tapped on the map: its details. */
+  onSelectRoutesFeature: (selection: { layer: RoutesDataLayer; id: string }) => void;
 }
 type Latest = { current: Props };
 
@@ -61,6 +69,13 @@ export interface RestrictionOverlay {
   attribution: string;
 }
 
+export interface RoutesOverlay {
+  layer: RoutesDataLayer;
+  data: RoutesLayerData | null;
+  /** The layer's road highlighting, once loaded (restriction layers only). */
+  roads: RoutesHighlightsFile | null;
+}
+
 export interface MapViewArea {
   /** [west, south, east, north] */
   bounds: [number, number, number, number];
@@ -69,7 +84,7 @@ export interface MapViewArea {
 }
 
 export function MapView(props: Props) {
-  const { view, routeLayers, routeJunctions, closures, selected, junctions, theme, restrictions, selectedRestrictionId } = props;
+  const { view, routeLayers, routeJunctions, closures, selected, junctions, theme, restrictions, selectedRestrictionId, routesOverlays } = props;
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const styleTheme = useRef(theme);
@@ -221,7 +236,14 @@ export function MapView(props: Props) {
     applyView(map, view, routeLayers);
     applyRestrictions(map, latest.current.restrictions, latest.current.selectedRestrictionId, view);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- the switches are compared by value
-  }, [view, routeLayers.junctions]);
+  }, [view, routeSwitchKey(routeLayers)]);
+
+  // Routes' OpenStreetMap layers: each file is handed to its own source once, when it has loaded (visibility is applyView's).
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map?.getSource(ROUTES_OVERLAY_SOURCES["speed-cameras"])) return;
+    applyRoutesData(map, routesOverlays);
+  }, [routesOverlays]);
 
   // Routes' junction labels.
   useEffect(() => {
@@ -326,6 +348,13 @@ function installLayers(map: MapLibreMap, latest: Latest) {
   map.addSource("route-ends", { type: "geojson", data: diversionEnds(selected) });
   map.addSource("junctions", { type: "geojson", data: junctionPoints(junctions) });
   map.addSource(ROUTES_JUNCTION_SOURCE, { type: "geojson", data: junctionPoints(latest.current.routeJunctions) });
+  // Routes' OpenStreetMap layers: empty and hidden until switched on and loaded; the OSM credit shows while any of them is visible.
+  // No clustering: every marker is one record, drawn from its layer's zoom (routesOverlayLayers.ts, ROUTES_LAYER_MIN_ZOOM).
+  for (const layer of ROUTES_DATA_LAYERS) map.addSource(ROUTES_OVERLAY_SOURCES[layer], { type: "geojson", data: EMPTY, attribution: ROUTES_OSM_ATTRIBUTION });
+  // Road highlighting: its own sources, so a layer's roads load and switch independently of its markers.
+  for (const layer of ROUTES_HIGHLIGHT_LAYERS) map.addSource(ROUTES_HIGHLIGHT_SOURCES[layer], { type: "geojson", data: EMPTY, attribution: ROUTES_OSM_ATTRIBUTION });
+  routesShown.delete(map);
+  routesRoadsShown.delete(map);
   // Restriction sources start empty and hidden; each carries its credit, which MapLibre shows only while its layers are visible.
   // Height and weight markers are grouped when zoomed out (POINT_SOURCE_CLUSTER).
   const clusterFor = (layer: RestrictionLayer) => (layer === "height" || layer === "weight" ? POINT_SOURCE_CLUSTER : {});
@@ -340,6 +369,32 @@ function installLayers(map: MapLibreMap, latest: Latest) {
   applySelection(map, selected);
   applyView(map, latest.current.view, latest.current.routeLayers);
   applyRestrictions(map, latest.current.restrictions, latest.current.selectedRestrictionId, latest.current.view);
+  applyRoutesData(map, latest.current.routesOverlays);
+}
+
+/** The Routes switches as one value, so the view effect runs when any of them changes. */
+const routeSwitchKey = (s: RoutesLayerSwitches) => [s.junctions, ...ROUTES_DATA_LAYERS.map((l) => s[l] === true)].join();
+
+/** The data each Routes source last received, so a large file is handed to MapLibre once, not on every render. */
+const routesShown = new WeakMap<MapLibreMap, Map<RoutesDataLayer, RoutesLayerData | RoutesHighlightsFile>>();
+
+/** The road highlighting each source last received, likewise handed to MapLibre once. */
+const routesRoadsShown = new WeakMap<MapLibreMap, Map<RoutesDataLayer, RoutesHighlightsFile>>();
+
+function applyRoutesData(map: MapLibreMap, overlays: RoutesOverlay[]) {
+  const shown = routesShown.get(map) ?? new Map<RoutesDataLayer, RoutesLayerData | RoutesHighlightsFile>();
+  routesShown.set(map, shown);
+  const roadsShown = routesRoadsShown.get(map) ?? new Map<RoutesDataLayer, RoutesHighlightsFile>();
+  routesRoadsShown.set(map, roadsShown);
+  for (const o of overlays) {
+    if (o.roads && roadsShown.get(o.layer) !== o.roads) {
+      roadsShown.set(o.layer, o.roads);
+      void map.getSource<GeoJSONSource>(ROUTES_HIGHLIGHT_SOURCES[o.roads.layer])?.setData(routesHighlightFeatures(o.roads));
+    }
+    if (!o.data || shown.get(o.layer) === o.data) continue;
+    shown.set(o.layer, o.data);
+    void map.getSource<GeoJSONSource>(ROUTES_OVERLAY_SOURCES[o.layer])?.setData(o.data.kind === "points" ? routesPointFeatures(o.data.file) : routesSectionFeatures(o.data.file));
+  }
 }
 
 function applyView(map: MapLibreMap, view: AppView, routes: RoutesLayerSwitches) {
@@ -393,6 +448,16 @@ function registerInteractions(map: MapLibreMap, latest: Latest) {
     });
     map.on("mouseenter", group, () => (map.getCanvas().style.cursor = "pointer"));
     map.on("mouseleave", group, () => (map.getCanvas().style.cursor = ""));
+  }
+  // Routes' OpenStreetMap markers and sections open their details (the key's keyboard list is the keyboard route to the same
+  // records). These layers are hidden in Closures, so they never take a Closures tap.
+  for (const layer of ROUTES_DATA_LAYERS) {
+    map.on("click", ROUTES_TAP_LAYERS[layer], (e) => {
+      const id = e.features?.[0]?.properties?.["id"] as string | undefined;
+      if (id) latest.current.onSelectRoutesFeature({ layer, id });
+    });
+    map.on("mouseenter", ROUTES_TAP_LAYERS[layer], () => (map.getCanvas().style.cursor = "pointer"));
+    map.on("mouseleave", ROUTES_TAP_LAYERS[layer], () => (map.getCanvas().style.cursor = ""));
   }
   for (const layer of ["marker", "closure-line", "selected-marker"]) {
     map.on("click", layer, (e) => {

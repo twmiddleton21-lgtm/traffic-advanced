@@ -32,6 +32,223 @@ the base map (OpenFreeMap), motorway and primary-route emphasis, road numbers, a
   follow road signs."
 - "Live traffic isn't connected yet. Road closures are in the Closures view."
 
+## OpenStreetMap layers (stage 1, built locally 2026-10-12; not deployed, data not published)
+
+Approved by the owner on 2026-10-12 as the first stage of the Routes layers plan: OpenStreetMap camera and road-restriction layers
+for the **Routes view only**, each switched on and off on its own in the Layers panel. The Closures view, its restriction layers and
+files, National Highways data and the existing Routes wording are unchanged.
+
+**Layers.** A new visitor starts with every layer **off** and junction numbers on. Closing the panel keeps the switches.
+
+**Remembering the switches** (added 2026-10-12):
+- The switches are remembered on this device only, in `localStorage` under the versioned key `ta-routes-layers-v1`
+  (`settings/preferences.ts`).
+- Only the eight true/false switches are stored: never the map position, a selected marker, a search or filters.
+- A missing, damaged or partly invalid value falls back to the defaults switch by switch, and unknown fields are dropped.
+- A layer switched on in an earlier visit is downloaded again when the app opens, and only then.
+
+| Layer | What is shown | England records (data to 2026-10-11) |
+|---|---|---|
+| Speed cameras | `highway=speed_camera` nodes, and the device nodes of enforcement relations for speed (`enforcement=maxspeed` / `average_speed`) | 3,159 |
+| Average speed checks | `enforcement=average_speed` relations whose `section` ways join into one unbroken line passing through the relation's single `from` and `to` points; drawn from start to end with direction arrows | 20 of 78 mapped |
+| Red-light cameras | device nodes of `enforcement=traffic_signals` relations | 33 |
+| Height limits | `maxheight`, `maxheight:physical` (+ `:conditional`); the lower is shown when both are mapped | 10,763 |
+| Weight limits | lorry limits (`maxweightrating:hgv`, `maxweight:hgv`) and all-vehicle limits (`maxweight`, `maxweightrating`), kept apart, with `:conditional` exemptions | 33,707 |
+| Width and length limits | `maxwidth`, `maxwidth:physical` (on roads only), `maxlength` | 4,898 |
+| Lorry access restrictions | `hgv=no`, `destination`, `delivery`, `discouraged` (advisory), and `hgv:conditional` | 8,000 |
+
+**Interpretation rules** (`shared/sources/osm/routes-layers.ts`, tested on real elements in `fixtures/routes-layers/`):
+- Nothing is guessed. An element or tag that can't be read reliably is left out and counted by reason in the build report. A road
+  with no record is never treated as unrestricted, and the UI says so.
+- Height and weight values use the Closures view's own parsers unchanged (`shared/sources/osm/restrictions.ts`). `default`, `none`
+  and other no-limit words never become a value.
+- Conditions and exemptions are kept verbatim and never evaluated. A value mapped only in a `:conditional` tag is marked
+  "applies only under the conditions mapped", never shown as a general rule. Markers with conditions carry `*`.
+- Camera speed limits: shown only when mapped as `<n> mph` and all mapped values agree. A bare number (km/h by OSM's rules) is never
+  converted. Always labelled the road's mapped limit, not a lorry limit. **No HGV limit is inferred from car limits.**
+- Camera direction: only the bearing from an enforcement relation's `from` point to its `to` point (OSM's documented roles), and the
+  camera's `direction` tag verbatim with a note that its meaning varies. Nothing else.
+- Red-light cameras only from `enforcement=traffic_signals` relations. `enforcement=red_light_camera` and `enforcement` tags on
+  nodes are documented mistakes and are left out (5 and 78 in England).
+- Restrictions only on roads for motor vehicles (`highway=` motorway … service, living_street, road, busway; not footway,
+  cycleway, path, pedestrian or track). `maxwidth:physical` on a lone node (usually a path barrier) is left out.
+- Average speed checks are left out unless the section and direction are certain: 12 have no section ways, 39 lack exactly one
+  `from` and one `to`, 1 doesn't join into one line, and 6 have a `from` or `to` point off the section.
+- Records are kept only inside England, using the ONS England boundary already used by the Closures pipeline.
+
+**In the app:**
+- Layers panel (`components/RoutesMapControls.tsx`): a "Community map data" group under the junction switch, with Cameras and Road
+  limits sub-groups, the community-data caveat, the source, licence and data date, and each layer's loading, error (with Try again)
+  and record count. Loading and errors also show outside the fold. The scope text and the no-traffic note are unchanged and stay
+  last.
+- Caveat (shown in the panel, the map key and every record's details): "Community data from OpenStreetMap: incomplete and may be
+  wrong or out of date. No marker does not mean no camera or restriction."
+- Map: each layer has its own GeoJSON source (`map/routesOverlayLayers.ts`).
+  - **No groups or clusters** (changed 2026-10-12). Every marker is one record, and each layer appears only once the map is zoomed in
+    far enough to read its records on their own (`ROUTES_LAYER_MIN_ZOOM`). The map stays clean at England and regional views:
+
+    | Zoom (about) | What is drawn |
+    |---|---|
+    | below 9 (England, a region) | nothing |
+    | 9 (a county) | average speed sections; arrows from 11, names from 12 |
+    | 11 (a city) | speed and red-light cameras |
+    | 12 (a town) | height, width and length limits |
+    | 13 (streets) | weight limits and lorry access, the densest layers |
+
+    No record is ever hidden by a collision once its layer is drawn. A layer that is on but not drawn at the current zoom says so:
+    "Zoom in on the map to see them" on its panel row, and "Zoom in to see: …" in the map key. Each row also says which level it
+    appears from. The keyboard list lists only layers drawn at the current zoom.
+  - They draw under the junction labels and never hide them (`*-ignore-placement`).
+  - Each kind differs by **shape**, not colour alone, and every image has a white edge, so it reads on both the light and the dark
+    base map:
+    - speed camera: a dark **square** sign with a camera and a flash;
+    - red-light camera: a **tall** signal housing with three lights over a small camera;
+    - average speed check: a dashed line with direction arrows and its name written along it ("Average speed check 50 mph");
+    - restrictions: sign-style plates with a dashed border (community data), each with its own glyph and value:
+      - height: arrows up and down;
+      - lorry weight: a lorry;
+      - all-vehicle weight: a bridge;
+      - width: inward arrows between uprights;
+      - length: a lorry over a measuring line;
+      - lorry access: a red prohibition roundel;
+- Layout: the Layers panel stays at the top left and the map key at the bottom left.
+  - The panel's bottom edge follows the key's measured height (a `ResizeObserver` in `App.tsx`), so the open panel always ends
+    above the key, folded or open, at every screen size, and the two never overlap.
+  - Opened in Routes, the key takes at most 45% of the map and scrolls beyond that, so the panel keeps the rest.
+  - The panel is opaque.
+  - Scrolling (changed 2026-10-12): the Layers button is a fixed control and never scrolls. Opened, only the panel's own bordered box
+    scrolls, inside its border, like the Closures list and the map key. The box is capped as a shrinking flex item of `<details>`,
+    and also at its container's height less the button (`100cqh`), for browsers where `<details>` ignores flex.
+- Map key (`components/MapKey.tsx`, changed 2026-10-12): a **permanent legend**.
+  - It always has the same seven rows, one per layer this build has, each a symbol and a short name.
+  - A layer that is off is muted and marked "Off". It is never hidden, so the key doesn't change shape as layers are switched.
+  - While a layer is on it also shows:
+    - the weight road colours (7.5 t or less, above 7.5 t);
+    - what a highlighted or faint road and "*" mean;
+    - which layers need more zoom;
+    - the community-data caveat, once;
+    - the data date, and a stale warning after 120 days.
+  - A keyboard list of records in view is hidden until it has keyboard focus.
+- Layers and the map key are **never open together** (Routes): opening one folds the other, through shared state in `App.tsx`.
+  - The Routes key has its own open state, so the Closures key is unaffected.
+  - Layers starts open where there's room and the key folded.
+- **Road highlighting** (restriction layers, added 2026-10-12): while Height, Weight, Width and length, or Lorry access is on, the
+  roads its records were mapped on are drawn as a translucent line under the markers, from one zoom level before the markers.
+  - Each layer has its own colour **and line pattern**: weight solid, height dashed, width and length dotted, access dash-dot.
+  - Weight limits of 7.5 t or less are red, higher limits amber.
+  - Roads whose record has conditions or exemptions are drawn fainter.
+  - The lines come only from the layer's own records and the same extract (`shared/sources/osm/routes-highlights.ts`). One line is
+    drawn per record mapped on a road; a record from a single point keeps its marker only. Nothing is inferred, and an
+    unhighlighted road is not a clear road.
+  - Separate files, `<layer>-roads.json`, are loaded only while the layer is on, and are optional: if they are missing, the markers
+    still show.
+
+  | Layer | Roads | Point-only records | Gzipped size |
+  |---|---|---|---|
+  | Height | 7,913 | 2,849 | 243 KB |
+  | Weight | 33,141 | 564 | 1.88 MB |
+  | Width and length | 3,948 | 950 | 294 KB |
+  | Access | 7,852 | 148 | 497 KB |
+
+- **Visual hierarchy:** markers start smaller and softer at the zoom their layer appears (70–75% size and opacity), and reach full
+  size two levels later. There are no groups or clusters.
+- Details (`components/RoutesFeatureDialog.tsx`): the value (heights and widths in m and ft-in), the tags exactly as mapped,
+  conditions verbatim, direction as mapped, the location, the last edit, links to each OpenStreetMap element, the source, the caveat
+  and the scope text.
+- Data loading (`routemap/useRoutesLayerData.ts`): a layer's file is fetched only once it is switched on. It is then kept for the
+  visit, so switching off and on, or opening and closing the panel, downloads nothing. A failed load affects only its own row.
+  Files are static, content-hashed assets from our own origin, through `trafficService.ts`. They never run Worker code
+  (`run_worker_first: ["/api/*"]`), so they add no Worker requests or CPU.
+
+**Source, licence and attribution:**
+- **Source:** one dated Geofabrik extract, `https://download.geofabrik.de/europe/united-kingdom/england-261011.osm.pbf`
+  (1,703,180,189 bytes). Geofabrik's MD5 was checked on download, and our SHA-256 is
+  `16959e0317e09e187a21ba5118d30045884dd4187e6f3a189d4a07565215e966`. Its replication timestamp, the date the OSM data runs to, is
+  2026-10-11T20:21:06Z. No public Overpass endpoint is used.
+- **Reader check:** the extract read through our PBF reader gives 3,142 `highway=speed_camera` nodes and 622 `type=enforcement`
+  relations in England, the same as taginfo for England on the same data date (checked 2026-10-12).
+- **Licence:** ODbL 1.0. The layer files are a derivative database and are offered under the ODbL. Each file states the licence,
+  the attribution and the extract it came from. The files are the ones the app downloads, and the method that makes them is
+  `scripts/routes-layers/` (ODbL 4.6).
+- **Attribution:** "© OpenStreetMap contributors", linked to https://www.openstreetmap.org/copyright. It appears in the Layers
+  panel, the map key, each record's details, and the map credits while a layer is on (the source's `attribution`).
+
+**Sizes:**
+
+| File | Raw | Gzip | Brotli |
+|---|---|---|---|
+| speed-cameras | 1.4 MB | 102 KB | 77 KB |
+| red-light-cameras | 17 KB | 2 KB | 2 KB |
+| average-speed | 29 KB | 7 KB | 5 KB |
+| height | 4.7 MB | 403 KB | 288 KB |
+| weight | 17.8 MB | 1.28 MB | 0.90 MB |
+| width-length | 2.2 MB | 189 KB | 132 KB |
+| access | 3.5 MB | 298 KB | 209 KB |
+
+On a desktop the weight file parses in about 100 ms and validates in about 120 ms. A phone will be slower; the row shows "Loading…"
+meanwhile.
+
+**Update procedure** (nothing is uploaded or deployed by these steps):
+1. `node scripts/routes-layers/fetch-osm.ts`: downloads today's dated England extract into `data/raw/routes-layers/<stamp>/`
+   (git-ignored), checks Geofabrik's MD5 and records the URL, size, SHA-256 and Last-Modified.
+2. `node --max-old-space-size=8192 scripts/routes-layers/extract-osm.ts data/raw/routes-layers/<stamp>`: three passes (about 9
+   minutes), writing `routes-extract.json` beside the extract.
+3. `node scripts/routes-layers/build-routes-layers.ts --osm data/raw/routes-layers/<stamp> --boundary <folder with ons-england-bfe.json>`:
+   writes `web/src/routemap/data/` and a build report beside the extract. Review the report's counts and reasons before using the
+   files.
+4. `node --max-old-space-size=6144 scripts/routes-layers/build-highlights.ts --osm data/raw/routes-layers/<stamp>`: writes the road
+   highlighting files beside the marker files. It refuses marker files from a different extract.
+5. Optionally, `node scripts/routes-layers/capture-fixtures.ts data/raw/routes-layers/<stamp>` refreshes the test fixture.
+
+### Generated data: recommended production approach (a recommendation; nothing changed yet)
+
+**Today:** the generated files sit uncommitted in `web/src/routemap/data/` (about 30 MB raw). They are bundled by `npm run build` as
+content-hashed static assets.
+
+**Facts this rests on (verified 2026-10-12):**
+- **Workers Static Assets:** "Individual file size | 25 MiB | 25 MiB" and "Files per Worker version | 20,000 | 100,000"
+  (Free | Paid, developers.cloudflare.com/workers/platform/limits). The largest file, weight, is 17.8 MB raw.
+- **No Worker work:** static assets never run Worker code (`run_worker_first: ["/api/*"]`).
+- **CI:** `.github/workflows/ci.yml` runs `npm run build` on every push and PR, with no secrets.
+- **One extract:** a Geofabrik England extract is 1.7 GB, takes about 9 minutes to extract, and is updated about daily.
+
+**Recommendation, in order:**
+1. **Keep the repo to schemas, parsers, scripts, fixtures and docs.**
+   - Add `web/src/routemap/data/*.json` to `.gitignore`.
+   - Load the catalogue through `import.meta.glob` (as the data files already are), so a build without data simply offers no OSM
+     layers. CI, development builds and tests then work without the data; tests use `fixtures/routes-layers/`.
+2. **Build the data in a separate, manually run job, not on every CI run.** A `workflow_dispatch` GitHub Actions workflow with no
+   secrets would:
+   1. run fetch-osm → extract-osm → build-routes-layers;
+   2. check the build report against agreed limits (each file under 20 MiB, record counts within an expected range of the last
+      build);
+   3. publish the files, the build report and the provenance (extract URL, SHA-256, data date) as a dated, versioned GitHub
+      Release asset, e.g. `routes-layers-2026-10-11`.
+
+   Monthly, or on demand. The app warns after 120 days. One Geofabrik download per build, never per CI run.
+3. **Deploy pins a data release.** The deploy step downloads the named release into `web/src/routemap/data/` before
+   `npm run build` and `wrangler deploy`. The files are then ordinary content-hashed Workers Static Assets, exactly as now: no R2,
+   no new binding, no Worker code or CPU.
+   - A deploy without a pinned release ships no OSM layers rather than stale or mixed data.
+   - The release asset is also the ODbL "offer" of the derivative database, beside the scripts in this repo.
+4. **Size guard:** the build fails if a file exceeds 20 MiB, leaving headroom under the 25 MiB limit. If weight grows near it,
+   split it by kind (lorry and all-vehicle limits) rather than drop records.
+
+**Considered and not recommended:**
+- committing the data: about 30 MB per refresh in git history;
+- generating it in every CI run: slow, and repeated 1.7 GB downloads;
+- serving it from R2 through the Worker: new routes, Worker requests and CPU per file, for files that are static anyway.
+
+**Splash (2026-10-12):** the splash has its own stylesheet, `web/src/splash.css`, linked in `index.html`'s `<head>`.
+- A stylesheet `<link>` blocks the first paint, so the banner is drawn at its final size and ratio from the first frame. Before,
+  until the app's CSS arrived, the image showed at its 1186 px intrinsic width; in development, Vite injects CSS from JavaScript after
+  the first paint.
+- The banner's box keeps the 1186:400 ratio before the image loads, and the text's line box is fixed for the web-font swap.
+- Its colours repeat the theme tokens, and a test checks they match.
+
+**Not in this stage:** speed limits (too large for a static marker file; see `docs/SPEED-LIMIT-TILES-PROPOSAL.md`), OS RAMI,
+TomTom incidents and truck routing, and turn restrictions.
+
 ## Junction numbers: verified coverage
 
 Source: the existing junctions snapshot (`/api/junctions`, `shared/api/junctions.ts`), built from the NH Network Model (S5 in

@@ -19,12 +19,20 @@ import { useClosures } from "./hooks/useClosures.ts";
 import { useJunctions } from "./hooks/useJunctions.ts";
 import { useNow } from "./hooks/useNow.ts";
 import { useWideLayout } from "./hooks/useWideLayout.ts";
-import { MapView, type MapViewArea, type RestrictionOverlay } from "./map/MapView.tsx";
+import { MapView, type MapViewArea, type RestrictionOverlay, type RoutesOverlay } from "./map/MapView.tsx";
 import type { RoutesLayerSwitches } from "./map/viewLayers.ts";
+import { ROUTES_DATA_LAYERS, type RoutesDataLayer } from "../../shared/api/routes-layers.ts";
+import { RoutesFeatureDialog } from "./components/RoutesFeatureDialog.tsx";
+import { availableRoutesLayers, routesManifest } from "./routemap/catalog.ts";
+import { ROUTES_LAYER_TEXT } from "./routemap/describe.ts";
+import { findRoutesRecord } from "./routemap/inView.ts";
+import { useRoutesLayerData, type RoutesLayerStatus } from "./routemap/useRoutesLayerData.ts";
+import { useRoutesHighlights } from "./routemap/useRoutesHighlights.ts";
+import type { RoutesHighlightsFile } from "../../shared/api/routes-highlights.ts";
 import { sourceAttribution } from "./map/restrictionLayers.ts";
 import { allSources, availableLayers } from "./restrictions/catalog.ts";
 import { useRestrictionData, type LayerStatus } from "./restrictions/useRestrictionData.ts";
-import { RESTRICTION_LAYERS, type RestrictionLayer } from "./settings/preferences.ts";
+import { browserStore, readRoutesLayers, RESTRICTION_LAYERS, writeRoutesLayers, type RestrictionLayer } from "./settings/preferences.ts";
 import { junctionLabels, junctionLoad } from "./routemap/junctionLabels.ts";
 import { readView, withView, type AppView } from "./routemap/view.ts";
 import { useSettings } from "./settings/useSettings.ts";
@@ -88,10 +96,39 @@ export function App() {
   useEffect(() => {
     window.history.replaceState(null, "", withView(window.location.href, appView));
   }, [appView]);
-  // The Routes view's own layer switches (on by default, for this visit) and the junction labels it may draw. Live traffic is
-  // deferred from the first release (web/src/deferred/traffic/ is not imported).
-  const [routeLayers, setRouteLayers] = useState<RoutesLayerSwitches>({ junctions: true });
+  // The Routes view's own layer switches. A new visitor gets the defaults (DEFAULT_ROUTES_LAYERS: junction numbers on, every
+  // OpenStreetMap layer off); after that, the switches are remembered on this device only (settings/preferences.ts,
+  // ROUTES_LAYERS_KEY), and nothing else about the map is. Each switch is independent, and the Layers panel only shows and changes
+  // them, so closing it keeps them. Live traffic is deferred from the first release (web/src/deferred/traffic/ is not imported).
+  const [routeLayers, setRouteLayers] = useState<RoutesLayerSwitches>(() => readRoutesLayers(browserStore()));
+  useEffect(() => {
+    writeRoutesLayers(browserStore(), routeLayers);
+  }, [routeLayers]);
+  // The Routes map key's height (folded: one 48 px line), measured as it changes, so the Layers panel can always end above it. A
+  // callback ref (state, not useRef), so the observer starts whenever the key element is actually mounted, whenever that is.
+  const [routesKeyElement, setRoutesKeyElement] = useState<HTMLDivElement | null>(null);
+  const [routesKeyHeight, setRoutesKeyHeight] = useState(48);
+  useEffect(() => {
+    const key = routesKeyElement;
+    if (!key) return;
+    // ResizeObserver reports the key's size once when it starts observing, then on every change (opening, folding, new rows).
+    const observer = new ResizeObserver(() => setRoutesKeyHeight(key.offsetHeight));
+    observer.observe(key);
+    return () => observer.disconnect();
+  }, [routesKeyElement]);
+  // Routes' two floating controls, the Layers panel (top left) and the map key (bottom left), are never open together: opening one
+  // folds the other (shared state, not CSS hiding). Layers starts open where there's room; the Routes key has its own state, so the
+  // Closures view's key is unaffected.
   const [routesPanelOpen, setRoutesPanelOpen] = useState(wide);
+  const [routesKeyOpen, setRoutesKeyOpen] = useState(false);
+  const openRoutesPanel = (open: boolean) => {
+    setRoutesPanelOpen(open);
+    if (open) setRoutesKeyOpen(false);
+  };
+  const openRoutesKey = (open: boolean) => {
+    setRoutesKeyOpen(open);
+    if (open) setRoutesPanelOpen(false);
+  };
   const routeLabels = useMemo(() => junctionLabels(junctions), [junctions]);
   const routeJunctionLoad = junctionLoad(routeLayers.junctions, { isPending: junctionsQuery.isPending, isError: junctionsQuery.isError, hasData: Boolean(junctionsQuery.data) }, routeLabels);
 
@@ -217,6 +254,58 @@ export function App() {
   };
   const closeRestrictions = () => setSelectedRestriction(null);
 
+  // Routes' OpenStreetMap layers: a switch only for layers this build has data for; each file loads only once its layer is on and is
+  // then kept for the visit, so switching off and on again downloads nothing.
+  const routesEntries = useMemo(() => availableRoutesLayers(), []);
+  const routesEntryOf = (layer: RoutesDataLayer) => routesEntries.find((e) => e.layer === layer);
+  const routesStatuses: Record<RoutesDataLayer, RoutesLayerStatus> = {
+    "speed-cameras": useRoutesLayerData(routesEntryOf("speed-cameras"), "speed-cameras", routeLayers["speed-cameras"] === true),
+    "average-speed": useRoutesLayerData(routesEntryOf("average-speed"), "average-speed", routeLayers["average-speed"] === true),
+    "red-light-cameras": useRoutesLayerData(routesEntryOf("red-light-cameras"), "red-light-cameras", routeLayers["red-light-cameras"] === true),
+    height: useRoutesLayerData(routesEntryOf("height"), "height", routeLayers.height === true),
+    weight: useRoutesLayerData(routesEntryOf("weight"), "weight", routeLayers.weight === true),
+    "width-length": useRoutesLayerData(routesEntryOf("width-length"), "width-length", routeLayers["width-length"] === true),
+    access: useRoutesLayerData(routesEntryOf("access"), "access", routeLayers.access === true),
+  };
+  const routesKey = ROUTES_DATA_LAYERS.map((l) => `${l}:${routesStatuses[l].state}`).join();
+  // Road highlighting for the restriction layers: loaded with the layer, kept for the visit, optional (markers show without it).
+  const routesRoads: Partial<Record<RoutesDataLayer, RoutesHighlightsFile | null>> = {
+    height: useRoutesHighlights(routesEntryOf("height"), routeLayers.height === true),
+    weight: useRoutesHighlights(routesEntryOf("weight"), routeLayers.weight === true),
+    "width-length": useRoutesHighlights(routesEntryOf("width-length"), routeLayers["width-length"] === true),
+    access: useRoutesHighlights(routesEntryOf("access"), routeLayers.access === true),
+  };
+  const routesRoadsKey = ROUTES_DATA_LAYERS.map((l) => (routesRoads[l] ? 1 : 0)).join();
+  const routesOverlays = useMemo<RoutesOverlay[]>(
+    () => ROUTES_DATA_LAYERS.map((layer) => ({ layer, data: routesStatuses[layer].data, roads: routesRoads[layer] ?? null })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- recomputed when a layer's or its roads' load state changes
+    [routesKey, routesRoadsKey],
+  );
+  // Records of the layers that are on and loaded: what the key lists and the details can show.
+  const routesShown = ROUTES_DATA_LAYERS.flatMap((layer) => {
+    const d = routeLayers[layer] === true ? routesStatuses[layer].data : null;
+    return d ? [{ layer, data: d }] : [];
+  });
+  const [routesSelection, setRoutesSelection] = useState<{ layer: RoutesDataLayer; id: string } | null>(null);
+  const routesOpener = useRef<HTMLElement | null>(null);
+  const routesRecord = routesSelection ? findRoutesRecord(routesShown, routesSelection) : null;
+  // A marker or section tapped on the map (MapView reads it through its latest props, so it needn't be stable).
+  const selectRoutesFeature = (selection: { layer: RoutesDataLayer; id: string }) => {
+    routesOpener.current = null;
+    setRoutesSelection(selection);
+  };
+  const openRoutesFeature = (selection: { layer: RoutesDataLayer; id: string }) => {
+    routesOpener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setRoutesSelection(selection);
+  };
+
+  // Switching a Routes layer off also closes its record's details, so it can't reappear selected when the layer comes back.
+  const toggleRouteLayer = (layer: keyof RoutesLayerSwitches, on: boolean) => {
+    setRouteLayers((l) => ({ ...l, [layer]: on }));
+    if (!on) setRoutesSelection((s) => (s?.layer === layer ? null : s));
+  };
+  const retryJunctions = () => void junctionsQuery.refetch();
+
   // Problems for Settings: the same messages shown elsewhere, gathered in one list (not announced again). Each view lists only its
   // own layers' problems.
   const warnings = [
@@ -224,9 +313,8 @@ export function App() {
     baseMapFailed ? (closuresView ? "The base map couldn't load. The closures list still works." : "The base map couldn't load.") : null,
     ...(closuresView ? RESTRICTION_LAYERS.filter((l) => statuses[l].state === "error").map((l) => `Restriction data (${l}): ${statuses[l].error}`) : []),
     !closuresView && routeJunctionLoad.state === "error" ? "Junction numbers couldn't be loaded." : null,
+    ...(!closuresView ? ROUTES_DATA_LAYERS.filter((l) => routesStatuses[l].state === "error").map((l) => `${ROUTES_LAYER_TEXT[l].label}: ${routesStatuses[l].error}`) : []),
   ].filter((w): w is string => Boolean(w));
-  const toggleRouteLayer = (layer: keyof RoutesLayerSwitches, on: boolean) => setRouteLayers((l) => ({ ...l, [layer]: on }));
-  const retryJunctions = () => void junctionsQuery.refetch();
 
   const count = data ? (visible.length === dayClosures.length ? `${dayClosures.length}` : `${visible.length} of ${dayClosures.length}`) : null;
 
@@ -355,6 +443,8 @@ export function App() {
             onSelectRestriction={selectRestriction}
             onViewChange={setView}
             onBaseMapError={setBaseMapFailed}
+            routesOverlays={routesOverlays}
+            onSelectRoutesFeature={selectRoutesFeature}
           />
           {closuresView ? (
             <>
@@ -376,19 +466,34 @@ export function App() {
           ) : (
             <>
               {/* Routes: the Layers button at the top left, clear of MapLibre's buttons on the right; opened, its panel scrolls
-                  within the map, above the map key even when that is open (phones and tablets; on desktop, above the folded key).
-                  On short screens (landscape phones) it may use the map's full height, drawn over the key, so it stays usable.
-                  The map's own notices start under it (--ta-map-top-inset). */}
-              <div className="pointer-events-none absolute bottom-[calc(11.5rem+env(safe-area-inset-bottom))] lg:bottom-[calc(5.5rem+env(safe-area-inset-bottom))] [@media(max-height:40rem)]:bottom-[calc(2rem+env(safe-area-inset-bottom))] left-[max(0.75rem,env(safe-area-inset-left))] right-14 top-3 z-10 flex items-start">
-                <RoutesMapControls layers={routeLayers} onToggle={toggleRouteLayer} junctions={routeJunctionLoad} onRetry={retryJunctions} open={routesPanelOpen} onOpenChange={setRoutesPanelOpen} />
+                  within the map and always ends above the map key, at every size and whether the key is folded or open: its
+                  bottom edge follows the key's measured height (routesKeyHeight), so the two never overlap. The key's open height
+                  is capped in Routes (below), so the panel always keeps most of the map. The map's own notices start under it
+                  (--ta-map-top-inset). */}
+              <div
+                className="pointer-events-none absolute left-[max(0.75rem,env(safe-area-inset-left))] right-14 top-3 z-10 flex items-start [container-type:size]"
+                style={{ bottom: `calc(${routesKeyHeight}px + 2.5rem + env(safe-area-inset-bottom))` }}
+              >
+                <RoutesMapControls
+                  layers={routeLayers}
+                  onToggle={toggleRouteLayer}
+                  junctions={routeJunctionLoad}
+                  onRetry={retryJunctions}
+                  osm={{ entries: routesEntries, statuses: routesStatuses, dataAsOf: routesManifest?.dataAsOf ?? null, now, zoom: view?.zoom ?? null }}
+                  open={routesPanelOpen}
+                  onOpenChange={openRoutesPanel}
+                />
               </div>
               {/* The map key where it is in Closures: bottom left, above the map credits and under them while they're open, and
-                  ending short of the scale bar on the right. */}
+                  ending short of the scale bar on the right. Opened, it takes at most 45% of the map (it scrolls beyond that), so the
+                  Layers panel above it keeps the rest. */}
               <MapKey
                 view={appView}
-                open={mapKeyOpen}
-                onOpenChange={setMapKeyOpen}
-                className="absolute bottom-[calc(2rem+env(safe-area-inset-bottom))] left-[max(0.75rem,env(safe-area-inset-left))] z-[1] max-h-[max(6rem,calc(100%-6rem))] w-max max-w-[min(22rem,calc(100%-7.5rem))]"
+                open={routesKeyOpen}
+                onOpenChange={openRoutesKey}
+                rootRef={setRoutesKeyElement}
+                routes={{ available: routesEntries.map((e) => e.layer), on: routeLayers, statuses: ROUTES_DATA_LAYERS.map((l) => routesStatuses[l]), area: view, now, dataAsOf: routesManifest?.dataAsOf ?? null, onSelect: openRoutesFeature }}
+                className="absolute bottom-[calc(2rem+env(safe-area-inset-bottom))] left-[max(0.75rem,env(safe-area-inset-left))] z-[1] max-h-[max(6rem,calc(45%-2rem))] w-max max-w-[min(22rem,calc(100%-7.5rem))]"
               />
             </>
           )}
@@ -426,6 +531,13 @@ export function App() {
           zones={zoneFiles}
           selection={selectedRestriction}
           now={now}
+        />
+        <RoutesFeatureDialog
+          record={closuresView ? null : routesRecord}
+          dataAsOf={routesManifest?.dataAsOf ?? null}
+          now={now}
+          onClose={() => setRoutesSelection(null)}
+          returnFocus={() => routesOpener.current ?? document.querySelector<HTMLElement>(".maplibregl-canvas")}
         />
 
         {selected && data && closuresView && (
