@@ -189,7 +189,8 @@ function RoutesOsmKey({ osm }: { osm: RoutesKeyProps }) {
       <ul className="space-y-1">
         {osm.available.map((l) => (
           <li key={l} className={`flex items-center gap-2 ${isOn(l) ? "" : "text-muted opacity-60"}`}>
-            <span className="flex w-7 shrink-0 justify-center">
+            {/* Wide enough for the badge symbols (4.4m, 7.5t, No), so a symbol never runs into its label. */}
+            <span className="flex w-12 shrink-0 justify-center">
               <KeySymbol layer={l} />
             </span>
             <span className="flex-1">{KEY_LABELS[l]}</span>
