@@ -100,6 +100,7 @@ version: `npx wrangler rollback <version-id>`. Only on the owner's instruction.
 | `f7a9a816-42d6-4588-8723-c16d28d63d9a` | 2026-10-09 03:23:32 | not recorded | Not recorded at the time; found afterwards (see below) |
 | `4d03b164-0dc7-4e01-b496-314a9a37abe9` | 2026-10-12 16:43:34 | `82020c7` | Routes view, settings, app updates (service worker), restriction layers (PR #16); live traffic deferred |
 | `42808e9d-7954-49c9-bae6-93c898205a99` | 2026-10-12 17:41:04 | `0df5aff` | Compact map keys and the Routes Layers button (PR #18) |
+| `e0c7ad6e-21b5-4be5-9da9-3884dc3d2f7a` | 2026-10-12 18:36:40 | `308cec6` | Restrictions mini-tab and list popup removed; folded key unchanged by layers (PR #19) |
 
 ### 2026-10-06 16:46 UTC: map location control
 
@@ -334,6 +335,41 @@ data, ingestion, schedule, matcher or security-header change.
 - Worker log during the checks (`wrangler tail`): 20 API requests, all `ok`, no exceptions or error logs; CPU at most 10 ms (one
   request at the Workers Free limit, none over it). Worth watching.
 - The live data was still the 09:12 UTC capture (stale banner), as before this release; not investigated.
+
+### 2026-10-12 18:36 UTC: Restrictions mini-tab and list popup removed (PR #19)
+
+PR #19 merged 2026-10-12 18:32:16 UTC (19:32 UK time) with a normal merge commit, `308cec62fef16395ad377da684992dd68fc1c0db`
+(parents `0df5aff` and `014e695`), approved by the owner. Web UI only (11 files). The folded Closures map key looks the same whatever
+restriction layers are on. The "Restrictions" mini-tab and the "Restrictions in this view" popup are removed (owner decision); what
+they provided is kept: a marker opens its full details; each loaded zone has a "LEZ/ULEZ details and TfL's page" button in the
+opened key (source, TfL note, source notes including the ULEZ boundary-accuracy caveat, TfL's link); the opened key holds the
+keyboard and screen-reader list of restrictions in view, hidden visually until it has keyboard focus. No Worker, Wrangler, data,
+ingestion, schedule, matcher or security-header change.
+
+- Deployed 2026-10-12 18:36:40 UTC (19:36 UK time) as Worker version `e0c7ad6e-21b5-4be5-9da9-3884dc3d2f7a`, from a clean worktree of
+  `main` `308cec6`. Bindings `ASSETS` and `SNAPSHOTS` only. Wrangler uploaded 4 changed static files.
+- Before deploying, on `308cec6` in the clean worktree: `npm ci`, `npm run check` (708/708 tests in 58 files), the rules-freeze test
+  (15/15), `npm audit` (0 vulnerabilities) and `npm run worker:check` passed; build identity `308cec62fef1`, not dirty. CI passed on
+  the PR head (`014e695`).
+- The R2 `current.json` pointer was byte-identical before and after (SHA-256 `661a7657…`); the live snapshot stayed
+  `20261012T091216Z-ea6ca93a797f` (726 closures).
+- Checked live on both hosts: `/`, `/sw.js`, the app script and stylesheet, the Workbox files and the zone files byte-identical to the
+  release build; the three APIs 200 with matching SHA-256 and 304 on conditional requests; `/api/traffic/status` 404.
+  - **Transient:** about 40 seconds after the deploy, the workers.dev host once answered the new app script
+    (`/assets/index-8aZUS_Ue.js`) with the app page (`text/html`, the single-page-application fallback) while the custom domain
+    served it correctly. Re-checked six times over the next minute on both hosts: always `text/javascript`, byte-identical to the
+    build. A visitor loading the page in that window could have got a blank app until reload. Excluding `/assets/*` from the
+    fallback (an existing follow-up) would make such a miss a 404 instead.
+- Checked live in desktop Chrome: no mini-tab or list popup with none, one or all layers on; the folded key identical (97x48) in
+  all three; the opened key with every restriction row and the disclaimer; both zone buttons (48 px) opening their details with the
+  TfL note, boundary notes and TfL's link, focus returning to the button; the keyboard list hidden until focused, then listing 18
+  restrictions and opening their details; a 4.4 m marker opening its details; Routes with the Layers button, map key and 596
+  junction labels. No console errors after load. The test browser's layer setting was restored (none stored).
+- **Not checked live:** narrow screens (the window couldn't be resized; the page can't be framed). Checked on the local preview of
+  the same source before merging.
+- Worker log during the checks: 43 API requests, all `ok`, no exceptions or error logs. CPU peaked at 13 ms on one `/api/version`
+  304 and 10 ms on one `/api/junctions` 200 (medians 1 to 6 ms), most likely fresh instances right after the deploy; the Worker code
+  hasn't changed since PR #16. Over the Workers Free 10 ms limit once, yet completed. Watch for Error 1102.
 
 ## Scheduled ingestion
 
