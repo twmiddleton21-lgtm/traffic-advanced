@@ -234,7 +234,10 @@ No R2 or API is used, and nothing is published until a reviewed build is deploye
 
 ### ODbL compliance (OpenStreetMap)
 
-- `height.json` and `weight.json` contain a **derivative database** of OpenStreetMap: a filtered, converted subset.
+**This applies only once a build includes OpenStreetMap data. The current files contain no OSM records** (see the top of this
+file), so nothing in them is offered under the ODbL yet.
+
+- With OSM included, `height.json` and `weight.json` contain a **derivative database** of OpenStreetMap: a filtered, converted subset.
 - They are publicly used, so they are offered under the **ODbL 1.0**. Each file states the licence and attribution in its
   `sources`, and **the files themselves are publicly downloadable** from the app's origin, which is how the derivative database is
   made available.
