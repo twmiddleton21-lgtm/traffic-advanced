@@ -342,3 +342,34 @@ captured 18:22:55, published 18:25:47 (UTC).
 
 Related, **not changed**: the snapshot files' own `generatedAt` is also the run start (it's inside the published files, so changing it
 alters their bytes). Proposal pending approval.
+
+### Deferred from the first release (PR #16): licensing, attribution, wording and device review
+
+Status: **open follow-up work, not resolved and not legally cleared.** The owner approved merging and deploying PR #16 on
+2026-10-12 with these items deferred to a later update. Nothing below is a legal determination.
+
+- **Licensing and permissions:**
+  - TfL: whether registration is required before redistributing TfL open data (the Transport Data Service licence refers to
+    information "You provide on registration"; the files download without a key). See `docs/RESTRICTIONS.md`.
+  - National Highways S1 and S6: the APIs' metadata says OGL v3.0, but the Developer Portal terms are "based on version 2.0 of
+    the OGL with specific amendments for NH". Paragraphs 20(b), 21(c) and 21(e) are unresolved, and the enquiry is drafted but
+    not sent. See `docs/DATA-SOURCES.md`, "Developer Portal licence".
+- **Attribution and third-party rights:**
+  - NH paragraph 20(a) asks for "Powered by National Highways' Transport Data Feeds", which the app doesn't show. Adding it is
+    a wording change for the owner.
+  - Ordnance Survey rights behind the NH diversion points rely on NH's own OGL statement and are not independently verified
+    (the owner accepted this risk for release on 2026-10-12).
+- **TfL LEZ wording in Settings** (`web/src/components/settings/RestrictionsSection.tsx`): the LEZ description summarises one
+  TfL rule in original wording ("TfL says lorries over 3.5 tonnes…"), while a zone's details say "This app doesn't show the
+  rules". Review the wording and its consistency.
+- **Safety wording and devices:** review the route-card sentence "National Highways records no restrictions on this route. This
+  does not guarantee there are none.", the TfL zone note and the folded restrictions disclaimer; and test the Routes view on
+  real phones and tablets (only desktop Chrome and emulated widths were checked).
+- **Earlier history and served builds:**
+  - The repository is public (checked 2026-10-12). Five sentences of tfl.gov.uk website text that earlier commits stored
+    (removed from the files in `434aca9`) remain visible in its Git history, which has not been rewritten. Whether that needs
+    action is open.
+  - No deployed build served the zone files: the live build before this release (`f7a9a816`) references no restriction files,
+    and the earlier deployments are `main` commits from before restriction layers existed (table above).
+- **Live traffic (TomTom):** deferred and not shipped; its terms, attribution, name use and privacy wording are unresolved
+  (`docs/LIVE-TRAFFIC-RESEARCH.md`).
