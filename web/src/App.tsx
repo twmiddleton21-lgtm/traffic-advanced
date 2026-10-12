@@ -6,6 +6,7 @@ import { ClosureDetail } from "./components/ClosureDetail.tsx";
 import { ClosureList } from "./components/ClosureList.tsx";
 import { DateSelector } from "./components/DateSelector.tsx";
 import { FilterBar } from "./components/FilterBar.tsx";
+import { MapKey } from "./components/MapKey.tsx";
 import { RestrictionMapControls } from "./components/RestrictionMapControls.tsx";
 import { RestrictionsDialog } from "./components/RestrictionsDialog.tsx";
 import { RoutesMapControls } from "./components/RoutesMapControls.tsx";
@@ -165,9 +166,9 @@ export function App() {
   const settingsButton = useRef<HTMLButtonElement>(null);
   const [restrictionsOpen, setRestrictionsOpen] = useState(false);
   const restrictionsButton = useRef<HTMLButtonElement>(null);
-  // The restrictions key starts open where there's room and closed on phones and tablets, as the map key does; the choice then
-  // holds while layers are switched (and off and on again) until the app is reloaded.
-  const [restrictionKeyOpen, setRestrictionKeyOpen] = useState(wide);
+  // The map's one key (MapKey.tsx, which also carries the restriction key in Closures) starts open where there's room and folded on
+  // phones and tablets; the choice then holds across view and layer switches until the app is reloaded.
+  const [mapKeyOpen, setMapKeyOpen] = useState(wide);
   const [selectedRestrictionId, setSelectedRestrictionId] = useState<string | null>(null);
   const [view, setView] = useState<MapViewArea | null>(null);
   const [baseMapFailed, setBaseMapFailed] = useState(false);
@@ -330,9 +331,9 @@ export function App() {
           className={`absolute inset-0 z-20 bg-[#0b0e11]/45 transition-opacity duration-200 lg:hidden ${drawerModal ? "opacity-100" : "pointer-events-none opacity-0"}`}
         />
 
-        {/* --ta-map-top-inset keeps the map's own notices clear of the Closures button on phones and tablets. */}
+        {/* --ta-map-top-inset keeps the map's own notices clear of the Closures button (phones and tablets) and the Layers button (Routes). */}
         <section
-          className={`relative min-w-0 flex-1 lg:[--ta-map-top-inset:0px] ${closuresView ? "[--ta-map-top-inset:3.75rem]" : "[--ta-map-top-inset:0px]"}`}
+          className={`relative min-w-0 flex-1 ${closuresView ? "[--ta-map-top-inset:3.75rem] lg:[--ta-map-top-inset:0px]" : "[--ta-map-top-inset:4.5rem]"}`}
           aria-label="Map"
           inert={drawerModal}
         >
@@ -352,28 +353,42 @@ export function App() {
             onViewChange={setView}
             onBaseMapError={setBaseMapFailed}
           />
-          {/* Below MapLibre's zoom and location buttons, and above the map credits: an opened key scrolls rather than run off the map. */}
-          <div className="pointer-events-none absolute bottom-[calc(2rem+env(safe-area-inset-bottom))] right-[max(0.75rem,env(safe-area-inset-right))] top-[9.5rem] z-10 flex items-start justify-end">
-            {closuresView ? (
-              <RestrictionMapControls
-                statuses={Object.values(statuses)}
-                zoom={view?.zoom ?? null}
-                onOpenList={() => setRestrictionsOpen(true)}
-                buttonRef={restrictionsButton}
-                keyOpen={restrictionKeyOpen}
-                onKeyOpenChange={setRestrictionKeyOpen}
+          {closuresView ? (
+            <>
+              {/* Below MapLibre's zoom and location buttons, and above the map credits: it scrolls rather than run off the map. */}
+              <div className="pointer-events-none absolute bottom-[calc(2rem+env(safe-area-inset-bottom))] right-[max(0.75rem,env(safe-area-inset-right))] top-[9.5rem] z-10 flex items-start justify-end">
+                <RestrictionMapControls statuses={Object.values(statuses)} zoom={view?.zoom ?? null} onOpenList={() => setRestrictionsOpen(true)} buttonRef={restrictionsButton} />
+              </div>
+              {/* Bottom left, above the map credits; opened, it scrolls within the map, clear of the restrictions button above it and
+                  of the map credits beside it on phones (at least 6rem tall, so a short landscape map can't squeeze it away). Under
+                  MapLibre's controls (z-index 2), as the map key always was: while the credits are open they cover it, never the reverse. */}
+              <MapKey
+                view={appView}
+                open={mapKeyOpen}
+                onOpenChange={setMapKeyOpen}
+                restrictions={{ statuses: Object.values(statuses), zoom: view?.zoom ?? null }}
+                className="absolute bottom-[calc(2rem+env(safe-area-inset-bottom))] left-[max(0.75rem,env(safe-area-inset-left))] z-[1] max-h-[max(6rem,calc(100%-15rem))] w-max max-w-[min(22rem,calc(100%-4.5rem))] lg:max-h-[calc(100%-3rem)]"
               />
-            ) : (
-              <RoutesMapControls
-                layers={routeLayers}
-                onToggle={toggleRouteLayer}
-                junctions={routeJunctionLoad}
-                onRetry={retryJunctions}
-                open={routesPanelOpen}
-                onOpenChange={setRoutesPanelOpen}
+            </>
+          ) : (
+            <>
+              {/* Routes: the Layers button at the top left, clear of MapLibre's buttons on the right; opened, its panel scrolls
+                  within the map, above the map key even when that is open (phones and tablets; on desktop, above the folded key).
+                  On short screens (landscape phones) it may use the map's full height, drawn over the key, so it stays usable.
+                  The map's own notices start under it (--ta-map-top-inset). */}
+              <div className="pointer-events-none absolute bottom-[calc(11.5rem+env(safe-area-inset-bottom))] lg:bottom-[calc(5.5rem+env(safe-area-inset-bottom))] [@media(max-height:40rem)]:bottom-[calc(2rem+env(safe-area-inset-bottom))] left-[max(0.75rem,env(safe-area-inset-left))] right-14 top-3 z-10 flex items-start">
+                <RoutesMapControls layers={routeLayers} onToggle={toggleRouteLayer} junctions={routeJunctionLoad} onRetry={retryJunctions} open={routesPanelOpen} onOpenChange={setRoutesPanelOpen} />
+              </div>
+              {/* The map key where it is in Closures: bottom left, above the map credits and under them while they're open, and
+                  ending short of the scale bar on the right. */}
+              <MapKey
+                view={appView}
+                open={mapKeyOpen}
+                onOpenChange={setMapKeyOpen}
+                className="absolute bottom-[calc(2rem+env(safe-area-inset-bottom))] left-[max(0.75rem,env(safe-area-inset-left))] z-[1] max-h-[max(6rem,calc(100%-6rem))] w-max max-w-[min(22rem,calc(100%-7.5rem))]"
               />
-            )}
-          </div>
+            </>
+          )}
           <button
             hidden={!closuresView}
             ref={openButton}

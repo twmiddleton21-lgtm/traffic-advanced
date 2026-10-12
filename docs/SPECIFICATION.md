@@ -38,8 +38,11 @@ wearing gloves, short on time. They need fast answers: *is my road shut, when, w
      - Switching keeps each view's state: Closures' day, filters, search, selected closure and restriction switches; Routes'
        junction switch and map position.
      - Closures-only on screen: the closures list and drawer, the day selector, the road search, closure details, the restrictions
-       panel and list. Routes-only: the "Route map layers" panel (junction numbers, the data's state, scope and no-traffic notes).
-     - Each view has its own map key.
+       panel and list. Routes-only: the "Layers" button and panel (junction numbers, the data's state, scope and no-traffic notes).
+     - One map key, with each view's own rows. It folds to a single 48 px "Map key" line (open on desktop, folded on phones and
+       tablets at first; the choice holds across view and layer switches). Closures: bottom left; while restriction layers are on
+       it also carries the restriction key, and folded it shows their symbols. Routes: bottom left too; the "Layers" control is
+       a separate square map button at the top left whose panel opens under it.
    - **Road selector**: search/pick a road (e.g. M6, A14), optional direction, My Roads shortcuts.
    - A status chip, "Last updated 14:05", turns amber/red when delayed/stale.
    - A **Settings** button (header) opens a panel over the map (the map, its view and selection are kept):
@@ -223,7 +226,7 @@ Map overlays, each switched on separately in Settings, all **off by default**; c
   - limitations.
 - **Wording.** Shown wherever restriction data is shown, verbatim: "Restrictions data is incomplete. Community-sourced records
   are unverified. No marker does not mean no restriction. Always follow road signs. This map is not a route check."
-  On the map it sits in the restrictions key, which folds like the map key; folded, the disclaimer is hidden visually but
+  On the map it sits in the map key's restriction section (Closures); folded, the disclaimer is hidden visually but
   kept for screen readers (owner decision, 2026-10-12, docs/RESTRICTIONS.md). The "Restrictions in this view" list always shows it.
 - **What the layers never do.** They don't check a vehicle or a route, never imply a road is clear, and never change closures,
   diversions or classifications.

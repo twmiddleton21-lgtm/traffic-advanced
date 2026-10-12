@@ -6,6 +6,7 @@ import { junctionsSnapshotSchema, type Junction } from "../../../shared/api/junc
 import { RESTRICTIONS_DISCLAIMER } from "../../../shared/api/restrictions.ts";
 import { APP_VERSION } from "../app/version.ts";
 import { AppHeader } from "../components/AppHeader.tsx";
+import { MapKey } from "../components/MapKey.tsx";
 import { JunctionNumbersSwitch, NO_TRAFFIC_TEXT, ROUTES_SCOPE_TEXT, RoutesMapControls } from "../components/RoutesMapControls.tsx";
 import { SettingsDialog } from "../components/settings/SettingsDialog.tsx";
 import { ViewSwitch } from "../components/ViewSwitch.tsx";
@@ -59,7 +60,7 @@ describe("Closures / Routes view state", () => {
     expect(app).toMatch(/hidden=\{!closuresView\}\s*className=\{`flex min-h-0 flex-col/);
     expect(app).toMatch(/\{data && closuresView && <DateSelector/);
     expect(app).toMatch(/\{selected && data && closuresView && \(/);
-    for (const state of ["filter", "query", "selectedId", "chosenDay", "drawerOpen", "restrictionKeyOpen"]) expect(app).toMatch(new RegExp(`const \\[${state}, `));
+    for (const state of ["filter", "query", "selectedId", "chosenDay", "drawerOpen", "mapKeyOpen"]) expect(app).toMatch(new RegExp(`const \\[${state}, `));
   });
 
   it("uses one map for both views: no second map container or instance", () => {
@@ -106,7 +107,58 @@ describe("each view's own map layers", () => {
 
   it("restriction layers are shown in the Closures view only (their switches and data are kept)", () => {
     expect(mapView).toMatch(/const visible = view === "closures" && o\.visible && o\.data !== null;/);
-    expect(app).toMatch(/\{closuresView \? \(\s*<RestrictionMapControls/);
+    expect(app).toMatch(/\{closuresView \? \(\s*<>[\s\S]*?<RestrictionMapControls[\s\S]*?\) : \(/);
+  });
+});
+
+describe("compact map keys", () => {
+  const key = (view: AppView, open: boolean) => renderToStaticMarkup(h(MapKey, { view, open, onOpenChange: () => undefined }));
+
+  it("one key per view, folding to a single 48 px 'Map key' line; open, it shows that view's own rows", () => {
+    for (const view of ["closures", "routes"] as const) {
+      const folded = key(view, false);
+      expect(folded).toMatch(/<summary class="[^"]*\bmin-h-12\b[^"]*">Map key<svg/);
+      expect(folded).not.toMatch(/<details[^>]*\sopen=""/);
+    }
+    expect(key("routes", true)).toContain("Junction number (National Highways roads only)");
+    expect(key("routes", true)).not.toContain("Closed carriageway");
+    expect(key("closures", true)).toContain("Closed carriageway");
+    // Without restriction layers there is no restriction section or disclaimer in it.
+    expect(key("closures", true)).not.toMatch(/Restrictions key|restrictions-disclaimer/);
+  });
+
+  it("Closures: the key sits bottom left, above the map credits; it scrolls within the map, clear of the restriction controls on phones", () => {
+    expect(app).toMatch(/<MapKey\s+view=\{appView\}\s+open=\{mapKeyOpen\}\s+onOpenChange=\{setMapKeyOpen\}\s+restrictions=\{\{ statuses: Object\.values\(statuses\), zoom: view\?\.zoom \?\? null \}\}\s+className="absolute bottom-\[calc\(2rem\+env\(safe-area-inset-bottom\)\)\] left-\[max\(0\.75rem,env\(safe-area-inset-left\)\)\] z-\[1\] max-h-\[max\(6rem,calc\(100%-15rem\)\)\] w-max max-w-\[min\(22rem,calc\(100%-4\.5rem\)\)\]/);
+  });
+
+  it("Routes: the Layers button at the top left, clear of the map's buttons; the map key at the bottom left, as in Closures", () => {
+    expect(app).toMatch(/<div className="pointer-events-none absolute bottom-\[calc\(11\.5rem\+env\(safe-area-inset-bottom\)\)\] lg:bottom-\[calc\(5\.5rem\+env\(safe-area-inset-bottom\)\)\] \[@media\(max-height:40rem\)\]:bottom-\[calc\(2rem\+env\(safe-area-inset-bottom\)\)\] left-\[max\(0\.75rem,env\(safe-area-inset-left\)\)\] right-14 top-3 z-10 flex items-start">\s*<RoutesMapControls /);
+    expect(app).toMatch(/<MapKey\s+view=\{appView\}\s+open=\{mapKeyOpen\}\s+onOpenChange=\{setMapKeyOpen\}\s+className="absolute bottom-\[calc\(2rem\+env\(safe-area-inset-bottom\)\)\] left-\[max\(0\.75rem,env\(safe-area-inset-left\)\)\] z-\[1\] max-h-\[max\(6rem,calc\(100%-6rem\)\)\] w-max max-w-\[min\(22rem,calc\(100%-7\.5rem\)\)\]/);
+    // Each has its own open state: one never opens or closes the other.
+    expect(app).toMatch(/<RoutesMapControls [^>]*open=\{routesPanelOpen\} onOpenChange=\{setRoutesPanelOpen\}/);
+    // The map's own notices start below the Layers button in Routes, at every width.
+    expect(app).toMatch(/\$\{closuresView \? "\[--ta-map-top-inset:3\.75rem\] lg:\[--ta-map-top-inset:0px\]" : "\[--ta-map-top-inset:4\.5rem\]"\}/);
+  });
+
+  it("Layers: folded, a square 56 px map button named 'Layers' with a layers icon; open, its panel keeps the switch and both notes", () => {
+    const panel = (open: boolean, junctions: JunctionLoad = { state: "ready", count: 596, leftOut: 0 }) =>
+      renderToStaticMarkup(h(RoutesMapControls, { layers: { junctions: true }, onToggle: () => undefined, junctions, onRetry: () => undefined, open, onOpenChange: () => undefined }));
+    const summary = /<summary class="([^"]*)"><svg[^>]*aria-hidden="true"[\s\S]*?<\/svg>Layers<\/summary>/.exec(panel(false));
+    expect(summary).not.toBeNull();
+    expect(summary![1]).toMatch(/\bsize-14\b/);
+    expect(summary![1]).toMatch(/\bfocus-visible:-outline-offset-3!/);
+    expect(panel(false)).not.toContain("Route map layers");
+    // Folded: no fixed width. Open: the panel widens, with the switch, the scope note and the not-connected note.
+    expect(panel(false)).toMatch(/^<div class="pointer-events-auto flex max-h-full flex-col items-start gap-1\.5 overflow-y-auto overscroll-contain p-px ">/);
+    expect(panel(true)).toMatch(/^<div class="[^"]*\bw-\[min\(20rem,calc\(100vw-5\.5rem\)\)\]">/);
+    expect(panel(true)).toMatch(/role="switch" aria-checked="true"[^>]*>[\s\S]*Junction numbers/);
+    expect(panel(true)).toContain(ROUTES_SCOPE_TEXT.replaceAll("'", "&#x27;"));
+    expect(panel(true)).toContain(NO_TRAFFIC_TEXT.replaceAll("'", "&#x27;"));
+    // Junction loading and errors stay outside the fold, under the button; with nothing to say, the box isn't drawn.
+    const fold = (html: string) => /<details[\s\S]*<\/details>/.exec(html)?.[0] ?? "";
+    const failed = panel(false, { state: "error" });
+    expect(failed.replace(fold(failed), "")).toMatch(/Junction numbers couldn&#x27;t be loaded\.[\s\S]*Try again/);
+    expect(panel(false)).toMatch(/<div role="status" class="[^"]*\bempty:hidden"><\/div>/);
   });
 });
 

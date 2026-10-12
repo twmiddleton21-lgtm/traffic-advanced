@@ -40,10 +40,12 @@ routes only. A first OSM build would add both. All records are in England (see "
 
 **On the map** (2026-10-12): from zoom 6 to 11, nearby height or weight markers are grouped into a ring with a count (red for
 heights, grey for weights; selecting one zooms in until it splits), and a marker with no near neighbour keeps its plate. From zoom
-12 every marker is separate. Below zoom 6 none is drawn. The "Restrictions" button shows which layers are on; its panel shows a
-zoom message, loading and error states and key rows for the loaded layers only, and the full disclaimer whenever any layer is on.
-The key, its zoom message and the disclaimer fold to one "Restrictions key" line, like the map key (open on desktop, folded
-on phones and tablets at first; the choice holds while layers are switched). Owner decision, 2026-10-12: folded, the disclaimer
+12 every marker is separate. Below zoom 6 none is drawn. The "Restrictions" button shows which layers are on, with loading and
+error states under it. Once a layer has loaded, its key rows (loaded layers only), the zoom message and the full disclaimer are a
+"Restrictions" section of the map's one key (`web/src/components/MapKey.tsx`, bottom left); until then the disclaimer is shown
+under the button, so it is on screen whenever any layer is on. The map key folds to one "Map key" line that shows the restriction
+symbols that are on (open on desktop, folded on phones and tablets at first; the choice holds while layers and views are
+switched). Owner decision, 2026-10-12: folded, the disclaimer
 is hidden visually only. It stays in the page word for word as the folded control's description for screen readers, shows
 again when the key is opened, and is always shown in "Restrictions in this view". Loading and error states are never folded.
 The "Restrictions in this view" list works from zoom 6, nearest the centre first.

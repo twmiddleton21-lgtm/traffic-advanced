@@ -12,7 +12,8 @@ the base map (OpenFreeMap), motorway and primary-route emphasis, road numbers, a
   and puts the map back where that view last was (`web/src/routemap/view.ts`). Nothing is created or destroyed on a switch.
 - **State.** The view is in the URL (`?view=routes`; Closures, the default, is never written), like `?closure=`. No new storage.
   Closures' day, filters, search, selection, drawer and restriction settings live in `App` and are untouched by a switch.
-- **Routes' own controls.** A "Route map layers" panel (folds like the map key) with its own switch for junction numbers (on by
+- **Routes' own controls.** At the top left of the map, a square "Layers" map button (layers icon and label) that opens a panel
+  under it, independent of the map key (bottom left, as in Closures), with its own switch for junction numbers (on by
   default, for the visit), the data's loading/error/empty states, coverage, source, a no-live-traffic note and the scope text.
   The restrictions panel, closures list, date bar, road search and closure details are not shown in Routes.
 - **Attribution.** Base map: OpenStreetMap/OpenMapTiles/OpenFreeMap credits, unchanged. Junction numbers: National Highways, OGL

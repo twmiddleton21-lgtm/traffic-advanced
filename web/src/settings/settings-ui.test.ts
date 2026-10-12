@@ -1,11 +1,12 @@
 import { readFileSync } from "node:fs";
-import { createElement as h, type ComponentProps } from "react";
+import { createElement as h, Fragment, type ComponentProps } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { RESTRICTIONS_DISCLAIMER, restrictionPointsFileSchema, type RestrictionSource } from "../../../shared/api/restrictions.ts";
 import { APP_VERSION } from "../app/version.ts";
 import { AppHeader } from "../components/AppHeader.tsx";
 import { ModalDialog } from "../components/ModalDialog.tsx";
+import { MapKey } from "../components/MapKey.tsx";
 import { RestrictionMapControls } from "../components/RestrictionMapControls.tsx";
 import { AppearanceSection } from "../components/settings/AppearanceSection.tsx";
 import { AppStatusSection } from "../components/settings/AppStatusSection.tsx";
@@ -232,8 +233,11 @@ describe("Data status and help", () => {
 });
 
 describe("Restrictions on the map", () => {
+  /** What App draws on the Closures map: the restriction controls and the map's one key (which carries the restriction key). */
+  const onMap = (statusesOn: LayerStatus[], zoom: number) =>
+    html(h(Fragment, null, h(RestrictionMapControls, { statuses: statusesOn, zoom, onOpenList: () => undefined, buttonRef: null }), h(MapKey, { view: "closures", open: true, onOpenChange: () => undefined, restrictions: { statuses: statusesOn, zoom } })));
   it("show nothing while every layer is off", () => {
-    expect(html(h(RestrictionMapControls, { statuses: Object.values(statuses), zoom: 14, onOpenList: () => undefined, buttonRef: null, keyOpen: true, onKeyOpenChange: () => undefined }))).toBe("");
+    expect(html(h(RestrictionMapControls, { statuses: Object.values(statuses), zoom: 14, onOpenList: () => undefined, buttonRef: null }))).toBe("");
   });
 
   it("offer the Restrictions list button (48px), showing which layers are on, with loading and failure states", () => {
@@ -247,8 +251,6 @@ describe("Restrictions on the map", () => {
         zoom: 9,
         onOpenList: () => undefined,
         buttonRef: null,
-        keyOpen: true,
-        onKeyOpenChange: () => undefined,
       }),
     );
     expect(out).toMatch(/<button[^>]*class="[^"]*\bh-12\b[^"]*"[^>]*>[\s\S]*Restrictions<span class="sr-only"> \(height restrictions, weight restrictions, london low emission zone \(lez\) on\): list what&#x27;s in view<\/span><\/button>/);
@@ -273,21 +275,21 @@ describe("Restrictions on the map", () => {
       [{ ...off("weight"), state: "ready", data: { layer: "weight", points: community } }],
     ];
     for (const statusesOn of cases) {
-      const out = html(h(RestrictionMapControls, { statuses: statusesOn, zoom: 14, onOpenList: () => undefined, buttonRef: null, keyOpen: true, onKeyOpenChange: () => undefined }));
+      const out = onMap(statusesOn, 14);
       expect(out.split(RESTRICTIONS_DISCLAIMER).length - 1, statusesOn[0]!.state).toBe(1);
       // The live region holds no nested <div>, so its content ends at the first </div>.
       const status = /<div role="status"[^>]*>([\s\S]*?)<\/div>/.exec(out)?.[1];
       expect(status).toBeDefined();
       expect(status).not.toContain(RESTRICTIONS_DISCLAIMER);
     }
-    const withCommunity = html(h(RestrictionMapControls, { statuses: cases[4]!, zoom: 14, onOpenList: () => undefined, buttonRef: null, keyOpen: true, onKeyOpenChange: () => undefined }));
+    const withCommunity = onMap(cases[4]!, 14);
     expect(withCommunity).toContain("Dashed: community record, unverified.");
     expect(withCommunity.indexOf("Dashed: community record")).toBeLessThan(withCommunity.indexOf(RESTRICTIONS_DISCLAIMER));
   });
 
   it("key the shipped weight data as NH diversion-route values of unrecorded type, never as lorry or all-vehicle limits", () => {
     const points = restrictionPointsFileSchema.parse(JSON.parse(readFileSync("web/src/restrictions/data/weight.json", "utf8")));
-    const key = (file: typeof points) => html(h(RestrictionMapControls, { statuses: [{ ...off("weight"), state: "ready", data: { layer: "weight", points: file } }], zoom: 14, onOpenList: () => undefined, buttonRef: null, keyOpen: true, onKeyOpenChange: () => undefined }));
+    const key = (file: typeof points) => onMap([{ ...off("weight"), state: "ready", data: { layer: "weight", points: file } }], 14);
     const out = key(points);
     expect(out).toContain("Weight value on a National Highways diversion route. Type, scope and");
     expect(out).toContain("exemptions not recorded.");
