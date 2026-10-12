@@ -97,6 +97,7 @@ version: `npx wrangler rollback <version-id>`. Only on the owner's instruction.
 | `160046f5-c009-44a2-a497-927c89c2bc33` | 2026-10-07 23:24:55 | `068936c` | Closures date selector (PR #9) |
 | `665cb5d4-3885-447e-9fb6-231b9326fa7f` | 2026-10-08 00:09:07 | `6dfe9eb` | Date selector can go back to yesterday (PR #11) |
 | `d5dae9fe-0916-4a47-9f33-d9df9f890484` | 2026-10-08 22:02:34 | `bb29aec` | Traffic Advanced brand identity (PR #13) |
+| `f7a9a816-42d6-4588-8723-c16d28d63d9a` | 2026-10-09 03:23:32 | not recorded | Not recorded at the time; found afterwards (see below) |
 
 ### 2026-10-06 16:46 UTC: map location control
 
@@ -244,6 +245,26 @@ Worker configuration, security-header or theme-colour changes.
   "Scheduled ingestion"). That is the existing data's age, not a problem with this deployment.
 - **Not yet checked:** real Safari (iOS and macOS), the Apple touch icon via "Add to Home Screen", and real phones and tablets.
 
+### 2026-10-09 03:23 UTC: unrecorded deployment (found 2026-10-12)
+
+This deployment wasn't logged when it was made. It was found on 2026-10-12 by a read-only review of Cloudflare's deployment history
+(`npx wrangler deployments status`, `deployments list` and `versions view`, all with `--name traffic-advanced`; nothing was changed).
+
+- **Verified from Cloudflare:** Worker version `f7a9a816-42d6-4588-8723-c16d28d63d9a`, created 2026-10-09 03:23:32 UTC and deployed
+  03:23:33 UTC (Wrangler's timestamps; 04:23 UK time), uploaded with Wrangler and with no deployment message. On 2026-10-12 it was the
+  current deployment, serving 100% of traffic. Handler `fetch`, compatibility date 2026-10-01, bindings `ASSETS` and `SNAPSHOTS`
+  (R2 bucket `traffic-advanced-snapshots`) only. It has **no** `TRAFFIC_USAGE` Durable Object binding, and neither has any earlier
+  deployed version (all 8 listed by `deployments list`).
+- **Not verified: which commit was deployed.** The deployment has no message. PR #15 (branch `fix/map-location-attribution-ux`) was merged
+  as `9e243b4` at 2026-10-09 03:18:09 UTC, five minutes before, so `9e243b4` is a possible match on timing alone. That hasn't been
+  confirmed, for example by comparing the live files with a build of that commit.
+- **Not recorded:** the checks run before deploying, the files uploaded, and any live checks afterwards.
+- **Not established:** whether a Durable Object migration has ever been applied to this Worker, or whether a `TrafficUsage` namespace
+  exists. Wrangler's version details don't show migrations, and Wrangler 4.147.0 has no read-only command that lists Durable Object
+  namespaces.
+- On 2026-10-12, the live `GET /api/traffic/status` returned 404 (the traffic routes aren't deployed), and `/api/version` served snapshot
+  `20261012T091216Z-ea6ca93a797f` (726 closures).
+
 ## Scheduled ingestion
 
 The hourly schedule (`17 * * * *` UTC, `.github/workflows/ingest.yml`) reached `main` at 2026-10-06 11:39:22 UTC (`4fb67e4`), but GitHub
@@ -321,3 +342,34 @@ captured 18:22:55, published 18:25:47 (UTC).
 
 Related, **not changed**: the snapshot files' own `generatedAt` is also the run start (it's inside the published files, so changing it
 alters their bytes). Proposal pending approval.
+
+### Deferred from the first release (PR #16): licensing, attribution, wording and device review
+
+Status: **open follow-up work, not resolved and not legally cleared.** The owner approved merging and deploying PR #16 on
+2026-10-12 with these items deferred to a later update. Nothing below is a legal determination.
+
+- **Licensing and permissions:**
+  - TfL: whether registration is required before redistributing TfL open data (the Transport Data Service licence refers to
+    information "You provide on registration"; the files download without a key). See `docs/RESTRICTIONS.md`.
+  - National Highways S1 and S6: the APIs' metadata says OGL v3.0, but the Developer Portal terms are "based on version 2.0 of
+    the OGL with specific amendments for NH". Paragraphs 20(b), 21(c) and 21(e) are unresolved, and the enquiry is drafted but
+    not sent. See `docs/DATA-SOURCES.md`, "Developer Portal licence".
+- **Attribution and third-party rights:**
+  - NH paragraph 20(a) asks for "Powered by National Highways' Transport Data Feeds", which the app doesn't show. Adding it is
+    a wording change for the owner.
+  - Ordnance Survey rights behind the NH diversion points rely on NH's own OGL statement and are not independently verified
+    (the owner accepted this risk for release on 2026-10-12).
+- **TfL LEZ wording in Settings** (`web/src/components/settings/RestrictionsSection.tsx`): the LEZ description summarises one
+  TfL rule in original wording ("TfL says lorries over 3.5 tonnes…"), while a zone's details say "This app doesn't show the
+  rules". Review the wording and its consistency.
+- **Safety wording and devices:** review the route-card sentence "National Highways records no restrictions on this route. This
+  does not guarantee there are none.", the TfL zone note and the folded restrictions disclaimer; and test the Routes view on
+  real phones and tablets (only desktop Chrome and emulated widths were checked).
+- **Earlier history and served builds:**
+  - The repository is public (checked 2026-10-12). Five sentences of tfl.gov.uk website text that earlier commits stored
+    (removed from the files in `434aca9`) remain visible in its Git history, which has not been rewritten. Whether that needs
+    action is open.
+  - No deployed build served the zone files: the live build before this release (`f7a9a816`) references no restriction files,
+    and the earlier deployments are `main` commits from before restriction layers existed (table above).
+- **Live traffic (TomTom):** deferred and not shipped; its terms, attribution, name use and privacy wording are unresolved
+  (`docs/LIVE-TRAFFIC-RESEARCH.md`).

@@ -18,6 +18,15 @@ describe("Wrangler deployment config", () => {
     for (const service of ["kv_namespaces", "d1_databases", "durable_objects", "queues", "services", "vars"]) expect(config[service], service).toBeUndefined();
   });
 
+  it("first release: live traffic stays off. No usage-counter binding, migration or export; the Worker neither routes nor exports traffic code", () => {
+    // Turning traffic on later is a deliberate change here AND in worker/src/index.ts (docs/LIVE-TRAFFIC-RESEARCH.md), plus a
+    // TomTom key secret and an R2 control object, none of which this release configures.
+    for (const key of ["durable_objects", "migrations", "exports"]) expect(config[key], key).toBeUndefined();
+    const entry = readFileSync(config.main, "utf8");
+    expect(entry).not.toMatch(/traffic\//);
+    expect(entry).not.toMatch(/TrafficUsage|handleTraffic|\/api\/traffic/);
+  });
+
   it("serves the built web app as static assets (Env.ASSETS), running Worker code only for /api/*", () => {
     expect(config.assets).toEqual({ directory: "./web/dist", binding: "ASSETS", run_worker_first: ["/api/*"], not_found_handling: "single-page-application" });
     // The assets directory is Vite's build output.

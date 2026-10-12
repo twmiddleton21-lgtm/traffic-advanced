@@ -1,0 +1,181 @@
+{
+ "_source": "NH Diversion Routes Public View, layer 3 (DiversionPoint), open-data capture 2026-10-06T0652Z; two real records of each type/unit. OGL; Data derived from Ordnance Survey Highway Network, Subject to Crown copyright and database rights 2024. Ordnance Survey Licence: AC0000827444.",
+ "features": [
+  {
+   "attributes": {
+    "OBJECTID": 249,
+    "GUID": "a14e6d58-f7c1-429a-b0e9-d2f026d0cd3f",
+    "DiversionRouteGUID": "d985889b-da1b-430b-93f5-9a2962facff8",
+    "DiversionRouteID": "M56/J12/J14/1",
+    "RestrictionType": "height",
+    "MeasureValue": 4.4,
+    "MeasureUnit": "metres",
+    "GlobalID": "6059e457-db8e-420a-8a81-5460ba3c6047"
+   },
+   "geometry": {
+    "x": -2.73187,
+    "y": 53.292677
+   }
+  },
+  {
+   "attributes": {
+    "OBJECTID": 426,
+    "GUID": "713d48a3-04de-4044-9e97-d27ef7fd4751",
+    "DiversionRouteGUID": "f38e35da-5d59-4811-9bf1-82e80bda62f7",
+    "DiversionRouteID": "M56/J10/J9/1",
+    "RestrictionType": "weight",
+    "MeasureValue": 7.5,
+    "MeasureUnit": "Tonnes",
+    "GlobalID": "aaf53cc3-c17e-4c75-b004-18fa1ed49b18"
+   },
+   "geometry": {
+    "x": -2.545119,
+    "y": 53.350447
+   }
+  },
+  {
+   "attributes": {
+    "OBJECTID": 477,
+    "GUID": "b2ff596a-e820-479e-90ef-a74c8dc06128",
+    "DiversionRouteGUID": "0977de51-e71d-4b23-a831-8e14695fd23f",
+    "DiversionRouteID": "M66/J3/J2/1",
+    "RestrictionType": "weight",
+    "MeasureValue": 18,
+    "MeasureUnit": "Tonnes",
+    "GlobalID": "acd240a4-50d2-485b-8ffd-30c8b51e516c"
+   },
+   "geometry": {
+    "x": -2.259042,
+    "y": 53.586258
+   }
+  },
+  {
+   "attributes": {
+    "OBJECTID": 1073,
+    "GUID": "4b6f5863-c051-4bb0-949d-5ba44fd32e97",
+    "DiversionRouteGUID": "dff08552-125f-4721-b920-3e2743ef94fc",
+    "DiversionRouteID": "M65/J4/J5/1",
+    "RestrictionType": "height",
+    "MeasureValue": 2.7,
+    "MeasureUnit": "metres",
+    "GlobalID": "f02c30e1-0b98-4a27-a94d-ea2cfd79c015"
+   },
+   "geometry": {
+    "x": -2.471457,
+    "y": 53.722627
+   }
+  },
+  {
+   "attributes": {
+    "OBJECTID": 2791,
+    "GUID": "04a46f5f-097e-46ed-8555-278bbedc530c",
+    "DiversionRouteGUID": "92dd2e94-b0f5-4dbe-989f-edf60a85c7da",
+    "DiversionRouteID": "A66/A685/BROUGH/JCT/J40/1",
+    "RestrictionType": "height",
+    "MeasureValue": 14.6,
+    "MeasureUnit": "feet",
+    "GlobalID": "9668a02b-71a1-411e-bbfd-e2209dec1cb2"
+   },
+   "geometry": {
+    "x": -2.370464,
+    "y": 54.455226
+   }
+  },
+  {
+   "attributes": {
+    "OBJECTID": 4275,
+    "GUID": "168f612e-15f6-426d-8b6d-07d76e70a13f",
+    "DiversionRouteGUID": "59f2079d-0086-4691-aeb1-b56bbb9b086e",
+    "DiversionRouteID": "A66/A6/A66/BROUGH/BYPASS/1",
+    "RestrictionType": "height",
+    "MeasureValue": 14.5,
+    "MeasureUnit": "feet",
+    "GlobalID": "91752470-abdc-40ee-84b9-8961c4732c2a"
+   },
+   "geometry": {
+    "x": -2.371752,
+    "y": 54.454933
+   }
+  },
+  {
+   "attributes": {
+    "OBJECTID": 4954,
+    "GUID": "18d7e3bf-da9f-4646-bb45-6559df3d1079",
+    "DiversionRouteGUID": "3e07eb86-72d7-425c-b938-086d631e0b57",
+    "DiversionRouteID": "A595/CHAPEL/BROW/RBT/DOBIES/JCT/1",
+    "RestrictionType": "length",
+    "MeasureValue": null,
+    "MeasureUnit": null,
+    "GlobalID": "b74c5129-3f03-456b-9f9b-2eacd5046d3e"
+   },
+   "geometry": {
+    "x": -3.542651,
+    "y": 54.643432
+   }
+  },
+  {
+   "attributes": {
+    "OBJECTID": 14981,
+    "GUID": "accb4ae7-1b52-42d1-8797-f394e04f9a0b",
+    "DiversionRouteGUID": "1878e55a-e58a-4bc5-8495-5bc07f639790",
+    "DiversionRouteID": "A259/CAMBER-RD/A268/1",
+    "RestrictionType": "width",
+    "MeasureValue": 7.5,
+    "MeasureUnit": "Tonnes",
+    "GlobalID": "e3cabb01-7d79-41fa-a299-26b7d4075438"
+   },
+   "geometry": {
+    "x": 0.79418,
+    "y": 51.030862
+   }
+  },
+  {
+   "attributes": {
+    "OBJECTID": 14983,
+    "GUID": "ac507049-55a8-4dfa-a06b-c46e00322cf5",
+    "DiversionRouteGUID": "1878e55a-e58a-4bc5-8495-5bc07f639790",
+    "DiversionRouteID": "A259/CAMBER-RD/A268/1",
+    "RestrictionType": "width",
+    "MeasureValue": 7.5,
+    "MeasureUnit": "Tonnes",
+    "GlobalID": "d0d5eabb-aafe-4b6f-bb69-010e50362dba"
+   },
+   "geometry": {
+    "x": 0.763991,
+    "y": 50.994536
+   }
+  },
+  {
+   "attributes": {
+    "OBJECTID": 18492,
+    "GUID": "1811c682-49dd-4be9-9f63-68b0ee1cf787",
+    "DiversionRouteGUID": "5d7bd481-7a22-4612-a9f0-7a77900f86b3",
+    "DiversionRouteID": "A1/B6348/B6353/1",
+    "RestrictionType": "width",
+    "MeasureValue": 1.9,
+    "MeasureUnit": "metres",
+    "GlobalID": "b0a3eb0b-eebd-4d40-8a25-56547a4b5503"
+   },
+   "geometry": {
+    "x": -1.971399,
+    "y": 55.558634
+   }
+  },
+  {
+   "attributes": {
+    "OBJECTID": 18559,
+    "GUID": "e1fc34a0-e886-480b-a1ec-5da1bda7a22e",
+    "DiversionRouteGUID": "4efad742-8f17-4957-9c8a-48f2800cf03e",
+    "DiversionRouteID": "A1/B6353/B6348/1",
+    "RestrictionType": "width",
+    "MeasureValue": 1.9,
+    "MeasureUnit": "metres",
+    "GlobalID": "42dfea87-f57a-469d-bd9e-343d64e34c5c"
+   },
+   "geometry": {
+    "x": -1.971399,
+    "y": 55.558634
+   }
+  }
+ ]
+}

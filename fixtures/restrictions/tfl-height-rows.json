@@ -1,0 +1,123 @@
+{
+ "_source": "TfL height-restrictions-in-london.xlsx (Last-Modified 2019-10-09), downloaded 2026-10-09; first worksheet rows read by scripts/lib/xlsx.ts, trimmed to the header and 8 real records. Powered by TfL Open Data. Contains OS data © Crown copyright and database rights 2016. Geomni UK Map data © and database rights [2019].",
+ "rows": [
+  {
+   "A": "Height restriction (m)",
+   "B": "Height restriction (imperial)",
+   "C": "Easting",
+   "D": "Northing",
+   "E": "Grid Reference",
+   "F": "Lat",
+   "G": "Lng",
+   "H": "Borough",
+   "I": "Road name",
+   "J": "Road number",
+   "K": "TLRN [Red route]?",
+   "L": "Comments"
+  },
+  {
+   "A": "Between 4.6 and 5.1",
+   "B": "Between 15'0\" and 16'6\"",
+   "C": "549062",
+   "D": "183214",
+   "E": "TQ4906283214",
+   "F": "51.528168000000001",
+   "G": "0.147455",
+   "H": "Barking & Dagenham",
+   "I": "Chequers Lane",
+   "J": " ",
+   "K": "No"
+  },
+  {
+   "A": "Between 4.6 and 5.1",
+   "B": "Between 15'0\" and 16'6\"",
+   "C": "530898",
+   "D": "179642",
+   "E": "TQ3089879642",
+   "F": "51.500566999999997",
+   "G": "-0.11555583",
+   "H": "Lambeth",
+   "I": "Westminster Bridge Road",
+   "J": "A23",
+   "K": "Yes"
+  },
+  {
+   "A": "Between 4.6 and 5.1",
+   "B": "Between 15'0\" and 16'6\"",
+   "C": "522702",
+   "D": "187356",
+   "E": "TQ2270287356",
+   "F": "51.571730000000002",
+   "G": "-0.23088649",
+   "H": "Barnet",
+   "I": "Staples Corner gyratory",
+   "K": "Yes",
+   "L": "The gyratory under the railway arches - technically no road number"
+  },
+  {
+   "A": "Between 4.6 and 5.1",
+   "B": "Between 15'0\" and 16'6\"",
+   "C": "522729",
+   "D": "187363",
+   "E": "TQ2272987363",
+   "F": "51.571787",
+   "G": "-0.23049465999999999",
+   "H": "Barnet",
+   "I": "Staples Corner gyratory",
+   "K": "Yes",
+   "L": "The gyratory under the railway arches - technically no road number"
+  },
+  {
+   "A": "Between 4.1 and 4.5",
+   "B": "Between 13'3\" and 14'9\"",
+   "C": "523589",
+   "D": "188117",
+   "E": "TQ2358988117",
+   "F": "51.578375999999999",
+   "G": "-0.21782682",
+   "H": "Barnet",
+   "I": "Shirehall Lane",
+   "J": " ",
+   "K": "No"
+  },
+  {
+   "A": "Between 3.6 and 4.0",
+   "B": "Between 11'9\" and 13'0\"",
+   "C": "544611",
+   "D": "167272",
+   "E": "TQ4461167272",
+   "F": "51.386076000000003",
+   "G": "7.6823582000000001E-2",
+   "H": "Bromley",
+   "I": "Tudor Way",
+   "J": " ",
+   "K": "No"
+  },
+  {
+   "A": "Between 3.1 and 3.5",
+   "B": "Between 9'10\" and 11'6\"",
+   "C": "522227",
+   "D": "189770",
+   "E": "TQ2222789770",
+   "F": "51.593527999999999",
+   "G": "-0.23689741",
+   "H": "Barnet",
+   "I": "Aerodrome Road",
+   "J": " ",
+   "K": "No"
+  },
+  {
+   "A": "Up to 3.0",
+   "B": "Up to 9'10\"",
+   "C": "549193",
+   "D": "173354",
+   "E": "TQ4919373354",
+   "F": "51.439539000000003",
+   "G": "0.14517985",
+   "H": "Bexley",
+   "I": "Manor Way",
+   "J": " ",
+   "K": "No"
+  }
+ ]
+}

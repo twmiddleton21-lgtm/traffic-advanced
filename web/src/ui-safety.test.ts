@@ -14,14 +14,26 @@ const walk = (dir: string): void => {
   }
 };
 walk("web/src");
+/** Work kept out of the release (web/src/deferred/): still type-checked, linted and held to these rules, but never imported. */
+const isDeferred = (file: string) => file.replaceAll("\\", "/").startsWith("web/src/deferred/");
 
 describe("UI safety boundary", () => {
   it("UI code imports shared code only through the API contracts, never matcher internals or source adapters", () => {
     for (const file of files) {
       const imports = [...readFileSync(file, "utf8").matchAll(/from "([^"]+)"/g)].map((m) => m[1]!);
       for (const spec of imports.filter((s) => s.includes("shared/"))) {
-        expect(spec, `${file} imports ${spec}`).toMatch(/shared\/api\/(?:closures|junctions|freshness|version)\.ts$/);
+        // The traffic contract is for the deferred live-traffic work only (web/src/deferred/traffic/).
+        const allowed = isDeferred(file) ? /shared\/api\/(?:closures|junctions|freshness|version|restrictions|traffic)\.ts$/ : /shared\/api\/(?:closures|junctions|freshness|version|restrictions)\.ts$/;
+        expect(spec, `${file} imports ${spec}`).toMatch(allowed);
       }
+    }
+  });
+
+  it("first release: no live traffic. Nothing in the app imports the deferred work, or names TomTom or the traffic API", () => {
+    for (const file of files.filter((f) => !isDeferred(f))) {
+      const text = readFileSync(file, "utf8");
+      expect(text, file).not.toMatch(/from "[^"]*deferred\//);
+      expect(text, file).not.toMatch(/tomtom|\/api\/traffic|shared\/api\/traffic/i);
     }
   });
 
@@ -52,8 +64,11 @@ describe("UI safety boundary", () => {
   });
 
   it("shows the safety notice wording from the spec", () => {
-    const detail = readFileSync("web/src/components/ClosureDetail.tsx", "utf8");
-    expect(detail).toContain("For planning only. Do not use while driving.");
-    expect(detail).toContain("the signs take priority");
+    const notice = readFileSync("web/src/components/SafetyNotice.tsx", "utf8");
+    expect(notice).toContain("For planning only. Do not use while driving.");
+    expect(notice).toContain("the signs take priority");
+    // Shown on every closure's details and in Settings.
+    expect(readFileSync("web/src/components/ClosureDetail.tsx", "utf8")).toMatch(/<SafetyNotice \/>/);
+    expect(readFileSync("web/src/components/settings/DataHelpSection.tsx", "utf8")).toMatch(/<SafetyNotice \/>/);
   });
 });

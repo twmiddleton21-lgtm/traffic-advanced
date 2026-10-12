@@ -2,10 +2,11 @@ import type { ReactNode } from "react";
 import type { ClosuresSnapshot, OfficialRoute, TrafficClosure } from "../../../shared/api/closures.ts";
 import { NOT_LIVE_TEXT } from "../domain/dataStatus.ts";
 import { confirmedJunctions, directionLabel, formatDateTime, formatWindow } from "../domain/filters.ts";
-import { classificationMeaning, formatRestriction } from "../domain/units.ts";
+import { classificationMeaning, formatRestriction, NO_RESTRICTIONS_RECORDED } from "../domain/units.ts";
 import { DiversionBadge } from "./DiversionBadge.tsx";
 import { HgvStatus } from "./HgvStatus.tsx";
 import { RoadShield } from "./RoadShield.tsx";
+import { SafetyNotice } from "./SafetyNotice.tsx";
 import { SignageSymbol } from "./SignageSymbol.tsx";
 
 interface Props {
@@ -183,7 +184,7 @@ function MatchedRoute({ route }: { route: NonNullable<TrafficClosure["matchedRou
   );
 }
 
-function RouteCard({ route: r }: { route: OfficialRoute }) {
+export function RouteCard({ route: r }: { route: OfficialRoute }) {
   return (
     <section className="space-y-3 rounded-[4px] border border-line p-3" aria-label={`Route ${r.routeId}`}>
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -206,28 +207,17 @@ function RouteCard({ route: r }: { route: OfficialRoute }) {
               ))}
             </ul>
           ) : (
-            "None recorded by National Highways"
+            NO_RESTRICTIONS_RECORDED
           )}
         </Fact>
       </Facts>
       <ul className="space-y-1 text-[14px]">
-        {r.hgvReasons.map((reason) => (
+        {/* The no-restrictions sentence is already the Restrictions fact; it isn't repeated as a reason. */}
+        {r.hgvReasons.filter((reason) => reason !== NO_RESTRICTIONS_RECORDED).map((reason) => (
           <li key={reason}>{reason}</li>
         ))}
       </ul>
     </section>
-  );
-}
-
-function SafetyNotice() {
-  return (
-    <aside className="rounded-[4px] bg-raised px-4 py-3 text-[14px]" aria-label="Safety notice">
-      <p className="font-bold">For planning only. Do not use while driving.</p>
-      <p className="mt-1">
-        Always follow road signs, police and National Highways instructions and temporary traffic management. If this app conflicts with signs on
-        the road, the signs take priority.
-      </p>
-    </aside>
   );
 }
 

@@ -143,4 +143,12 @@ describe("cache-first snapshot sync", () => {
     failing = /\/api\//;
     await expect(visit().sync()).rejects.toBeInstanceOf(TrafficApiError);
   });
+
+  it("reports the publication time only for a version /api/version confirmed this visit, never for an unconfirmed device copy", async () => {
+    const first = await visit().sync();
+    expect(first.publishedAt).toBe("2026-10-05T13:00:00.000Z");
+    failing = /\/api\//;
+    const offline = await visit().sync();
+    expect(offline).toMatchObject({ via: "device-cache", publishedAt: null });
+  });
 });

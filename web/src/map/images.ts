@@ -55,6 +55,95 @@ function addArrow(map: MapLibreMap): void {
   map.addImage("ta-arrow", image, { pixelRatio: RATIO });
 }
 
+const RESTRICTION_RED = "#c8102e";
+
+/**
+ * Restriction plates, sign-style: white with a red border (a grey border when NH doesn't record the limit's type), a glyph for the
+ * kind and the value as text. Heights carry up-and-down arrows, weights of unrecorded type a weight, lorry limits a lorry and
+ * structural limits a bridge, so the kinds differ by shape as well as by colour. Community (OpenStreetMap) records have a dashed
+ * border. Only the plain middle stretches, so glyphs and corners keep their shape. The same glyphs are drawn in the app's key
+ * (components/RestrictionGlyphs.tsx).
+ */
+function addPlate(map: MapLibreMap, id: string, options: { border: string; dashed: boolean; glyph: "height" | "weight" | "lorry" | "bridge" }): void {
+  const glyphWidth = 16;
+  const width = glyphWidth + 16;
+  const height = 20;
+  const image = draw(width, height, (ctx) => {
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.roundRect(1.5, 1.5, width - 3, height - 3, 4);
+    ctx.fill();
+    ctx.strokeStyle = options.border;
+    ctx.lineWidth = 2.5;
+    if (options.dashed) ctx.setLineDash([3, 2]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = COLOURS.ink;
+    ctx.strokeStyle = COLOURS.ink;
+    if (options.glyph === "height") {
+      // A vertical double-headed arrow between two bars: the clearance.
+      ctx.fillRect(4, 3.5, 10, 1.6);
+      ctx.fillRect(4, 14.9, 10, 1.6);
+      ctx.beginPath();
+      ctx.moveTo(9, 5.6);
+      ctx.lineTo(12, 8.6);
+      ctx.lineTo(6, 8.6);
+      ctx.closePath();
+      ctx.moveTo(9, 14.4);
+      ctx.lineTo(12, 11.4);
+      ctx.lineTo(6, 11.4);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillRect(8.2, 8, 1.6, 4);
+    } else if (options.glyph === "weight") {
+      // A weight: a ring handle on a trapezoid.
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.arc(9, 6.2, 2.1, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(5.5, 8.6);
+      ctx.lineTo(12.5, 8.6);
+      ctx.lineTo(14.5, 15.5);
+      ctx.lineTo(3.5, 15.5);
+      ctx.closePath();
+      ctx.fill();
+    } else if (options.glyph === "lorry") {
+      // Trailer, cab and two wheels.
+      ctx.fillRect(4, 6, 8, 6);
+      ctx.fillRect(12.5, 8, 3.5, 4);
+      ctx.beginPath();
+      ctx.arc(6.5, 13.5, 1.6, 0, Math.PI * 2);
+      ctx.arc(13.5, 13.5, 1.6, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (options.glyph === "bridge") {
+      // A deck on an arch.
+      ctx.fillRect(3.5, 6, 13, 2);
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.moveTo(4.5, 14.5);
+      ctx.quadraticCurveTo(10, 6.5, 15.5, 14.5);
+      ctx.stroke();
+    }
+  });
+  const left = (glyphWidth + 5) * RATIO;
+  const right = (width - 5) * RATIO;
+  map.addImage(id, image, { pixelRatio: RATIO, stretchX: [[left, right]], stretchY: [[6 * RATIO, 14 * RATIO]], content: [left, 4 * RATIO, right, 16 * RATIO] });
+}
+
+function addRestrictionPlates(map: MapLibreMap): void {
+  const kinds = [
+    { kind: "height", border: RESTRICTION_RED, glyph: "height" },
+    { kind: "weight-goods", border: RESTRICTION_RED, glyph: "lorry" },
+    { kind: "weight-structural", border: RESTRICTION_RED, glyph: "bridge" },
+    { kind: "weight-unrecorded-type", border: "#5b6770", glyph: "weight" },
+  ] as const;
+  for (const k of kinds) {
+    addPlate(map, `ta-r-${k.kind}`, { border: k.border, dashed: false, glyph: k.glyph });
+    addPlate(map, `ta-r-${k.kind}-community`, { border: k.border, dashed: true, glyph: k.glyph });
+  }
+}
+
 export function addMapImages(map: MapLibreMap): void {
   if (map.hasImage("ta-arrow")) return;
   addShield(map, "ta-shield-blue", "#0b4f9c", "#ffffff");
@@ -62,4 +151,5 @@ export function addMapImages(map: MapLibreMap): void {
   addShield(map, "ta-shield-white", "#ffffff", COLOURS.ink);
   addShield(map, "ta-junction", COLOURS.ink, "#ffffff");
   addArrow(map);
+  addRestrictionPlates(map);
 }

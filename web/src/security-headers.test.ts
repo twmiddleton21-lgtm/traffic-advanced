@@ -34,7 +34,10 @@ const sourceFiles: string[] = [];
 const walk = (dir: string): void => {
   for (const name of readdirSync(dir)) {
     const path = join(dir, name);
-    if (statSync(path).isDirectory()) walk(path);
+    // web/src/deferred/ holds work kept out of the release: nothing in the app imports it (ui-safety.test.ts), so it isn't shipped.
+    if (statSync(path).isDirectory()) {
+      if (path.replaceAll("\\", "/") !== "web/src/deferred") walk(path);
+    }
     else if (/\.(ts|tsx)$/.test(name) && !/\.test\.ts$/.test(name)) sourceFiles.push(path);
   }
 };
@@ -66,8 +69,9 @@ describe("static security headers", () => {
   });
 
   it("CSP connects only to our origin and the external hosts the app's code actually uses", () => {
-    // Pages people open from a link (the official-source link): navigations, never connections, so never in connect-src.
-    const linkOnly = ["https://nationalhighways.co.uk"];
+    // Pages people open from a link (the official-source link, licence and OpenStreetMap record links in Settings and restriction
+    // details): navigations, never connections, so never in connect-src.
+    const linkOnly = ["https://nationalhighways.co.uk", "https://www.nationalarchives.gov.uk", "https://www.openstreetmap.org"];
     const found = new Set(sourceFiles.flatMap((f) => [...readFileSync(f, "utf8").matchAll(/https:\/\/([a-z0-9.-]+)/g)].map((m) => `https://${m[1]}`)));
     const hosts = [...found].filter((h) => !linkOnly.includes(h));
     expect(hosts).toEqual(["https://tiles.openfreemap.org"]);

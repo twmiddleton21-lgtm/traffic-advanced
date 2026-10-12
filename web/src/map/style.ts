@@ -1,12 +1,16 @@
 import type { ExpressionSpecification, FilterSpecification, LayerSpecification, StyleSpecification } from "maplibre-gl";
+import { pointLayers, zoneLayers } from "./restrictionLayers.ts";
+import { routesJunctionLayer } from "./routesLayers.ts";
 
 /**
  * Traffic Advanced map layers as plain data, so they can be tested without a browser.
  *
  * Draw order (bottom → top) gives the label priority asked for: MapLibre places symbols from the top layer down, so a higher
  * layer wins a label collision.
- *   base map → road emphasis lines → closures → closure markers → B-road/A-road numbers → junction numbers → primary-route and
- *   motorway numbers → diversion route → direction arrows → diversion start/rejoin → selected closure → its confirmed junctions
+ *   base map → road emphasis lines → [London zones] → closures → closure markers → B-road/A-road numbers → junction numbers →
+ *   primary-route and motorway numbers → [weight and height restriction markers] → diversion route → direction arrows → diversion
+ *   start/rejoin → selected closure → its confirmed junctions        ([…] hidden until switched on in Settings)
+ * The Routes view's junction numbers sit with the Closures view's (Routes only); viewLayers.ts says which view shows what.
  */
 export type Theme = "light" | "dark";
 
@@ -270,11 +274,27 @@ export function baseLabelAdjustments(style: Pick<StyleSpecification, "layers">):
   return { hide, minzoom };
 }
 
-/** All Traffic Advanced overlay layers in draw order (bottom → top), added on top of the base map. */
+/**
+ * All Traffic Advanced overlay layers in draw order (bottom → top), added on top of the base map. Restriction layers are hidden until
+ * switched on (restrictionLayers.ts): the London zones under the closures, the height and weight markers above road numbers and
+ * under the selected closure's diversion.
+ */
 export function overlayLayers(): LayerSpecification[] {
   const closure = closureLayers();
   const roads = roadNumberLayers();
-  return [...closure.base, ...roads.low, junctionLayer, ...roads.high, ...diversionLayers(), ...closure.selected, confirmedJunctionLayer];
+  return [
+    ...zoneLayers(),
+    ...closure.base,
+    ...roads.low,
+    junctionLayer,
+    routesJunctionLayer,
+    ...roads.high,
+    ...pointLayers("weight"),
+    ...pointLayers("height"),
+    ...diversionLayers(),
+    ...closure.selected,
+    confirmedJunctionLayer,
+  ];
 }
 
 /**

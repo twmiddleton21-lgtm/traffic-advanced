@@ -7,16 +7,18 @@ than 3 months before relying on it. "SRN" = Strategic Road Network (England's mo
 
 | # | Source | Coords | Direction | Event ID | Diversion link | HGV restrictions | Key | Limit | Licence | Production use |
 |---|---|---|---|---|---|---|---|---|---|---|
-| S1 | NH Road & Lane Closures API v2.0 | ✅ WGS84 line (lat lon order) | ✅ enum | ✅ situation (= S2 event no.) + record id/version | ❌ none | ⚠ flags only | ✅ required | 10 calls/min/key | OGL v3.0 | ✅ primary (verified 2026-10-05) |
+| S1 | NH Road & Lane Closures API v2.0 | ✅ WGS84 line (lat lon order) | ✅ enum | ✅ situation (= S2 event no.) + record id/version | ❌ none | ⚠ flags only | ✅ required | 10 calls/min/key | OGL v3.0 ⚠ **unresolved**: the portal T&Cs say OGL v2.0 with NH amendments (see "Developer Portal licence") | ✅ primary (verified 2026-10-05) |
 | S2 | NH Public Scheduled Road Closures (ArcGIS) | ✅ line | ⚠ in text only | ✅ event number | ❌ (text only) | ❌ | ❌ none | ArcGIS fair use | OGL v3.0 | ✅ fallback/cross-check |
 | S3 | NH 7-day Road Closure Report (xlsx) | ❌ | ✅ column | ❌ | ❌ (text only) | ❌ | ❌ none | n/a | not stated on page | ⚠ cross-check only |
 | S4 | NH Diversion Routes (ArcGIS) | ✅ lines/points | ✅ | ✅ route + stretch GUIDs | ⚠ to a *stretch*, not to an event | ✅ values + points | ❌ none | ArcGIS fair use, 1000/page | OGL v3.0 + OS attribution (verified 2026-10-05) | ✅ diversion geometry |
 | S5 | NH Network Model (ArcGIS) | ✅ | ✅ | ✅ link/node GUIDs | (join key) | ✅ 18 SRN restrictions | ❌ none | ArcGIS fair use | OGL v3.0 | ✅ road geometry + joins |
-| S6 | NH Speed Managed Areas API | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ (same portal) | 10/min | OGL v3.0 (verified 2026-10-05) | ✅ official congestion signal |
+| S6 | NH Speed Managed Areas API | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ (same portal) | 10/min | OGL v3.0 per the API's OpenAPI export (2026-10-05) ⚠ **unresolved**: the portal T&Cs say OGL v2.0 with NH amendments (see "Developer Portal licence") | ✅ official congestion signal |
 | S7 | NH Digital VMS API | ✅ points | ✅ | ✅ | ❌ | ❌ | ✅ | 10/min | *verify* | ⚠ has display-use conditions |
 | S8 | NTIS DATEX II (speeds, journey times, events) | ✅ | ✅ | ✅ | *unverified* | *unverified* | subscription | *unverified* | *unverified* | ❓ access route unverified |
 | S9 | TomTom Traffic flow/incident tiles | tiles | n/a | n/a | ❌ | ❌ | ✅ | **200K tiles/month** (pricing page) | TomTom T&Cs | ⚠ optional overlay only |
 | S10 | OpenFreeMap base map | tiles | n/a | n/a | n/a | n/a | ❌ | none stated | OSM ODbL + attribution | ✅ (no SLA) |
+| S11 | TfL open data: height restrictions; LEZ and ULEZ boundaries | ✅ WGS84 + BNG / encoded polylines | n/a | grid ref | n/a | ✅ heights (bands only), London | ❌ none | 500 calls/min/feed | TfL Transport Data Service licence (verified 2026-10-09, re-checked 2026-10-12; registration not required by any published page, not confirmed with TfL) | ✅ restriction layers (docs/RESTRICTIONS.md) |
+| S12 | OpenStreetMap restriction tags (Overpass) | ✅ | n/a | element id + version | n/a | ✅ heights, weights (community) | ❌ none | Overpass usage policy | ODbL 1.0 (verified 2026-10-09) | ⏸ pipeline ready, **not in the 2026-10-09 build** (Overpass unavailable); labelled unverified when added |
 
 ## S1: Road and Lane Closures API v2.0
 
@@ -54,6 +56,51 @@ than 3 months before relying on it. "SRN" = Strategic Road Network (England's mo
 - **Unplanned closures (verified twice 2026-10-05):** situation ids are roadside signal ids (`signs/<signal>`), source "Signs and Signals",
   15-minute windows, and every record reported 0 lanes restricted with all lanes "Open". No real unplanned closure observed yet.
 - Sources: developer portal API catalogue (`/developer/apis?api-version=2022-04-01-preview`), schema export, FAQ, changelog.
+
+
+### Developer Portal licence (S1, S6): unresolved discrepancy (checked 2026-10-12)
+
+Two National Highways statements disagree about the licence for data from the Developer Portal APIs (S1 closures, S6 speed
+managed areas). **Not resolved:** the stated licence above is left as it was, flagged, until National Highways confirms which
+applies. The app's credit ("National Highways, Open Government Licence v3.0") is unchanged.
+
+- **Portal Terms & Conditions** (`https://developer.data.nationalhighways.co.uk/terms`, read 2026-10-12, no date or version shown):
+  - Paragraph 1: "These licence terms and conditions are based on version 2.0 of the Open Government Licence with specific
+    amendments for NH." The amendments aren't listed separately.
+  - Paragraph 20(a) asks for this attribution: "Powered by National Highways' Transport Data Feeds". **The app doesn't show this
+    statement.**
+  - Paragraph 19 allows copying, publishing, distributing and commercial use.
+  - Paragraph 21(c): no rights to use the Information after the licence ends.
+  - Paragraph 21(e): no "trawling, data mining and screen scraping" without a separate written licence. Whether scheduled API
+    calls count isn't stated.
+  - Paragraph 13: the data is "currently supplied to You without charge"; charging needs at least 6 months' notice.
+  - No caching clause.
+- **Portal FAQ** (`/faq`, read 2026-10-12): no licence statement; it refers to the terms. Rate limit "10 calls per subscription
+  key per minute".
+- **The APIs' own metadata says OGL v3.0 (verified 2026-10-12, later the same day).** The portal's public API list
+  (`https://developer.data.nationalhighways.co.uk/developer/apis?api-version=2022-04-01-preview`, readable without signing in)
+  gives `"license": {"name": "Open Government License (OGLv3.0)", "url": null}` for `road-and-lane-closures-v2` (S1) and
+  `speed-managed-areas-v1` (S6), with contact digitallaboperations@nationalhighways.co.uk. S1's OpenAPI export
+  (`…/developer/apis/road-and-lane-closures-v2?export=true&format=openapi%2Bjson&api-version=2022-04-01-preview`) repeats it.
+  This is now the evidence for S1's OGL v3.0 entry, and it matches S6's 2026-10-05 record.
+- **Automated requests:** S1's API description expects regular calls: "it is your responsibility to call the API as frequently
+  as appropriate", and "set modifiedSinceDateTime to now() minus 15 minutes". Paragraph 17 of the terms refers to "Your
+  interface used to access the Information". Whether paragraph 21(e) covers keyed polling is still not stated (interpretation:
+  probably not, but unconfirmed).
+- **Still unresolved:**
+  - which statement governs (OGL v3.0 in the metadata, or the OGL v2.0-based terms that key holders subscribe under);
+  - the exact attribution;
+  - NH branding guidelines (paragraph 20(b), not found);
+  - caching after the licence ends (paragraph 21(c)).
+
+  A draft enquiry (not sent) is in `docs/LIVE-TRAFFIC-RESEARCH.md`.
+
+To resolve, the owner should:
+1. ask National Highways which licence and attribution apply to S1 and S6 (and whether the paragraph 20(a) statement is required
+   alongside, or instead of, the OGL v3.0 credit);
+2. keep a copy of each API's OpenAPI licence field.
+
+Adding "Powered by National Highways' Transport Data Feeds" to the map credits is a wording change for the owner to approve.
 
 ## S2: Public Scheduled Road Closures (ArcGIS feature service)
 
@@ -98,6 +145,20 @@ than 3 months before relying on it. "SRN" = Strategic Road Network (England's mo
 - `SRNStartNode`/`SRNEndNode` are where the *diversion* leaves and rejoins the SRN, which isn't always the stretch's labelled junction (e.g. `M54/J1/M6/J10A/2` starts at M54 J2).
 - **Licence (verified 2026-10-05, item terms):** Open Government Licence. Required attribution: "Data derived from Ordnance Survey Highway
   Network, Subject to Crown copyright and database rights 2024. Ordnance Survey Licence: AC0000827444."
+  - Re-read 2026-10-09 from the item's ArcGIS licence field (`licenseInfo`):
+    - It says "The data is published under an Open Government Licence". The words "Open Government Licence" link to
+      `https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/`, so the publisher identifies **OGL v3.0**.
+    - The visible text alone gives no version, which an earlier reading on the same day relied on.
+    - The restriction layers now say OGL v3.0 and keep NH's Ordnance Survey attribution verbatim.
+  - **Caveat:** the app relies on National Highways' published OGL v3.0 statement. Underlying third-party rights, including Ordnance
+    Survey rights, have **not** been independently verified.
+  - The project owner accepted this remaining rights risk for release on 2026-10-12. The rights are still not verified.
+- **`DiversionPoint` weights (checked 2026-10-09):**
+  - Only `RestrictionType` "weight", `MeasureValue` and `MeasureUnit` "Tonnes". No direction, extent, vehicle class or exemptions.
+  - One point per route and direction: 84 records at 75 places.
+  - Of the 77 records at 7.5 t, 73 are on routes whose `WeightLimitTonnes` is also 7.5.
+  - Some route descriptions say the route is for "Vehicles under 7.5t Only".
+  - Shown as values of unrecorded type, never as lorry or all-vehicle limits (`docs/RESTRICTIONS.md`).
 - **Classification is not enough for HGVs (verified 2026-10-05):** 46 Class 1A/1B routes have height limits < 4.95 m, 74 have weight limits
   < 44 t, and 5 are described "Non HGV" / "Cars only" while Class 1A. Route numbers mark sub-diversions, HGV vs non-HGV variants or side-road
   flows, not a consistent "primary" order.
@@ -142,6 +203,9 @@ than 3 months before relying on it. "SRN" = Strategic Road Network (England's mo
 
 ## S9: TomTom Traffic
 
+- **Status (2026-10-12): not used by the first release.** Live TomTom traffic is deferred: the app doesn't show it, the Worker
+  doesn't route it, and no account, key or usage counter is configured. No TomTom licence, terms, attribution or use of TomTom's
+  name has been approved; the open questions, and the terms text read on 2026-10-12, are in `docs/LIVE-TRAFFIC-RESEARCH.md`.
 - Pricing page (2026-10-05): Traffic Flow & Incidents raster/vector tiles **200K requests/month free**; incident details 2.5K/month;
   no credit card. Third-party sources report 50K tiles/day + 2.5K non-tile/day and blocking (not billing) at the limit:
   **conflicting, treat 200K/month as the planning figure until confirmed in the account dashboard.**
@@ -164,6 +228,100 @@ than 3 months before relying on it. "SRN" = Strategic Road Network (England's mo
   A probe worker served under the app's CSP (`web/public/_headers`) fetched a vector tile, a glyph range and the sprite, decoded the
   sprite and drew text on an OffscreenCanvas; only `data:` fetches and other hosts were blocked. MapLibre's worker makes no `data:`
   fetches (its `data:` strings are object keys).
+
+## S11: TfL open data (restriction layers, checked 2026-10-09)
+
+- **Licence:** [Transport Data Service licence](https://tfl.gov.uk/corporate/terms-and-conditions/transport-data-service), "based on
+  version 2.0 of the Open Government Licence with specific amendments for Transport for London".
+  - **Allows:** copying, publishing, distributing, adapting, and commercial and non-commercial use.
+  - **Requires** the attribution "Powered by TfL Open Data", "Contains OS data © Crown copyright and database rights 2016" and
+    "Geomni UK Map data © and database rights [2019]".
+  - **Forbids** suggesting official status or TfL endorsement, and more than 500 calls per minute per feed.
+  - **Re-checked 2026-10-12** (licence page, which shows no last-updated date):
+    - Attribution: "Acknowledge TfL as the source of the Information by including the following attribution statement
+      'Powered by TfL Open Data'" and "…'Contains OS data © Crown copyright and database rights 2016' and Geomni UK Map data
+      © and database rights [2019]". The shipped attribution matches all three word for word, including "[2019]".
+    - Non-endorsement: "This Licence does not grant You any right to use the Information in a way that suggests any official
+      status or that TfL endorses You or Your use of the Information."
+    - Branding: "…following our design and branding guidelines". Those guidelines (`tfl.gov.uk/info-for/open-data-users/design-and-branding`)
+      say "Use our data - not our brand": no roundel, trademarks, New Johnston font, or terms implying a partnership "(like
+      'official' or 'in partnership')". The app uses none; TfL records say only "Source: Transport for London".
+    - Rate limit: "Limit traffic requests up to a maximum of 500 calls per minute per data feed." The app downloads each file
+      once per build and serves its own copies.
+    - Notification: none stated in the licence. "TfL may at any time revise this Licence without notice"; continued use counts as acceptance,
+      so the terms must be re-checked before each data update.
+  - **Registration (accepted, not confirmed with TfL):** the licence "shall apply from the date of registration", but no TfL page
+    requires registration for these static files. "Our open data" (`tfl.gov.uk/info-for/open-data-users/our-open-data`, read
+    2026-10-12) says "You need to register…" only for live feeds and APIs; its Roads entries don't mention it.
+  - **"Demonstration purposes only":** that page also says "The example data listed below are not updated and are for
+    demonstration purposes only." Whether it covers the Roads static files is unclear (`docs/RESTRICTIONS.md`).
+- **Which terms govern each file (checked 2026-10-12):**
+  - Heights: the London Datastore entry (`data.london.gov.uk/dataset/bridges-tunnels-road-barriers-height-restrictions-epowr`)
+    lists this exact file with "Licence: Transport Data Service Licence", publisher TfL, "Last Update: almost 7 years ago". TfL's
+    page: "available in our Roads data bucket under the folder /BridgesRestrictions", "Data last updated in October 2019".
+  - `lez.json`: **inferred** TDS. It is in the same bucket, but no TfL page links it; TfL's LEZ link is
+    `boundaries/LEZ_Boundary_20071113_tab_shape.zip`.
+  - `ULEZ_Boundary_20230829.json`: TDS, by the same reasoning. TfL links the same dated release as
+    `Boundaries/ULEZ_Boundary_20230829_Shape+Files.zip`.
+  - The three files were unchanged on 2026-10-12 (same `Last-Modified` and sizes as the 2026-10-09 download; `lez.json` and the
+    ULEZ JSON share one ETag).
+- **Not open data:** the LEZ/ULEZ rule sentences quoted from tfl.gov.uk pages fall under TfL's website terms
+  (`tfl.gov.uk/corporate/terms-and-conditions/website`): personal non-commercial use only without permission. The app no longer
+  shows them, and since 2026-10-12 the zone files, schema and build script no longer contain them (`docs/RESTRICTIONS.md`).
+- **Files** (bucket `roads.data.tfl.gov.uk`, no key):
+  - `BridgesRestrictions/height-restrictions-in-london.xlsx`: 90,944 bytes, last modified 2019-10-09. It has 877 structures
+    with height **bands**, BNG and WGS84 coordinates, borough, road name and number, red route flag and comments. **No weights.**
+    Its WGS84 coordinates match our OS-method conversion of its BNG coordinates to within 0.1 m for all 877.
+  - `Boundaries/lez.json` (last modified 2023-07-20) and `Boundaries/ULEZ_Boundary_20230829.json` (2023-09-13): each is 22 Google
+    encoded polylines, and the two files are **byte-identical** (SHA-256 `de14c05c…`).
+    - The ULEZ shapefile zip is identical to the LEZ 2021 zip, and contains `LEZ.shp`.
+    - TfL's LEZ page says the ULEZ "operates in the same zone".
+- **Cross-check:** GLA London Datastore "London Wide Ultra Low Emission Zone 2023" (OGL v2.0, GeoJSON in EPSG:27700).
+  - Publisher GLA, author TfL, update frequency "One off".
+  - Licence "Open Government Licence v2", with no attribution statement specified (re-checked 2026-10-12). The comparison
+    figures are credited with OGL v2.0's default statement, "Contains public sector information licensed under the Open
+    Government Licence v2.0.", in Settings → Sources and licences.
+  - The dataset page (2026-10-09) says it was last updated "over 2 years ago". The downloaded file's HTTP `Last-Modified` is
+    2025-10-21, which is not a data date.
+  - Its 22 polygons are labelled `BOUNDARY: "Low Emission Zone"`.
+  - Converted to WGS84 and compared with TfL's boundary:
+    - GLA vertices to TfL's line: median 2.3 m, 99th percentile 10.6 m, maximum 41.7 m;
+    - TfL vertices to the GLA's line: median 1.3 m, 99th percentile 9.6 m, maximum 110.7 m, on one stretch by the M25 near
+      Heathrow. The cause is not verified.
+- **Use:** see `docs/RESTRICTIONS.md`.
+
+## S12: OpenStreetMap restriction tags (checked 2026-10-09)
+
+- **Tags:** `maxheight`, `maxheight:physical`, `maxweight`, `maxweightrating`, `maxweightrating:hgv` and `maxweight:hgv`, plus
+  `:conditional` forms, on roads used by motor vehicles and on nodes. The query is
+  `scripts/restrictions/osm-england.overpassql`, run as 24 bounding-box tiles. Overpass doesn't clip them: the build keeps only
+  elements inside England using the ONS boundary (below).
+- **UK practice:**
+  - `maxweightrating:hgv` is the lorry-symbol (environmental) limit, and the older `maxweight:hgv` means the same (about 1,500
+    were being converted in 2025).
+  - `maxweight` is an all-vehicle limit.
+- **Values seen in a central London sample of 1,958 elements:**
+  - `maxweightrating:hgv` was the most common (671), with exemptions `none @ delivery` (288) and `none @ destination` (234);
+  - `maxheight` included `default` (189), `below_default` (84) and feet-inches (`15'3"` …);
+  - one weight was in `KG`.
+- **Licence:** ODbL 1.0. A filtered extract that is used publicly is a derivative database and must be offered under ODbL
+  (`docs/RESTRICTIONS.md`).
+- **Overpass:** the public instance announces a rate limit per IP (2 to 4 slots). It was overloaded for much of 2026-10-09 (HTTP
+  504 "server is probably too busy"). The VK Maps instance (`maps.mail.ru`) also failed for part of that time.
+  - Clipping to England on the server is the costly part: a large tile with a per-statement area clip ran for over 5 minutes, and
+    one clip per tile for nearly 10.
+  - Bounding-box queries for central London took about 15 s. So the tiles are bounding-box only, and the build clips to England
+    with the ONS boundary (below).
+- **England boundary for the clip:** ONS "Countries (December 2023) Boundaries UK BFE" (full resolution, extent of the realm),
+  England (`E92000001`), simplified to 10 m by the ArcGIS service (`maxAllowableOffset=10`), British National Grid, 93 rings.
+  - OGL v3.0, with "Source: Office for National Statistics licensed under the Open Government Licence v3.0. Contains OS data ©
+    Crown copyright and database right 2023."
+  - Checked: inside England for London, Chester, Carlisle, Berwick, Penzance, the Isles of Scilly and seafront roads (Brighton,
+    Blackpool, Dover docks, Liverpool Pier Head, Southend); outside for Cardiff, Wrexham, Chepstow, Gretna, Calais and the Isle
+    of Man.
+- **Completeness:** unknown. There is no official full list to compare against.
+- **Not in the 2026-10-09 build:** Overpass stayed overloaded, so no complete England download was possible
+  (`docs/RESTRICTIONS.md`).
 
 ## Routing services (for classification C, post-V1)
 

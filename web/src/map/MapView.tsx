@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import type { TrafficClosure } from "../../../shared/api/closures.ts";
 import type { Junction } from "../../../shared/api/junctions.ts";
 import { WIDE_QUERY } from "../hooks/useWideLayout.ts";
+import { createViewCameras, type AppView } from "../routemap/view.ts";
 import { addMapImages } from "./images.ts";
 import {
   createLocationErrors,
@@ -19,12 +20,22 @@ import {
   type LocationNotice,
 } from "./location.ts";
 import { closureBounds, closureLines, closureMarkers, confirmedJunctionNames, diversionEnds, ENGLAND_BOUNDS, junctionPoints, selectedRouteLines } from "./layers.ts";
+import type { RestrictionLayer } from "../settings/preferences.ts";
+import type { LayerData } from "../restrictions/useRestrictionData.ts";
+import { EMPTY, layerIds, POINT_SOURCE_CLUSTER, RESTRICTION_MIN_ZOOM, RESTRICTION_SOURCES, restrictionFeatures, zoneFeatures } from "./restrictionLayers.ts";
+import { ROUTES_JUNCTION_SOURCE } from "./routesLayers.ts";
+import { viewLayerVisibility, type RoutesLayerSwitches } from "./viewLayers.ts";
 import { baseLabelAdjustments, confirmedJunctionFilter, overlayLayers, roadEmphasisBeforeId, roadEmphasisLayers, selectedFilter, type Theme } from "./style.ts";
 
 /** OpenFreeMap: free, no key, commercial use allowed, attribution included in the style (docs/DATA-SOURCES.md S10). */
 const STYLE_URL = { light: "https://tiles.openfreemap.org/styles/positron", dark: "https://tiles.openfreemap.org/styles/dark" } as const;
 
 interface Props {
+  /** Closures (the default) or Routes. One map serves both: switching shows each view's own layers and its own last position. */
+  view: AppView;
+  /** The Routes view's layer switches, and its junction labels (already checked: routemap/junctionLabels.ts). */
+  routeLayers: RoutesLayerSwitches;
+  routeJunctions: Junction[];
   closures: TrafficClosure[];
   selected: TrafficClosure | null;
   junctions: Junction[];
@@ -32,11 +43,33 @@ interface Props {
   /** Called whenever the map has finished rendering (MapLibre "idle"): the app's signal that the first view is ready. */
   onIdle?: () => void;
   theme: Theme;
+  /** Restriction overlays: each layer's visibility, its data once loaded, and its map credit (shown while it is on). */
+  restrictions: RestrictionOverlay[];
+  selectedRestrictionId: string | null;
+  onSelectRestriction: (id: string) => void;
+  /** The visible area after each move, for the keyboard-accessible "restrictions in view" list. Never leaves the device. */
+  onViewChange?: (view: MapViewArea) => void;
+  /** Whether the base map failed to load, for Settings' warnings. */
+  onBaseMapError?: (failed: boolean) => void;
 }
 type Latest = { current: Props };
 
+export interface RestrictionOverlay {
+  layer: RestrictionLayer;
+  visible: boolean;
+  data: LayerData | null;
+  attribution: string;
+}
+
+export interface MapViewArea {
+  /** [west, south, east, north] */
+  bounds: [number, number, number, number];
+  centre: [number, number];
+  zoom: number;
+}
+
 export function MapView(props: Props) {
-  const { closures, selected, junctions, theme } = props;
+  const { view, routeLayers, routeJunctions, closures, selected, junctions, theme, restrictions, selectedRestrictionId } = props;
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const styleTheme = useRef(theme);
@@ -46,6 +79,8 @@ export function MapView(props: Props) {
     latest.current = props;
   });
   const [baseMapError, setBaseMapError] = useState(false);
+  const cameras = useRef(createViewCameras());
+  const shownView = useRef(view);
   // Location UI state only: whether the map is following the user, and the last error. Never the coordinates (see location.ts).
   const [following, setFollowing] = useState(false);
   const [locationNotice, setLocationNotice] = useState<LocationNotice | null>(null);
@@ -116,9 +151,19 @@ export function MapView(props: Props) {
     const stopFolding = foldAttributionLater(map, container.current);
     registerInteractions(map, latest);
     map.on("idle", () => latest.current.onIdle?.());
-    map.on("error", (e: ErrorEvent) => {
+    const reportView = () => {
+      const b = map.getBounds();
+      const c = map.getCenter();
+      latest.current.onViewChange?.({ bounds: [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()], centre: [c.lng, c.lat], zoom: map.getZoom() });
+    };
+    map.on("load", reportView);
+    map.on("moveend", reportView);
+    map.on("error", (e: ErrorEvent & { sourceId?: string }) => {
       // Tile/style failures leave the list usable; tell the user rather than failing silently.
-      if (/style|tile|source/i.test(e.error.message)) setBaseMapError(true);
+      if (/style|tile|source/i.test(e.error.message)) {
+        setBaseMapError(true);
+        latest.current.onBaseMapError?.(true);
+      }
       // Registering a listener replaces MapLibre's own console report, so keep errors (e.g. invalid layers) visible to developers.
       console.error(e.error);
     });
@@ -154,19 +199,48 @@ export function MapView(props: Props) {
     updateData(map, closures, selected, junctions);
   }, [closures, selected, junctions]);
 
-  // Frame the selected closure with its whole diversion, start to rejoin.
+  // Restriction overlays: visibility, data and the selected marker. Closures and their layers are never touched here.
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !selected) return;
+    if (!map?.getSource(RESTRICTION_SOURCES.height)) return;
+    applyRestrictions(map, restrictions, selectedRestrictionId, view);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the view's own effect below re-applies them on a switch
+  }, [restrictions, selectedRestrictionId]);
+
+  // The view: each view's map position is kept for when it is shown again, and only its own layers are shown.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (shownView.current !== view) {
+      const c = map.getCenter();
+      const to = cameras.current.switchView(shownView.current, view, { center: [c.lng, c.lat], zoom: map.getZoom(), bearing: map.getBearing(), pitch: map.getPitch() });
+      shownView.current = view;
+      if (to) map.jumpTo(to);
+    }
+    if (!map.getSource(ROUTES_JUNCTION_SOURCE)) return;
+    applyView(map, view, routeLayers);
+    applyRestrictions(map, latest.current.restrictions, latest.current.selectedRestrictionId, view);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the switches are compared by value
+  }, [view, routeLayers.junctions]);
+
+  // Routes' junction labels.
+  useEffect(() => {
+    void mapRef.current?.getSource<GeoJSONSource>(ROUTES_JUNCTION_SOURCE)?.setData(junctionPoints(routeJunctions));
+  }, [routeJunctions]);
+
+  // Frame the selected closure with its whole diversion, start to rejoin (in the Closures view only; Routes keeps its own position).
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !selected || latest.current.view !== "closures") return;
     const bounds = closureBounds(selected);
     if (bounds) map.fitBounds(bounds, { padding: detailPadding(map.getContainer()), maxZoom: 12, duration: 600 });
   }, [selected]);
 
   return (
     <div className="relative h-full w-full">
-      <div ref={container} className="h-full w-full" aria-label="Map of closures" role="region" />
+      <div ref={container} className="h-full w-full" aria-label={view === "routes" ? "Route map" : "Map of closures"} role="region" />
       <div className="pointer-events-none absolute left-[max(0.75rem,env(safe-area-inset-left))] right-14 top-[calc(0.75rem+var(--ta-map-top-inset,0px))] flex flex-col items-start gap-2">
-        {baseMapError && <p className="rounded-[4px] bg-surface px-3 py-2 text-[14px] shadow">The base map couldn't load. The closures list still works.</p>}
+        {baseMapError && <p className="rounded-[4px] bg-surface px-3 py-2 text-[14px] shadow">{view === "routes" ? "The base map couldn't load." : "The base map couldn't load. The closures list still works."}</p>}
         {following && (
           <p role="status" className="rounded-[4px] border-2 border-[#1a73e8] bg-surface px-3 py-2 text-[14px] shadow">
             <span className="font-bold">Following your location.</span> Move or zoom the map to stop.
@@ -186,7 +260,7 @@ export function MapView(props: Props) {
           </div>
         )}
       </div>
-      <Legend />
+      <Legend view={view} />
     </div>
   );
 }
@@ -252,14 +326,75 @@ function installLayers(map: MapLibreMap, latest: Latest) {
   map.addSource("selected-route", { type: "geojson", data: selectedRouteLines(selected) });
   map.addSource("route-ends", { type: "geojson", data: diversionEnds(selected) });
   map.addSource("junctions", { type: "geojson", data: junctionPoints(junctions) });
+  map.addSource(ROUTES_JUNCTION_SOURCE, { type: "geojson", data: junctionPoints(latest.current.routeJunctions) });
+  // Restriction sources start empty and hidden; each carries its credit, which MapLibre shows only while its layers are visible.
+  // Height and weight markers are grouped when zoomed out (POINT_SOURCE_CLUSTER).
+  const clusterFor = (layer: RestrictionLayer) => (layer === "height" || layer === "weight" ? POINT_SOURCE_CLUSTER : {});
+  for (const r of latest.current.restrictions) map.addSource(RESTRICTION_SOURCES[r.layer], { type: "geojson", data: EMPTY, attribution: r.attribution, ...clusterFor(r.layer) });
+  for (const layer of ["height", "weight", "lez", "ulez"] as const) {
+    if (!map.getSource(RESTRICTION_SOURCES[layer])) map.addSource(RESTRICTION_SOURCES[layer], { type: "geojson", data: EMPTY, ...clusterFor(layer) });
+  }
+  shownData.delete(map);
 
   // Bottom → top; see style.ts for why this order is the label priority.
   for (const layer of overlayLayers()) map.addLayer(layer);
   applySelection(map, selected);
+  applyView(map, latest.current.view, latest.current.routeLayers);
+  applyRestrictions(map, latest.current.restrictions, latest.current.selectedRestrictionId, latest.current.view);
+}
+
+function applyView(map: MapLibreMap, view: AppView, routes: RoutesLayerSwitches) {
+  for (const { id, visible } of viewLayerVisibility(view, routes)) map.setLayoutProperty(id, "visibility", visible ? "visible" : "none");
+}
+
+/** The data each restriction source last received, so a large file is handed to MapLibre once, not on every render. */
+const shownData = new WeakMap<MapLibreMap, Map<RestrictionLayer, LayerData | null>>();
+
+function applyRestrictions(map: MapLibreMap, overlays: RestrictionOverlay[], selectedId: string | null, view: AppView) {
+  const shown = shownData.get(map) ?? new Map<RestrictionLayer, LayerData | null>();
+  shownData.set(map, shown);
+  for (const o of overlays) {
+    // Restrictions belong to the Closures view; in Routes they are hidden but keep their data and switches.
+    const visible = view === "closures" && o.visible && o.data !== null;
+    for (const id of layerIds(o.layer)) map.setLayoutProperty(id, "visibility", visible ? "visible" : "none");
+    if (o.data && shown.get(o.layer) !== o.data) {
+      shown.set(o.layer, o.data);
+      const source = map.getSource<GeoJSONSource>(RESTRICTION_SOURCES[o.layer]);
+      void source?.setData("points" in o.data ? restrictionFeatures(o.data.points) : zoneFeatures(o.data.zones));
+    }
+  }
+  for (const layer of ["height", "weight"] as const) map.setFilter(`restriction-${layer}-selected`, ["==", ["get", "id"], selectedId ?? "__none__"]);
 }
 
 /** Layer-scoped handlers survive style swaps in MapLibre, so they're registered once, not on every "style.load". */
 function registerInteractions(map: MapLibreMap, latest: Latest) {
+  // Restriction markers open their details, unless a closure is under the tap: closures keep priority.
+  for (const layer of ["restriction-height", "restriction-weight"]) {
+    map.on("click", layer, (e) => {
+      if (map.queryRenderedFeatures(e.point, { layers: ["marker", "closure-line", "selected-marker"] }).length > 0) return;
+      const id = e.features?.[0]?.properties?.["id"] as string | undefined;
+      if (id) latest.current.onSelectRestriction(id);
+    });
+    map.on("mouseenter", layer, () => (map.getCanvas().style.cursor = "pointer"));
+    map.on("mouseleave", layer, () => (map.getCanvas().style.cursor = ""));
+  }
+  // A group of restrictions zooms in until it splits (the "Restrictions" list is the keyboard route to the same records).
+  for (const layer of ["height", "weight"] as const) {
+    const group = `restriction-${layer}-group`;
+    map.on("click", group, (e) => {
+      if (map.queryRenderedFeatures(e.point, { layers: ["marker", "closure-line", "selected-marker"] }).length > 0) return;
+      const feature = e.features?.[0];
+      const clusterId = feature?.properties?.["cluster_id"] as number | undefined;
+      if (clusterId === undefined || feature?.geometry.type !== "Point") return;
+      const centre = feature.geometry.coordinates as [number, number];
+      void map
+        .getSource<GeoJSONSource>(RESTRICTION_SOURCES[layer])
+        ?.getClusterExpansionZoom(clusterId)
+        .then((zoom) => map.easeTo({ center: centre, zoom: Math.min(zoom, RESTRICTION_MIN_ZOOM) }));
+    });
+    map.on("mouseenter", group, () => (map.getCanvas().style.cursor = "pointer"));
+    map.on("mouseleave", group, () => (map.getCanvas().style.cursor = ""));
+  }
   for (const layer of ["marker", "closure-line", "selected-marker"]) {
     map.on("click", layer, (e) => {
       const id = e.features?.[0]?.properties?.["id"] as string | undefined;
@@ -285,8 +420,9 @@ function updateData(map: MapLibreMap, closures: TrafficClosure[], selected: Traf
   applySelection(map, selected);
 }
 
-function Legend() {
-  // Open by default where there's room; on phones and tablets the key starts closed so it doesn't cover the map.
+function Legend({ view }: { view: AppView }) {
+  // Open by default where there's room; on phones and tablets the key starts closed so it doesn't cover the map. One key, so it
+  // stays open or closed across a view switch; its rows are the view's own.
   const [open] = useState(() => window.matchMedia(WIDE_QUERY).matches);
   return (
     <details
@@ -294,44 +430,83 @@ function Legend() {
       className="absolute bottom-[calc(2rem+env(safe-area-inset-bottom))] left-[max(0.75rem,env(safe-area-inset-left))] max-w-[calc(100%-1.5rem)] rounded-[4px] border border-line bg-surface/95 text-[13px] shadow-sm"
     >
       <summary className="flex min-h-11 cursor-pointer select-none items-center px-3 font-bold lg:min-h-0 lg:py-2">Map key</summary>
-      <ul className="space-y-1.5 px-3 pb-2.5">
-        <li className="flex items-center gap-2">
-          <ClosureGlyph /> Closed carriageway
-        </li>
-        <li className="flex items-center gap-2">
-          <RouteGlyph /> Official diversion route, arrows show the way to drive
-        </li>
-        <li className="flex items-center gap-2">
-          <span className="flex w-7 justify-center gap-1" aria-hidden="true">
-            <span className="size-3 rounded-full border-[3px] border-[#14191e] bg-white" />
-            <span className="size-3 rounded-full border-[3px] border-white bg-[#14191e] ring-1 ring-[#14191e]" />
-          </span>
-          Diversion starts / rejoins
-        </li>
-        <li className="flex items-center gap-2">
-          <span className="flex w-7 gap-0.5" aria-hidden="true">
-            {["A", "B"].map((x) => (
-              <span key={x} className="grid size-3.5 place-items-center rounded-full border border-[#14191e] bg-sign text-[9px] font-bold text-[#14191e]">
-                {x}
-              </span>
-            ))}
-          </span>
-          Official diversion information
-        </li>
-        <li className="flex items-center gap-2">
-          <span className="flex w-7" aria-hidden="true">
-            <span className="grid size-3.5 place-items-center rounded-full border border-[#14191e] bg-unmatched text-[9px] font-bold text-white">D</span>
-          </span>
-          No reliable diversion
-        </li>
-        <li className="flex items-center gap-2">
-          <span className="flex w-7" aria-hidden="true">
-            <span className="rounded-[3px] border border-white bg-[#14191e] px-1 text-[10px] font-bold leading-[14px] text-white ring-1 ring-[#14191e]">J4</span>
-          </span>
-          Junction number (National Highways)
-        </li>
-      </ul>
+      {view === "routes" ? <RoutesKey /> : <ClosuresKey />}
     </details>
+  );
+}
+
+function RoutesKey() {
+  return (
+    <ul className="space-y-1.5 px-3 pb-2.5">
+      <li className="flex items-center gap-2">
+        <RoadGlyph className="stroke-[#0b4f9c] dark:stroke-[#4a8fe0]" /> Motorway
+      </li>
+      <li className="flex items-center gap-2">
+        <RoadGlyph className="stroke-[#00703c] dark:stroke-[#2fa66a]" /> Primary route (green-signed A road)
+      </li>
+      <li className="flex items-center gap-2">
+        <JunctionGlyph />
+        Junction number (National Highways roads only)
+      </li>
+    </ul>
+  );
+}
+
+function RoadGlyph({ className }: { className: string }) {
+  return (
+    <svg viewBox="0 0 28 10" className="h-2.5 w-7 shrink-0" aria-hidden="true">
+      <path d="M2 5 H26" className={className} strokeWidth="4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function JunctionGlyph() {
+  return (
+    <span className="flex w-7" aria-hidden="true">
+      <span className="rounded-[3px] border border-white bg-[#14191e] px-1 text-[10px] font-bold leading-[14px] text-white ring-1 ring-[#14191e]">J4</span>
+    </span>
+  );
+}
+
+function ClosuresKey() {
+  return (
+    <ul className="space-y-1.5 px-3 pb-2.5">
+      <li className="flex items-center gap-2">
+        <ClosureGlyph /> Closed carriageway
+      </li>
+      <li className="flex items-center gap-2">
+        <RouteGlyph /> Official diversion route, arrows show the way to drive
+      </li>
+      <li className="flex items-center gap-2">
+        <span className="flex w-7 justify-center gap-1" aria-hidden="true">
+          <span className="size-3 rounded-full border-[3px] border-[#14191e] bg-white" />
+          <span className="size-3 rounded-full border-[3px] border-white bg-[#14191e] ring-1 ring-[#14191e]" />
+        </span>
+        Diversion starts / rejoins
+      </li>
+      <li className="flex items-center gap-2">
+        <span className="flex w-7 gap-0.5" aria-hidden="true">
+          {["A", "B"].map((x) => (
+            <span key={x} className="grid size-3.5 place-items-center rounded-full border border-[#14191e] bg-sign text-[9px] font-bold text-[#14191e]">
+              {x}
+            </span>
+          ))}
+        </span>
+        Official diversion information
+      </li>
+      <li className="flex items-center gap-2">
+        <span className="flex w-7" aria-hidden="true">
+          <span className="grid size-3.5 place-items-center rounded-full border border-[#14191e] bg-unmatched text-[9px] font-bold text-white">D</span>
+        </span>
+        No reliable diversion
+      </li>
+      <li className="flex items-center gap-2">
+        <span className="flex w-7" aria-hidden="true">
+          <span className="rounded-[3px] border border-white bg-[#14191e] px-1 text-[10px] font-bold leading-[14px] text-white ring-1 ring-[#14191e]">J4</span>
+        </span>
+        Junction number (National Highways)
+      </li>
+    </ul>
   );
 }
 
