@@ -148,14 +148,16 @@ describe("restriction data build (real trimmed fixtures)", () => {
     expect(height.features.filter((f) => f.source === "osm").every((f) => f.osm && f.osm.version > 0)).toBe(true);
   });
 
-  it("checks the ULEZ boundary against the GLA's independent copy and labels the zones separately with TfL's own rules", () => {
+  it("checks the ULEZ boundary against the GLA's independent copy, labels the zones separately and links each to TfL's page", () => {
     const ulez = files["ulez.json"] as ZonesFile;
     const lez = files["lez.json"] as ZonesFile;
     expect(report.boundaryCheck).toMatchObject({ sameAsLez: true });
     expect(lez.zones[0]).toMatchObject({ id: "lez", name: "London Low Emission Zone (LEZ)" });
     expect(ulez.zones[0]).toMatchObject({ id: "ulez", name: "London Ultra Low Emission Zone (ULEZ)" });
-    expect(ulez.zones[0]!.rules.join(" ")).toMatch(/over 3\.5 tonnes\) .*do not need to pay the ULEZ charge/);
-    expect(lez.zones[0]!.rules.join(" ")).toMatch(/heavy diesel vehicles/);
+    // No rule text is stored: TfL's rules are website text, not open data (docs/RESTRICTIONS.md).
+    for (const zone of [lez.zones[0]!, ulez.zones[0]!]) expect(Object.keys(zone)).not.toContain("rules");
+    expect(lez.zones[0]!.rulesUrl).toBe("https://tfl.gov.uk/modes/driving/low-emission-zone");
+    expect(ulez.zones[0]!.rulesUrl).toBe("https://tfl.gov.uk/modes/driving/ultra-low-emission-zone");
     expect(ulez.sources[0]!.notes.join(" ")).toMatch(/same boundary for the ULEZ and the LEZ/);
   });
 

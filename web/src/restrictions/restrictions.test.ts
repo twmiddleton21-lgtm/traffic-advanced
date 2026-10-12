@@ -349,10 +349,11 @@ describe("LEZ and ULEZ details", () => {
     h(RestrictionsDialog, { open: false, onClose: () => undefined, returnFocus: () => null, view: { bounds: [-0.2, 51.45, 0, 51.55], centre: [-0.1, 51.5], zoom: 12 }, points: [], zones, selectedId: null, onSelect: () => undefined, now: new Date("2026-10-12T10:00:00Z") }),
   );
 
-  it("don't show TfL's website rule sentences (kept in the data files), but say TfL sets the rules and link to TfL's pages", () => {
-    const rules = zones.flatMap((f) => f.zones.flatMap((z) => z.rules));
-    expect(rules.length).toBeGreaterThan(0);
-    for (const r of rules) expect(out).not.toContain(esc(r));
+  it("say TfL sets the rules and link to TfL's pages; the zone data carries no rule text to show (TfL's is website text)", () => {
+    for (const z of ["lez", "ulez"]) {
+      const raw = JSON.parse(readFileSync(`web/src/restrictions/data/${z}.json`, "utf8")) as { zones: Record<string, unknown>[] };
+      expect(Object.keys(raw.zones[0]!), z).not.toContain("rules");
+    }
     expect(out).not.toContain("TfL says");
     expect(out.split(esc(ZONE_RULES_TEXT)).length - 1).toBe(2);
     expect(out).toContain('href="https://tfl.gov.uk/modes/driving/low-emission-zone"');

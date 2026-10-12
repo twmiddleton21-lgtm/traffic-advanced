@@ -65,9 +65,12 @@ describe("shipped restriction data", () => {
     for (const f of ["web/src/restrictions/describe.ts", "web/src/components/RestrictionsDialog.tsx"]) expect(readFileSync(f, "utf8")).not.toMatch(/Official record/);
   });
 
-  it("quotes TfL's ULEZ vehicle categories", () => {
-    const ulez = zonesFileSchema.parse(read("ulez.json"));
-    expect(ulez.zones[0]?.rules).toContain("This applies to cars, motorcycles, vans and specialist vehicles (up to and including 3.5 tonnes) and minibuses (up to and including 5 tonnes).");
+  it("ships no zone rule text: TfL's rules are tfl.gov.uk website text, not open data, so the zone files link to TfL's page instead", () => {
+    for (const name of ["lez", "ulez"]) {
+      const raw = read(`${name}.json`) as { zones: Record<string, unknown>[] };
+      expect(raw.zones.map((z) => Object.keys(z).sort()), name).toEqual([["geometry", "id", "name", "rulesUrl", "source"]]);
+      expect(zonesFileSchema.parse(raw).zones[0]?.rulesUrl, name).toMatch(/^https:\/\/tfl\.gov\.uk\/modes\/driving\//);
+    }
   });
 
   it("never states a 7.5 t lorry limit for a record whose source doesn't say so", () => {

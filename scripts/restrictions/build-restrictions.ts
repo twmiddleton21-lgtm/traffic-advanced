@@ -36,17 +36,6 @@ const TFL_LICENCE = { name: "TfL Transport Data Service licence (based on OGL v2
 const TFL_ATTRIBUTION = "Powered by TfL Open Data. Contains OS data © Crown copyright and database rights 2016. Geomni UK Map data © and database rights [2019].";
 const ODBL = { name: "Open Database License (ODbL) 1.0", url: "https://opendatacommons.org/licenses/odbl/1-0/" };
 
-/** TfL's own wording about who each zone applies to and when (tfl.gov.uk, checked 2026-10-09). Prices are left out: they change. */
-const LEZ_RULES = [
-  "The Low Emission Zone (LEZ) operates to encourage the most polluting heavy diesel vehicles driving in London to become cleaner. The LEZ covers most of Greater London and is in operation 24 hours a day, every day of the year.",
-  "The LEZ is separate from the Ultra Low Emission Zone (ULEZ) which operates in the same zone 24 hours a day, every day of the year except Christmas Day.",
-];
-const ULEZ_RULES = [
-  "To help clear London's air, the Ultra Low Emission Zone (ULEZ) operates 24 hours a day, 7 days a week, every day of the year, except Christmas Day (25 December). The zone operates across all London boroughs, and does not include the M25.",
-  "This applies to cars, motorcycles, vans and specialist vehicles (up to and including 3.5 tonnes) and minibuses (up to and including 5 tonnes).",
-  "Lorries, vans or specialist heavy vehicles (all over 3.5 tonnes) and buses, minibuses and coaches (all over 5 tonnes) do not need to pay the ULEZ charge. They will need to pay the LEZ charge if they do not meet the Low Emission Zone (LEZ) emissions standard.",
-];
-
 /**
  * The TfL and GLA copies of the boundary must agree this closely. TfL's file is rounded to about 1 m and slightly simplified, so
  * nearly every vertex is within about 11 m; a wrong file or coordinate system would be kilometres out. When checked (2026-10-09,
@@ -247,7 +236,7 @@ export function buildRestrictions({ tflDir, osmDir, nhDir, generatedAt }: BuildI
     schemaVersion: RESTRICTIONS_SCHEMA_VERSION,
     generatedAt,
     sources: [zoneSource("tfl-lez", lezEntry, "Low Emission Zone (LEZ) boundary", ["The boundary only: whether a vehicle must pay depends on its emissions standard. Check your vehicle with TfL."])],
-    zones: [{ id: "lez", name: "London Low Emission Zone (LEZ)", source: "tfl-lez", geometry: lez, rules: LEZ_RULES, rulesUrl: "https://tfl.gov.uk/modes/driving/low-emission-zone" }],
+    zones: [{ id: "lez", name: "London Low Emission Zone (LEZ)", source: "tfl-lez", geometry: lez, rulesUrl: "https://tfl.gov.uk/modes/driving/low-emission-zone" }],
   });
   const ulezFile = zonesFileSchema.parse({
     schemaVersion: RESTRICTIONS_SCHEMA_VERSION,
@@ -259,7 +248,7 @@ export function buildRestrictions({ tflDir, osmDir, nhDir, generatedAt }: BuildI
         `Checked against the Greater London Authority's copy of the 2023 ULEZ boundary (Open Government Licence v2.0): 99% of its points are within ${Math.ceil(boundaryCheck.glaToTfl.p99GapMetres)} m of TfL's boundary. The two copies differ by up to about ${Math.ceil(Math.max(boundaryCheck.glaToTfl.maxGapMetres, boundaryCheck.tflToGla.maxGapMetres))} m in places. Near the boundary, follow the zone signs.`,
       ]),
     ],
-    zones: [{ id: "ulez", name: "London Ultra Low Emission Zone (ULEZ)", source: "tfl-ulez", geometry: ulez, rules: ULEZ_RULES, rulesUrl: "https://tfl.gov.uk/modes/driving/ultra-low-emission-zone" }],
+    zones: [{ id: "ulez", name: "London Ultra Low Emission Zone (ULEZ)", source: "tfl-ulez", geometry: ulez, rulesUrl: "https://tfl.gov.uk/modes/driving/ultra-low-emission-zone" }],
   });
 
   const catalogue = restrictionsManifestSchema.parse({

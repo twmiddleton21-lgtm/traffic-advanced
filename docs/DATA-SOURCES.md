@@ -267,7 +267,7 @@ Adding "Powered by National Highways' Transport Data Feeds" to the map credits i
     ULEZ JSON share one ETag).
 - **Not open data:** the LEZ/ULEZ rule sentences quoted from tfl.gov.uk pages fall under TfL's website terms
   (`tfl.gov.uk/corporate/terms-and-conditions/website`): personal non-commercial use only without permission. The app no longer
-  shows them (`docs/RESTRICTIONS.md`).
+  shows them, and since 2026-10-12 the zone files, schema and build script no longer contain them (`docs/RESTRICTIONS.md`).
 - **Files** (bucket `roads.data.tfl.gov.uk`, no key):
   - `BridgesRestrictions/height-restrictions-in-london.xlsx`: 90,944 bytes, last modified 2019-10-09. It has 877 structures
     with height **bands**, BNG and WGS84 coordinates, borough, road name and number, red route flag and comments. **No weights.**

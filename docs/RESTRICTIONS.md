@@ -24,6 +24,10 @@ same downloads as before: TfL `data/raw/restrictions/2026-10-09T081333Z` and the
 geometry are unchanged. Only source notes, the NH diversion-point licence name and the ULEZ rules changed (see "Reproducing the
 files" below).
 
+On 2026-10-12 `lez.json` and `ulez.json` were regenerated offline from the same downloads, with the same `generatedAt`, after the
+zones' `rules` field was removed (see "Rules" under LEZ and ULEZ below). `height.json`, `weight.json` and `manifest.json` came out
+byte-identical, and the two zone files differ from before only by the removed field.
+
 | Layer | Records | Sources |
 |---|---|---|
 | Height | 972 records at 943 places | NH diversion points 77 (48 places), NH network 18, TfL 877 (London, bands) |
@@ -115,10 +119,11 @@ The "Restrictions in this view" list works from zoom 6, nearest the centre first
     change for the owner to approve, and needs a data rebuild (the notes are in the data files).
   - Wherever restriction layers are shown, including on the map, the disclaimer ends "Always follow road signs. This map is not a
     route check."
-- **Rules, quoted from TfL** (tfl.gov.uk, read 2026-10-09; prices left out because they change). **Not shown in the app since
-  2026-10-12:** these sentences are tfl.gov.uk website text, which TfL's website terms allow for personal non-commercial use
-  only, and are not TfL open data (see "Unresolved licence questions"). They stay in `lez.json`/`ulez.json` (the schema requires
-  them) and in the build script until the next data rebuild. The zone's details instead say: "Transport for London sets this
+- **Rules: not stored or shown (since 2026-10-12).** Earlier builds copied a few sentences from TfL's LEZ and ULEZ web pages
+  (read 2026-10-09). That is tfl.gov.uk website text, which TfL's website terms allow for personal non-commercial use only, and
+  not TfL open data (see "Unresolved licence questions"). The app stopped showing it, and the data was then minimised: the zone
+  schema (`shared/api/restrictions.ts`) and the build script no longer have a `rules` field, so `lez.json`/`ulez.json` carry
+  only the outline, the sources and the link to TfL's page. The zone's details say: "Transport for London sets this
   zone's rules and can change them. This app doesn't show the rules and isn't a check of your vehicle or route. TfL's page has
   the rules.", followed by the link to TfL's LEZ or ULEZ page. The Settings layer descriptions (`RestrictionsSection.tsx`)
   are original wording (2026-10-12; the ULEZ one previously reproduced TfL's vehicle list almost word for word):
@@ -126,14 +131,9 @@ The "Restrictions in this view" list works from zoom 6, nearest the centre first
     charge." (a summary of TfL's ULEZ page, not a quotation);
   - ULEZ: "TfL's boundary, the same as the LEZ's, but the ULEZ has different rules, set by TfL. This app doesn't check your
     vehicle against them: check with TfL."
-
-  The quoted sentences in the data files and build script are to be reconsidered at the next data rebuild.
-  - **LEZ:** "The Low Emission Zone (LEZ) operates to encourage the most polluting heavy diesel vehicles driving in London to
-    become cleaner. The LEZ covers most of Greater London and is in operation 24 hours a day, every day of the year."
-  - **ULEZ:** "This applies to cars, motorcycles, vans and specialist vehicles (up to and including 3.5 tonnes) and minibuses (up
-    to and including 5 tonnes)." "Lorries, vans or specialist heavy vehicles (all over 3.5 tonnes) and buses, minibuses and coaches (all over 5
-    tonnes) do not need to pay the ULEZ charge. They will need to pay the LEZ charge if they do not meet the Low Emission Zone
-    (LEZ) emissions standard."
+- **Schema version stays 1.** The app and its data files ship together, and each build loads its own content-hashed zone files,
+  so an app can't meet a zone file from another build. Validation strips unknown fields, so a file from before 2026-10-12, which
+  still has `rules`, validates and loses the field (checked 2026-10-12).
 
 **National Highways S4 (DiversionPoint)**
 - 176 records: 77 height in metres, 10 height in "feet", 84 weight in tonnes, 2 width in metres, 2 width in "Tonnes", and 1
@@ -222,7 +222,7 @@ files: Vite gives each a content hash (`/assets/height-<hash>.json`), so a new b
 |---|---|
 | `manifest.json` | Bundled with the app (a few KB): which layers have data, and every source's metadata and attribution. A layer without data has no switch. |
 | `height.json`, `weight.json` | Restriction points with source, kind, recorded value and range, conditions, position, road, source wording and dates. OSM records also keep element id, version and relevant tags. |
-| `lez.json`, `ulez.json` | One zone each: polygons (WGS84), TfL's rules verbatim (kept in the file but not shown in the app), the link to TfL's page for the zone, sources. |
+| `lez.json`, `ulez.json` | One zone each: polygons (WGS84), the link to TfL's page for the zone's rules (no rule text), sources. |
 
 Every file:
 - has `schemaVersion` and `generatedAt`, plus each source's licence, attribution, dataset date and download time;
@@ -318,12 +318,14 @@ three uncertainties below (registration, the demonstration notice and the `lez.j
   "Our open data" puts under the TDS licence ("Using our data is subject to our terms and conditions"), and it is byte-identical
   to `ULEZ_Boundary_20230829.json`, whose dated release TfL does link (as a shapefile zip). TfL's own LEZ link is a 2007 shapefile.
   Pointing the LEZ source at the linked 2023 release needs a data rebuild: deferred to the next one.
-- **TfL rules text (no longer shown).** The LEZ/ULEZ rule sentences came from tfl.gov.uk web pages, not open data. TfL's website
-  terms: TfL material "may not be printed, copied, reproduced, republished … except for your own personal non-commercial use. You
-  must gain our permission for any other type of use." The app now shows its own wording and a link to TfL's page instead
-  (`ZONE_RULES_TEXT`, `web/src/restrictions/describe.ts`). The sentences remain in `lez.json`/`ulez.json` (publicly
-  downloadable from the app's origin), in `scripts/restrictions/build-restrictions.ts` and in this file, until the next data
-  rebuild removes them, which also needs a decision on the schema's required `rules`.
+- **TfL rules text (removed from the app and its files, 2026-10-12).** The LEZ/ULEZ rule sentences came from tfl.gov.uk web
+  pages, not open data. TfL's website terms: TfL material "may not be printed, copied, reproduced, republished … except for your
+  own personal non-commercial use. You must gain our permission for any other type of use." The app shows its own wording and a
+  link to TfL's page instead (`ZONE_RULES_TEXT`, `web/src/restrictions/describe.ts`). As data minimisation, the sentences were
+  then removed from the zone files, the schema, the build script, the tests and this file. This is not a legal determination
+  about the earlier copies:
+  - they remain in this repository's Git history (commits before the removal), which is not rewritten;
+  - whether any deployed build ever served them is not established (`docs/PRODUCTION-LOG.md`).
 - **GLA comparison figures.** The ULEZ note publishes figures derived from the GLA's dataset (OGL v2.0; the dataset page,
   re-checked 2026-10-12, specifies no attribution statement). OGL v2.0: "acknowledge the source of the Information by including
   any attribution statement specified by the Information Provider(s) and, where possible, provide a link to this licence", with

@@ -117,8 +117,10 @@ export const zoneSchema = z.object({
   source: restrictionSourceSchema.shape.id,
   /** The polygons of the zone (GeoJSON MultiPolygon coordinates, WGS84). */
   geometry: z.array(z.array(ring).min(1)).min(1),
-  /** Who the zone applies to and when, in the authority's own words (verbatim), with where that wording came from. */
-  rules: z.array(z.string()).min(1),
+  /**
+   * The authority's own page for who the zone applies to and when. The rules themselves aren't stored: TfL's are tfl.gov.uk website
+   * text, not open data (docs/RESTRICTIONS.md). Files from before 2026-10-12 also carry a `rules` list, which validation strips.
+   */
   rulesUrl: httpsUrl,
 });
 export type Zone = z.infer<typeof zoneSchema>;
