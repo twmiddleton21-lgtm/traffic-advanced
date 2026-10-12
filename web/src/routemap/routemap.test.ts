@@ -131,20 +131,34 @@ describe("compact map keys", () => {
     expect(app).toMatch(/<MapKey\s+view=\{appView\}\s+open=\{mapKeyOpen\}\s+onOpenChange=\{setMapKeyOpen\}\s+restrictions=\{\{ statuses: Object\.values\(statuses\), zoom: view\?\.zoom \?\? null \}\}\s+className="absolute bottom-\[calc\(2rem\+env\(safe-area-inset-bottom\)\)\] left-\[max\(0\.75rem,env\(safe-area-inset-left\)\)\] z-\[1\] max-h-\[max\(6rem,calc\(100%-15rem\)\)\] w-max max-w-\[min\(22rem,calc\(100%-4\.5rem\)\)\]/);
   });
 
-  it("Routes: the key and the layer panel sit side by side at the top left, clear of the map's buttons, wrapping when opened", () => {
-    expect(app).toMatch(/<div className="pointer-events-none absolute [^"]*\bleft-\[max\(0\.75rem,env\(safe-area-inset-left\)\)\] right-14 top-3 z-10 flex flex-wrap content-start items-start gap-1\.5">\s*<MapKey view=\{appView\} open=\{mapKeyOpen\} onOpenChange=\{setMapKeyOpen\} className="max-h-full max-w-full" \/>\s*<RoutesMapControls /);
-    // The map's own notices start below that row in Routes, at every width.
-    expect(app).toMatch(/className=\{`relative min-w-0 flex-1 \[--ta-map-top-inset:3\.75rem\] \$\{closuresView \? "lg:\[--ta-map-top-inset:0px\]" : ""\}`\}/);
+  it("Routes: the Layers button at the top left, clear of the map's buttons; the map key at the bottom left, as in Closures", () => {
+    expect(app).toMatch(/<div className="pointer-events-none absolute bottom-\[calc\(11\.5rem\+env\(safe-area-inset-bottom\)\)\] lg:bottom-\[calc\(5\.5rem\+env\(safe-area-inset-bottom\)\)\] \[@media\(max-height:40rem\)\]:bottom-\[calc\(2rem\+env\(safe-area-inset-bottom\)\)\] left-\[max\(0\.75rem,env\(safe-area-inset-left\)\)\] right-14 top-3 z-10 flex items-start">\s*<RoutesMapControls /);
+    expect(app).toMatch(/<MapKey\s+view=\{appView\}\s+open=\{mapKeyOpen\}\s+onOpenChange=\{setMapKeyOpen\}\s+className="absolute bottom-\[calc\(2rem\+env\(safe-area-inset-bottom\)\)\] left-\[max\(0\.75rem,env\(safe-area-inset-left\)\)\] z-\[1\] max-h-\[max\(6rem,calc\(100%-6rem\)\)\] w-max max-w-\[min\(22rem,calc\(100%-7\.5rem\)\)\]/);
+    // Each has its own open state: one never opens or closes the other.
+    expect(app).toMatch(/<RoutesMapControls [^>]*open=\{routesPanelOpen\} onOpenChange=\{setRoutesPanelOpen\}/);
+    // The map's own notices start below the Layers button in Routes, at every width.
+    expect(app).toMatch(/\$\{closuresView \? "\[--ta-map-top-inset:3\.75rem\] lg:\[--ta-map-top-inset:0px\]" : "\[--ta-map-top-inset:4\.5rem\]"\}/);
   });
 
-  it("Routes panel: folded it is one compact 48 px line with no fixed width; open, it widens to show its notes", () => {
-    const panel = (open: boolean) =>
-      renderToStaticMarkup(h(RoutesMapControls, { layers: { junctions: true }, onToggle: () => undefined, junctions: { state: "ready", count: 596, leftOut: 0 }, onRetry: () => undefined, open, onOpenChange: () => undefined }));
-    expect(panel(false)).toMatch(/^<div class="pointer-events-auto flex max-h-full flex-col max-w-full">/);
-    expect(panel(false)).toMatch(/<summary class="[^"]*\bmin-h-12\b/);
-    expect(panel(true)).toMatch(/^<div class="pointer-events-auto flex max-h-full flex-col w-\[min\(20rem,calc\(100vw-5\.5rem\)\)\]">/);
-    // The scope note keeps its full wording inside the panel.
+  it("Layers: folded, a square 56 px map button named 'Layers' with a layers icon; open, its panel keeps the switch and both notes", () => {
+    const panel = (open: boolean, junctions: JunctionLoad = { state: "ready", count: 596, leftOut: 0 }) =>
+      renderToStaticMarkup(h(RoutesMapControls, { layers: { junctions: true }, onToggle: () => undefined, junctions, onRetry: () => undefined, open, onOpenChange: () => undefined }));
+    const summary = /<summary class="([^"]*)"><svg[^>]*aria-hidden="true"[\s\S]*?<\/svg>Layers<\/summary>/.exec(panel(false));
+    expect(summary).not.toBeNull();
+    expect(summary![1]).toMatch(/\bsize-14\b/);
+    expect(summary![1]).toMatch(/\bfocus-visible:-outline-offset-3!/);
+    expect(panel(false)).not.toContain("Route map layers");
+    // Folded: no fixed width. Open: the panel widens, with the switch, the scope note and the not-connected note.
+    expect(panel(false)).toMatch(/^<div class="pointer-events-auto flex max-h-full flex-col items-start gap-1\.5 overflow-y-auto overscroll-contain p-px ">/);
+    expect(panel(true)).toMatch(/^<div class="[^"]*\bw-\[min\(20rem,calc\(100vw-5\.5rem\)\)\]">/);
+    expect(panel(true)).toMatch(/role="switch" aria-checked="true"[^>]*>[\s\S]*Junction numbers/);
     expect(panel(true)).toContain(ROUTES_SCOPE_TEXT.replaceAll("'", "&#x27;"));
+    expect(panel(true)).toContain(NO_TRAFFIC_TEXT.replaceAll("'", "&#x27;"));
+    // Junction loading and errors stay outside the fold, under the button; with nothing to say, the box isn't drawn.
+    const fold = (html: string) => /<details[\s\S]*<\/details>/.exec(html)?.[0] ?? "";
+    const failed = panel(false, { state: "error" });
+    expect(failed.replace(fold(failed), "")).toMatch(/Junction numbers couldn&#x27;t be loaded\.[\s\S]*Try again/);
+    expect(panel(false)).toMatch(/<div role="status" class="[^"]*\bempty:hidden"><\/div>/);
   });
 });
 

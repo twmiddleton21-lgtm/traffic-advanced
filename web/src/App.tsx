@@ -331,9 +331,9 @@ export function App() {
           className={`absolute inset-0 z-20 bg-[#0b0e11]/45 transition-opacity duration-200 lg:hidden ${drawerModal ? "opacity-100" : "pointer-events-none opacity-0"}`}
         />
 
-        {/* --ta-map-top-inset keeps the map's own notices clear of the Closures button (phones and tablets) and of the Routes key row. */}
+        {/* --ta-map-top-inset keeps the map's own notices clear of the Closures button (phones and tablets) and the Layers button (Routes). */}
         <section
-          className={`relative min-w-0 flex-1 [--ta-map-top-inset:3.75rem] ${closuresView ? "lg:[--ta-map-top-inset:0px]" : ""}`}
+          className={`relative min-w-0 flex-1 ${closuresView ? "[--ta-map-top-inset:3.75rem] lg:[--ta-map-top-inset:0px]" : "[--ta-map-top-inset:4.5rem]"}`}
           aria-label="Map"
           inert={drawerModal}
         >
@@ -371,12 +371,23 @@ export function App() {
               />
             </>
           ) : (
-            // Routes: the map key and the Routes panel side by side at the top left, clear of MapLibre's buttons on the right; at
-            // narrow widths an opened one wraps below. The map's own notices start under this row (--ta-map-top-inset).
-            <div className="pointer-events-none absolute bottom-[calc(2rem+env(safe-area-inset-bottom))] left-[max(0.75rem,env(safe-area-inset-left))] right-14 top-3 z-10 flex flex-wrap content-start items-start gap-1.5">
-              <MapKey view={appView} open={mapKeyOpen} onOpenChange={setMapKeyOpen} className="max-h-full max-w-full" />
-              <RoutesMapControls layers={routeLayers} onToggle={toggleRouteLayer} junctions={routeJunctionLoad} onRetry={retryJunctions} open={routesPanelOpen} onOpenChange={setRoutesPanelOpen} />
-            </div>
+            <>
+              {/* Routes: the Layers button at the top left, clear of MapLibre's buttons on the right; opened, its panel scrolls
+                  within the map, above the map key even when that is open (phones and tablets; on desktop, above the folded key).
+                  On short screens (landscape phones) it may use the map's full height, drawn over the key, so it stays usable.
+                  The map's own notices start under it (--ta-map-top-inset). */}
+              <div className="pointer-events-none absolute bottom-[calc(11.5rem+env(safe-area-inset-bottom))] lg:bottom-[calc(5.5rem+env(safe-area-inset-bottom))] [@media(max-height:40rem)]:bottom-[calc(2rem+env(safe-area-inset-bottom))] left-[max(0.75rem,env(safe-area-inset-left))] right-14 top-3 z-10 flex items-start">
+                <RoutesMapControls layers={routeLayers} onToggle={toggleRouteLayer} junctions={routeJunctionLoad} onRetry={retryJunctions} open={routesPanelOpen} onOpenChange={setRoutesPanelOpen} />
+              </div>
+              {/* The map key where it is in Closures: bottom left, above the map credits and under them while they're open, and
+                  ending short of the scale bar on the right. */}
+              <MapKey
+                view={appView}
+                open={mapKeyOpen}
+                onOpenChange={setMapKeyOpen}
+                className="absolute bottom-[calc(2rem+env(safe-area-inset-bottom))] left-[max(0.75rem,env(safe-area-inset-left))] z-[1] max-h-[max(6rem,calc(100%-6rem))] w-max max-w-[min(22rem,calc(100%-7.5rem))]"
+              />
+            </>
           )}
           <button
             hidden={!closuresView}

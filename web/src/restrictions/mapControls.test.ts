@@ -164,7 +164,7 @@ describe("the restriction key is part of the map's one key, which folds to a com
     // App keeps the one key's choice across layer and view switches, starting open where there's room and folded on phones.
     const app = readFileSync("web/src/App.tsx", "utf8");
     expect(app).toMatch(/const \[mapKeyOpen, setMapKeyOpen\] = useState\(wide\);/);
-    expect(app.match(/<MapKey\b[^>]*open=\{mapKeyOpen\} onOpenChange=\{setMapKeyOpen\}/g)).toHaveLength(1);
+    expect(app.match(/<MapKey\b/g)).toHaveLength(2);
     expect(app.match(/open=\{mapKeyOpen\}\s+onOpenChange=\{setMapKeyOpen\}/g)).toHaveLength(2);
     // The map itself no longer draws a key of its own.
     expect(readFileSync("web/src/map/MapView.tsx", "utf8")).not.toMatch(/Map key|<Legend/);
