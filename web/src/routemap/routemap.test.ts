@@ -13,7 +13,8 @@ import { ViewSwitch } from "../components/ViewSwitch.tsx";
 import { availableLayers } from "../restrictions/catalog.ts";
 import { ROUTES_JUNCTION_SOURCE, ROUTES_LAYER_IDS } from "../map/routesLayers.ts";
 import { overlayLayers } from "../map/style.ts";
-import { CLOSURES_LAYER_IDS, viewLayerVisibility } from "../map/viewLayers.ts";
+import { CLOSURES_LAYER_IDS, DEFAULT_ROUTES_LAYERS, ROUTES_OVERLAY_LAYER_IDS, viewLayerVisibility } from "../map/viewLayers.ts";
+import { ROUTES_DATA_LAYERS } from "../../../shared/api/routes-layers.ts";
 import { junctionLabels, junctionLoad, type JunctionLoad } from "./junctionLabels.ts";
 import { createViewCameras, readView, withView, type AppView } from "./view.ts";
 
@@ -77,7 +78,12 @@ describe("each view's own map layers", () => {
   const layers = overlayLayers();
 
   it("Closures shows its closure, diversion and junction layers and none of Routes'", () => {
-    for (const { id, visible } of viewLayerVisibility("closures", { junctions: true })) expect(visible, id).toBe(!(ROUTES_LAYER_IDS as readonly string[]).includes(id));
+    const routes = new Set<string>([...ROUTES_LAYER_IDS, ...ROUTES_OVERLAY_LAYER_IDS]);
+    // Whatever the Routes switches say, including every OpenStreetMap layer on.
+    const allOn = { junctions: true, ...Object.fromEntries(ROUTES_DATA_LAYERS.map((l) => [l, true])) };
+    for (const switches of [{ junctions: true }, allOn]) {
+      for (const { id, visible } of viewLayerVisibility("closures", switches)) expect(visible, id).toBe(!routes.has(id));
+    }
   });
 
   it("Routes hides every closure, diversion and confirmed-junction layer, and shows its junction numbers while switched on", () => {
@@ -132,10 +138,18 @@ describe("compact map keys", () => {
   });
 
   it("Routes: the Layers button at the top left, clear of the map's buttons; the map key at the bottom left, as in Closures", () => {
-    expect(app).toMatch(/<div className="pointer-events-none absolute bottom-\[calc\(11\.5rem\+env\(safe-area-inset-bottom\)\)\] lg:bottom-\[calc\(5\.5rem\+env\(safe-area-inset-bottom\)\)\] \[@media\(max-height:40rem\)\]:bottom-\[calc\(2rem\+env\(safe-area-inset-bottom\)\)\] left-\[max\(0\.75rem,env\(safe-area-inset-left\)\)\] right-14 top-3 z-10 flex items-start">\s*<RoutesMapControls /);
-    expect(app).toMatch(/<MapKey\s+view=\{appView\}\s+open=\{mapKeyOpen\}\s+onOpenChange=\{setMapKeyOpen\}\s+className="absolute bottom-\[calc\(2rem\+env\(safe-area-inset-bottom\)\)\] left-\[max\(0\.75rem,env\(safe-area-inset-left\)\)\] z-\[1\] max-h-\[max\(6rem,calc\(100%-6rem\)\)\] w-max max-w-\[min\(22rem,calc\(100%-7\.5rem\)\)\]/);
+    // Layers at the top left; its bottom edge follows the map key's measured height, so the open panel always ends above the key
+    // (folded or open, at every size) and the two never overlap.
+    expect(app).toMatch(
+      /<div\s+className="pointer-events-none absolute left-\[max\(0\.75rem,env\(safe-area-inset-left\)\)\] right-14 top-3 z-10 flex items-start \[container-type:size\]"\s+style=\{\{ bottom: `calc\(\$\{routesKeyHeight\}px \+ 2\.5rem \+ env\(safe-area-inset-bottom\)\)` \}\}\s*>\s*<RoutesMapControls\s/,
+    );
+    expect(app).toMatch(/new ResizeObserver\(\(\) => setRoutesKeyHeight\(key\.offsetHeight\)\)/);
+    // The key stays bottom left, as in Closures; opened in Routes it takes at most 45% of the map, so the panel keeps the rest.
+    expect(app).toMatch(
+      /<MapKey\s+view=\{appView\}\s+open=\{routesKeyOpen\}\s+onOpenChange=\{openRoutesKey\}\s+rootRef=\{setRoutesKeyElement\}\s+routes=\{[^\n]*\}\s+className="absolute bottom-\[calc\(2rem\+env\(safe-area-inset-bottom\)\)\] left-\[max\(0\.75rem,env\(safe-area-inset-left\)\)\] z-\[1\] max-h-\[max\(6rem,calc\(45%-2rem\)\)\] w-max max-w-\[min\(22rem,calc\(100%-7\.5rem\)\)\]/,
+    );
     // Each has its own open state: one never opens or closes the other.
-    expect(app).toMatch(/<RoutesMapControls [^>]*open=\{routesPanelOpen\} onOpenChange=\{setRoutesPanelOpen\}/);
+    expect(app).toMatch(/<RoutesMapControls\s[^>]*open=\{routesPanelOpen\}\s+onOpenChange=\{openRoutesPanel\}/);
     // The map's own notices start below the Layers button in Routes, at every width.
     expect(app).toMatch(/\$\{closuresView \? "\[--ta-map-top-inset:3\.75rem\] lg:\[--ta-map-top-inset:0px\]" : "\[--ta-map-top-inset:4\.5rem\]"\}/);
   });
@@ -149,7 +163,12 @@ describe("compact map keys", () => {
     expect(summary![1]).toMatch(/\bfocus-visible:-outline-offset-3!/);
     expect(panel(false)).not.toContain("Route map layers");
     // Folded: no fixed width. Open: the panel widens, with the switch, the scope note and the not-connected note.
-    expect(panel(false)).toMatch(/^<div class="pointer-events-auto flex max-h-full flex-col items-start gap-1\.5 overflow-y-auto overscroll-contain p-px ">/);
+    expect(panel(false)).toMatch(/^<div class="pointer-events-auto flex max-h-full min-h-0 flex-col items-start gap-1\.5 p-px ">/);
+    // The button is a fixed control: the column around it never scrolls, and the button never shrinks. Only the panel's own box
+    // scrolls, inside its border, capped as a flex item and by the container's height less the button.
+    expect(panel(false)).not.toMatch(/^<div class="[^"]*overflow-y-auto/);
+    expect(summary![1]).toMatch(/\bshrink-0\b/);
+    expect(panel(true)).toMatch(/<\/summary><div class="mt-1\.5 max-h-\[calc\(100cqh-4\.25rem\)\] min-h-0 space-y-2 overflow-y-auto overscroll-contain rounded-\[4px\] border border-line bg-surface/);
     expect(panel(true)).toMatch(/^<div class="[^"]*\bw-\[min\(20rem,calc\(100vw-5\.5rem\)\)\]">/);
     expect(panel(true)).toMatch(/role="switch" aria-checked="true"[^>]*>[\s\S]*Junction numbers/);
     expect(panel(true)).toContain(ROUTES_SCOPE_TEXT.replaceAll("'", "&#x27;"));
@@ -349,11 +368,14 @@ describe("Settings are the shown view's own", () => {
   it("App gives Settings the shown view, the Routes switches' one state, and each view's own warnings and credits", () => {
     expect(app).toMatch(/view=\{appView\}\s+appearance=/);
     expect(app).toMatch(/routes=\{\{ layers: routeLayers, onToggle: toggleRouteLayer, junctions: routeJunctionLoad, onRetry: retryJunctions \}\}/);
-    expect(app).toMatch(/useState<RoutesLayerSwitches>\(\{ junctions: true \}\)/);
+    // Junction numbers on and every OpenStreetMap layer off for a new visitor; after that, restored from this device only.
+    expect(app).toMatch(/useState<RoutesLayerSwitches>\(\(\) => readRoutesLayers\(browserStore\(\)\)\)/);
+    expect(app).toMatch(/writeRoutesLayers\(browserStore\(\), routeLayers\)/);
+    expect(DEFAULT_ROUTES_LAYERS).toEqual({ junctions: true });
     expect(app).not.toMatch(/tomtom|useTraffic|TrafficAttribution|trafficCredit/i);
     // The map panel and Settings change the same Routes state; neither touches the restriction switches.
     expect(app).toMatch(/onToggle=\{toggleRouteLayer\}/);
-    expect(app).toMatch(/const toggleRouteLayer = \(layer: keyof RoutesLayerSwitches, on: boolean\) => setRouteLayers\(/);
+    expect(app).toMatch(/const toggleRouteLayer = \(layer: keyof RoutesLayerSwitches, on: boolean\) => \{\s*setRouteLayers\(\(l\) => \(\{ \.\.\.l, \[layer\]: on \}\)\);/);
     expect(app).toMatch(/\.\.\.\(closuresView \? RESTRICTION_LAYERS\.filter/);
     expect(app).toMatch(/restrictionSources: closuresView \? allSources\(entries\) : \[\]/);
   });

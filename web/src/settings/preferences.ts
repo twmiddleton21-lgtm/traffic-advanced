@@ -83,6 +83,48 @@ export function readSettings(store: PreferenceStore | null): Settings {
   }
 }
 
+/**
+ * The Routes view's layer switches (junction numbers and each OpenStreetMap layer), remembered on this device only under their own
+ * versioned key. Only the switches are stored: never the map position, a selected marker, a search or filters. Missing, damaged or
+ * partly invalid values fall back to the defaults field by field (junction numbers on, every other layer off), and unknown fields
+ * are dropped, so an old or tampered value can only ever switch known layers on or off.
+ */
+export const ROUTES_LAYERS_KEY = "ta-routes-layers-v1";
+const ROUTES_SWITCHES = ["junctions", "speed-cameras", "average-speed", "red-light-cameras", "height", "weight", "width-length", "access"] as const;
+export type RoutesSwitchName = (typeof ROUTES_SWITCHES)[number];
+export type StoredRoutesLayers = { junctions: boolean } & Partial<Record<Exclude<RoutesSwitchName, "junctions">, boolean>>;
+
+export function readRoutesLayers(store: PreferenceStore | null): StoredRoutesLayers {
+  const result: StoredRoutesLayers = { junctions: true };
+  try {
+    const raw = store?.getItem(ROUTES_LAYERS_KEY);
+    if (!raw) return result;
+    const parsed: unknown = JSON.parse(raw);
+    if (typeof parsed !== "object" || parsed === null) return result;
+    const values = parsed as Record<string, unknown>;
+    for (const name of ROUTES_SWITCHES) {
+      const v = values[name];
+      if (typeof v !== "boolean") continue;
+      if (name === "junctions") result.junctions = v;
+      else if (v) result[name] = true;
+    }
+    return result;
+  } catch {
+    return result;
+  }
+}
+
+/** Saves the known switches only, as true/false. Returns false when storage is unavailable (the switches still apply this visit). */
+export function writeRoutesLayers(store: PreferenceStore | null, layers: StoredRoutesLayers): boolean {
+  try {
+    if (!store) return false;
+    store.setItem(ROUTES_LAYERS_KEY, JSON.stringify(Object.fromEntries(ROUTES_SWITCHES.map((n) => [n, layers[n] === true]))));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** Saves only the known fields. Returns false when storage is unavailable. */
 export function writeSettings(store: PreferenceStore | null, settings: Settings): boolean {
   try {

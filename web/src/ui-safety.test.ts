@@ -23,7 +23,9 @@ describe("UI safety boundary", () => {
       const imports = [...readFileSync(file, "utf8").matchAll(/from "([^"]+)"/g)].map((m) => m[1]!);
       for (const spec of imports.filter((s) => s.includes("shared/"))) {
         // The traffic contract is for the deferred live-traffic work only (web/src/deferred/traffic/).
-        const allowed = isDeferred(file) ? /shared\/api\/(?:closures|junctions|freshness|version|restrictions|traffic)\.ts$/ : /shared\/api\/(?:closures|junctions|freshness|version|restrictions)\.ts$/;
+        // routes-layers and routes-highlights are the Routes map's OpenStreetMap contracts (shared/api/); the builders that read OSM
+        // (shared/sources/osm/) are build-time only and never imported here.
+        const allowed = isDeferred(file) ? /shared\/api\/(?:closures|junctions|freshness|version|restrictions|traffic)\.ts$/ : /shared\/api\/(?:closures|junctions|freshness|version|restrictions|routes-layers|routes-highlights)\.ts$/;
         expect(spec, `${file} imports ${spec}`).toMatch(allowed);
       }
     }

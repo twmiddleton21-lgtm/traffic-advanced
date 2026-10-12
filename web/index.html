@@ -14,6 +14,9 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <!-- The splash's own stylesheet: a <link> in <head> blocks the first paint, so the splash is drawn at its final size from the
+         first frame, before the app's bundle and CSS (web/src/splash.css). -->
+    <link rel="stylesheet" href="/src/splash.css" />
     <script>
       // Apply the saved or system theme before first paint (no flash of the wrong theme).
       try {
@@ -26,7 +29,7 @@
     </script>
   </head>
   <body>
-    <!-- Splash: painted with the first frame (styled by the bundled stylesheet, no inline CSS), so the map and data never assemble in
+    <!-- Splash: painted with the first frame (styled by web/src/splash.css, linked above; no inline CSS), so the map and data never assemble in
          view. The app removes it as soon as the closures and the first map render are ready (web/src/splash.ts). -->
     <div id="splash" class="ta-splash" role="status">
       <div class="ta-splash-inner">

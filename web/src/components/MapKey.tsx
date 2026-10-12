@@ -1,3 +1,4 @@
+import type { Ref } from "react";
 import { RESTRICTIONS_DISCLAIMER, type RestrictionPointsFile, type ZonesFile } from "../../../shared/api/restrictions.ts";
 import type { MapViewArea } from "../map/MapView.tsx";
 import { isStale } from "../restrictions/describe.ts";
@@ -7,6 +8,27 @@ import type { AppView } from "../routemap/view.ts";
 import { GroupDot, Plate, ZoneLine } from "./RestrictionGlyphs.tsx";
 import { DISCLAIMER_ID } from "./RestrictionMapControls.tsx";
 import { InViewButtons, STALE_RESTRICTIONS_TEXT, type RestrictionSelection } from "./RestrictionsDialog.tsx";
+import { ROUTES_OSM_CAVEAT, type RoutesDataLayer } from "../../../shared/api/routes-layers.ts";
+import { ROUTES_HIGHLIGHT_STYLE, ROUTES_LAYER_MIN_ZOOM } from "../map/routesOverlayLayers.ts";
+import { formatDate } from "../restrictions/describe.ts";
+import { isRoutesDataStale, routesKindLabel, routesMarkerText, sectionTitle, STALE_ROUTES_TEXT } from "../routemap/describe.ts";
+import { ROUTES_LIST_LIMIT, routesInView } from "../routemap/inView.ts";
+import type { RoutesLayerData, RoutesLayerStatus } from "../routemap/useRoutesLayerData.ts";
+import { CameraGlyph, RoutesSymbol, SectionGlyph } from "./RoutesGlyphs.tsx";
+
+/** Routes only: the OpenStreetMap layers' statuses, the map's visible area (for the keyboard list), the data's date, and what opens a record. */
+export interface RoutesKeyProps {
+  /** Every OpenStreetMap layer this build has data for (routemap/catalog.ts), in the panel's order: each always has a key row. */
+  available: RoutesDataLayer[];
+  /** Which of them are switched on: a row is shown active when on, muted and marked "Off" when off. */
+  on: Partial<Record<RoutesDataLayer, boolean>>;
+  /** Their load states (any order); a loaded layer's records feed the keyboard list. */
+  statuses: RoutesLayerStatus[];
+  area: MapViewArea | null;
+  now: Date;
+  dataAsOf: string | null;
+  onSelect: (selection: { layer: RoutesDataLayer; id: string }) => void;
+}
 
 /**
  * The map's one key, for the view that's shown. It folds to a single 48 px "Map key" line, so on phones it takes about as little of
@@ -30,6 +52,8 @@ export function MapKey({
   open,
   onOpenChange,
   restrictions,
+  routes,
+  rootRef,
   className = "",
 }: {
   view: AppView;
@@ -40,6 +64,10 @@ export function MapKey({
    * time (for the out-of-date warning), and what opens a restriction's or a zone's details.
    */
   restrictions?: { statuses: LayerStatus[]; area: MapViewArea | null; now: Date; onSelect: (selection: RestrictionSelection) => void };
+  /** Routes only: its OpenStreetMap layers, so the key shows exactly the layers that are on and loaded. */
+  routes?: RoutesKeyProps;
+  /** The key's outer box, so the Routes view can keep its Layers panel clear of it whatever the key's height (App.tsx). */
+  rootRef?: Ref<HTMLDivElement>;
   /** Where it sits on the map (App positions it per view). */
   className?: string;
 }) {
@@ -51,7 +79,7 @@ export function MapKey({
   const zoneFiles: ZonesFile[] = on.flatMap((s) => (s.state === "ready" && s.data !== null && "zones" in s.data ? [s.data.zones] : []));
   const stale = restrictions ? [...pointFiles, ...zoneFiles].some((f) => isStale(f.generatedAt, restrictions.now)) : false;
   return (
-    <div className={`pointer-events-auto overflow-y-auto overscroll-contain rounded-[4px] border border-line bg-surface/95 text-[13px] shadow-sm ${className}`}>
+    <div ref={rootRef} className={`pointer-events-auto overflow-y-auto overscroll-contain rounded-[4px] border border-line bg-surface/95 text-[13px] shadow-sm ${className}`}>
       <details id="map-key" open={open} onToggle={(e) => onOpenChange(e.currentTarget.open)} className="group">
         <summary
           aria-describedby={withRestrictions && !open ? DISCLAIMER_ID : undefined}
@@ -61,7 +89,7 @@ export function MapKey({
           {withRestrictions && <span className="sr-only">, including restrictions</span>}
           <Chevron />
         </summary>
-        {view === "routes" ? <RoutesKey /> : <ClosuresKey />}
+        {view === "routes" ? <RoutesKey osm={routes} /> : <ClosuresKey />}
         {withRestrictions && (
           <section aria-label="Restrictions key" className="border-t border-line px-2.5 pb-2 pt-1.5">
             <h3 className="pb-1 font-bold">Restrictions</h3>
@@ -119,20 +147,152 @@ function Chevron() {
   );
 }
 
-function RoutesKey() {
+function RoutesKey({ osm }: { osm: RoutesKeyProps | undefined }) {
   return (
-    <ul className="space-y-1 px-2.5 pb-2">
-      <li className="flex items-center gap-2">
-        <RoadGlyph className="stroke-[#0b4f9c] dark:stroke-[#4a8fe0]" /> Motorway
-      </li>
-      <li className="flex items-center gap-2">
-        <RoadGlyph className="stroke-[#00703c] dark:stroke-[#2fa66a]" /> Primary route (green-signed A road)
-      </li>
-      <li className="flex items-center gap-2">
-        <JunctionGlyph />
-        Junction number (National Highways roads only)
-      </li>
-    </ul>
+    <>
+      <ul className="space-y-1 px-2.5 pb-2">
+        <li className="flex items-center gap-2">
+          <RoadGlyph className="stroke-[#0b4f9c] dark:stroke-[#4a8fe0]" /> Motorway
+        </li>
+        <li className="flex items-center gap-2">
+          <RoadGlyph className="stroke-[#00703c] dark:stroke-[#2fa66a]" /> Primary route (green-signed A road)
+        </li>
+        <li className="flex items-center gap-2">
+          <JunctionGlyph />
+          Junction number (National Highways roads only)
+        </li>
+      </ul>
+      {osm && <RoutesOsmKey osm={osm} />}
+    </>
+  );
+}
+
+/**
+ * The Routes OpenStreetMap layers' key: always the full legend, one compact row per layer this build has (the same seven rows
+ * whatever is switched on). A layer that is off is muted and marked "Off", never hidden, so the key doesn't change shape as layers
+ * are switched. While any layer is on: the road-highlight colours (weight), what "*" and a faint road mean, which layers need more
+ * zoom, the community-data caveat once, and the data's date. The keyboard list of records in view is hidden until it has keyboard
+ * focus, as in Closures.
+ */
+function RoutesOsmKey({ osm }: { osm: RoutesKeyProps }) {
+  if (osm.available.length === 0) return null;
+  const isOn = (l: RoutesDataLayer) => osm.on[l] === true;
+  const anyOn = osm.available.some(isOn);
+  const restrictionOn = osm.available.some((l) => isOn(l) && RESTRICTION_LAYERS.has(l));
+  const ready = osm.statuses.filter((s): s is RoutesLayerStatus & { data: RoutesLayerData } => isOn(s.layer) && s.state === "ready" && s.data !== null);
+  // Layers that are on but not drawn at this zoom: say so, so an empty map never reads as nothing being mapped.
+  const zoom = osm.area?.zoom ?? null;
+  const notYet = zoom === null ? [] : osm.available.filter((l) => isOn(l) && zoom < ROUTES_LAYER_MIN_ZOOM[l]);
+  return (
+    <section aria-label="Community map data key" className="border-t border-line px-2.5 pb-2 pt-1.5">
+      <h3 className="pb-1 font-bold">Community map data</h3>
+      <ul className="space-y-1">
+        {osm.available.map((l) => (
+          <li key={l} className={`flex items-center gap-2 ${isOn(l) ? "" : "text-muted opacity-60"}`}>
+            {/* Wide enough for the badge symbols (4.4m, 7.5t, No), so a symbol never runs into its label. */}
+            <span className="flex w-12 shrink-0 justify-center">
+              <KeySymbol layer={l} />
+            </span>
+            <span className="flex-1">{KEY_LABELS[l]}</span>
+            {!isOn(l) && <span className="text-[11px] font-bold uppercase">Off</span>}
+          </li>
+        ))}
+      </ul>
+      {isOn("weight") && (
+        <p className="flex items-center gap-1.5 pt-1">
+          <RoadSwatch colour={ROUTES_HIGHLIGHT_STYLE["weight-strong"].colour} /> 7.5 t or less
+          <RoadSwatch colour={ROUTES_HIGHLIGHT_STYLE["weight-soft"].colour} /> above 7.5 t
+        </p>
+      )}
+      {restrictionOn && <p className="pt-1">Highlighted road: limit mapped along it. Faint road or *: conditions or exemptions apply.</p>}
+      {notYet.length > 0 && <p className="pt-1">{`Zoom in to see: ${notYet.map((l) => KEY_LABELS[l].toLowerCase()).join(", ")}.`}</p>}
+      {anyOn && <p className="pt-1 font-bold">{ROUTES_OSM_CAVEAT}</p>}
+      {anyOn && osm.dataAsOf && <p className="text-muted">{`© OpenStreetMap contributors, ODbL. Data to ${formatDate(osm.dataAsOf)}.`}</p>}
+      {anyOn && osm.dataAsOf && isRoutesDataStale(osm.dataAsOf, osm.now) && <p className="font-bold text-stale">{STALE_ROUTES_TEXT}</p>}
+      {ready.length > 0 && (
+        <div className="sr-only space-y-1 focus-within:not-sr-only focus-within:pt-2">
+          <h4 className="font-bold">Community map data in this view (keyboard list)</h4>
+          <RoutesInViewButtons osm={osm} layers={ready.map((s) => ({ layer: s.layer, data: s.data }))} />
+        </div>
+      )}
+    </section>
+  );
+}
+
+const RESTRICTION_LAYERS = new Set<RoutesDataLayer>(["height", "weight", "width-length", "access"]);
+
+/** Short row labels: the key stays a compact legend (the panel has the descriptions). */
+const KEY_LABELS: Record<RoutesDataLayer, string> = {
+  "speed-cameras": "Speed cameras",
+  "average-speed": "Average speed checks",
+  "red-light-cameras": "Red-light cameras",
+  height: "Height limits",
+  weight: "Weight limits",
+  "width-length": "Width and length limits",
+  access: "Lorry access restrictions",
+};
+
+/** One symbol per row, as drawn on the map. */
+function KeySymbol({ layer }: { layer: RoutesDataLayer }) {
+  switch (layer) {
+    case "speed-cameras":
+      return <CameraGlyph />;
+    case "red-light-cameras":
+      return <CameraGlyph redLight />;
+    case "average-speed":
+      return <SectionGlyph />;
+    case "height":
+      return <RoutesSymbol kind="height" text="4.4m" />;
+    case "weight":
+      return <RoutesSymbol kind="weight-goods" text="7.5t" />;
+    case "width-length":
+      return <RoutesSymbol kind="width" text="2m" />;
+    case "access":
+      return <RoutesSymbol kind="hgv-access" text="No" />;
+  }
+}
+
+/** A short stretch of highlighted road, as drawn on the map. */
+function RoadSwatch({ colour }: { colour: string }) {
+  return (
+    <svg viewBox="0 0 20 8" className="h-2 w-5 shrink-0" aria-hidden="true">
+      <path d="M1 4 H19" stroke={colour} strokeWidth="4" strokeLinecap="round" opacity="0.8" />
+    </svg>
+  );
+}
+
+function RoutesInViewButtons({ osm, layers }: { osm: RoutesKeyProps; layers: { layer: RoutesDataLayer; data: RoutesLayerData }[] }) {
+  const view = osm.area;
+  if (!view) return <p>The map is still loading.</p>;
+  // Only the layers drawn at this zoom are listed, as on the map.
+  const drawn = layers.filter((l) => view.zoom >= ROUTES_LAYER_MIN_ZOOM[l.layer]);
+  if (drawn.length === 0) return <p>Zoom in on the map to list the community map data here.</p>;
+  const { items, total } = routesInView(drawn, view.bounds, view.centre);
+  return (
+    <>
+      <p>
+        {total === 0
+          ? "Nothing is mapped in this view for the layers that are on. That does not mean there is nothing there."
+          : total > ROUTES_LIST_LIMIT
+            ? `${total} mapped in this view. The ${ROUTES_LIST_LIMIT} nearest the centre are listed; zoom in to narrow the list.`
+            : `${total} mapped in this view, nearest the centre first.`}
+      </p>
+      {items.length > 0 && (
+        <ul className="divide-y divide-line rounded-[4px] border border-line">
+          {items.map((item) => {
+            const id = item.kind === "point" ? item.point.id : item.section.id;
+            return (
+              <li key={id}>
+                <button type="button" onClick={() => osm.onSelect({ layer: item.layer, id })} className="flex min-h-12 w-full items-start gap-3 px-3 py-2 text-left hover:bg-raised">
+                  <span className="pt-0.5">{item.kind === "point" ? <RoutesSymbol kind={item.point.kind} text={routesMarkerText(item.point)} /> : <SectionGlyph />}</span>
+                  <span>{item.kind === "point" ? routesKindLabel(item.point) : sectionTitle(item.section)}</span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </>
   );
 }
 

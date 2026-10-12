@@ -323,6 +323,31 @@ Adding "Powered by National Highways' Transport Data Feeds" to the map credits i
 - **Not in the 2026-10-09 build:** Overpass stayed overloaded, so no complete England download was possible
   (`docs/RESTRICTIONS.md`).
 
+## S13: OpenStreetMap for the Routes map's layers (checked 2026-10-12)
+
+- **Source:** the Geofabrik England extract. Each build uses one dated file, e.g. `england-261011.osm.pbf`.
+  - 1,703,180,189 bytes, "License: ODbL 1.0".
+  - "normally updated every day" (download.geofabrik.de).
+  - Geofabrik publishes an MD5, which the fetch checks.
+  - The file's replication timestamp (2026-10-11T20:21:06Z here) is the data's date.
+  - Geofabrik's public files carry no user names, user ids or changeset ids.
+- **Reader:** our own PBF reader (`scripts/lib/osm-pbf.ts`, Node zlib only, no dependency). On this file it gives exactly taginfo's
+  England counts for the same data date: 3,142 `highway=speed_camera` nodes and 622 `type=enforcement` relations.
+- **Tags used, rules and counts:** `docs/ROUTES-MAP.md`, "OpenStreetMap layers". Taginfo England counts on 2026-10-11 (verified):
+  - 622 enforcement relations: 458 maxspeed, 78 average_speed, 32 traffic_signals;
+  - 22,474 `maxweightrating:hgv` ways, about 85% with an exemption in `:conditional`;
+  - 16,622 `maxheight` ways and 2,941 nodes;
+  - 4,063 `maxwidth` ways;
+  - 529 `maxlength` ways;
+  - 10,248 `hgv` ways;
+  - only 2 `maxspeed:hgv` ways, so lorry speed limits can't be read from OSM.
+- **Coverage:** unknown, with no official list to compare against. Mobile and temporary cameras aren't mapped (the wiki scheme
+  covers permanent devices only).
+- **Licence:** ODbL 1.0, so the layer files are a derivative database offered under the ODbL. Attribution is "© OpenStreetMap
+  contributors" linked to openstreetmap.org/copyright (OSMF attribution guidelines).
+- **Camera legality:** no official UK government statement on showing fixed camera locations in an app was found (**unverified**).
+  DfT Circular 01/2007 says the programme works through "camera locations being publicised, signed and visible to road users".
+
 ## Routing services (for classification C, post-V1)
 
 - openrouteservice `driving-hgv`: key required (401 without). Plan limits/commercial terms **unverified** (plans page needs login).

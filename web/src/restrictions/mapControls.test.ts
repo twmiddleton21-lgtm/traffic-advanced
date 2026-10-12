@@ -184,7 +184,9 @@ describe("the restriction key is part of the map's one key, which folds to a com
     const app = readFileSync("web/src/App.tsx", "utf8");
     expect(app).toMatch(/const \[mapKeyOpen, setMapKeyOpen\] = useState\(wide\);/);
     expect(app.match(/<MapKey\b/g)).toHaveLength(2);
-    expect(app.match(/open=\{mapKeyOpen\}\s+onOpenChange=\{setMapKeyOpen\}/g)).toHaveLength(2);
+    // Closures uses the one key state; the Routes key has its own, kept exclusive with the Layers panel (routemap.test.ts).
+    expect(app.match(/open=\{mapKeyOpen\}\s+onOpenChange=\{setMapKeyOpen\}/g)).toHaveLength(1);
+    expect(app.match(/open=\{routesKeyOpen\}\s+onOpenChange=\{openRoutesKey\}/g)).toHaveLength(1);
     // The map itself no longer draws a key of its own.
     expect(readFileSync("web/src/map/MapView.tsx", "utf8")).not.toMatch(/Map key|<Legend/);
   });

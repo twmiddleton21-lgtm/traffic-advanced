@@ -64,7 +64,7 @@ const RESTRICTION_RED = "#c8102e";
  * border. Only the plain middle stretches, so glyphs and corners keep their shape. The same glyphs are drawn in the app's key
  * (components/RestrictionGlyphs.tsx).
  */
-function addPlate(map: MapLibreMap, id: string, options: { border: string; dashed: boolean; glyph: "height" | "weight" | "lorry" | "bridge" }): void {
+function addPlate(map: MapLibreMap, id: string, options: { border: string; dashed: boolean; glyph: "height" | "weight" | "lorry" | "bridge" | "width" | "length" | "no-lorry" }): void {
   const glyphWidth = 16;
   const width = glyphWidth + 16;
   const height = 20;
@@ -124,6 +124,46 @@ function addPlate(map: MapLibreMap, id: string, options: { border: string; dashe
       ctx.moveTo(4.5, 14.5);
       ctx.quadraticCurveTo(10, 6.5, 15.5, 14.5);
       ctx.stroke();
+    } else if (options.glyph === "width") {
+      // A horizontal double-headed arrow between two uprights: the width.
+      ctx.fillRect(3, 4, 1.6, 12);
+      ctx.fillRect(14.4, 4, 1.6, 12);
+      ctx.beginPath();
+      ctx.moveTo(5.2, 10);
+      ctx.lineTo(8.2, 7);
+      ctx.lineTo(8.2, 13);
+      ctx.closePath();
+      ctx.moveTo(13.8, 10);
+      ctx.lineTo(10.8, 7);
+      ctx.lineTo(10.8, 13);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillRect(8, 9.2, 3, 1.6);
+    } else if (options.glyph === "length") {
+      // A lorry over a measuring line with end stops.
+      ctx.fillRect(4, 4.5, 8, 5);
+      ctx.fillRect(12.5, 6.5, 3.5, 3);
+      ctx.fillRect(3, 13.2, 14, 1.4);
+      ctx.fillRect(3, 11.5, 1.4, 4.8);
+      ctx.fillRect(15.6, 11.5, 1.4, 4.8);
+    } else if (options.glyph === "no-lorry") {
+      // A prohibition roundel: a small lorry inside a red ring with a red diagonal bar, so access reads differently from the
+      // lorry weight and length plates by shape.
+      ctx.fillRect(5.5, 7.5, 6, 4.5);
+      ctx.fillRect(11.8, 9, 2.7, 3);
+      ctx.beginPath();
+      ctx.arc(7.3, 12.8, 1.2, 0, Math.PI * 2);
+      ctx.arc(12.8, 12.8, 1.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = RESTRICTION_RED;
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.arc(10, 10, 7.2, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(4.9, 15.1);
+      ctx.lineTo(15.1, 4.9);
+      ctx.stroke();
     }
   });
   const left = (glyphWidth + 5) * RATIO;
@@ -144,6 +184,82 @@ function addRestrictionPlates(map: MapLibreMap): void {
   }
 }
 
+/**
+ * Routes map images (map/routesOverlayLayers.ts), used only by the Routes view's layers. Each kind differs by shape, not colour alone,
+ * and every image has a white edge so it reads on both the light and the dark base map:
+ * - restriction plates (dashed red border: community data) for widths, lengths and lorry access, access as a prohibition roundel;
+ * - a speed camera: a dark SQUARE sign with a white camera and a flash;
+ * - a red-light camera: a dark TALL signal housing with red, amber and green lights over a small camera;
+ */
+function addRoutesImages(map: MapLibreMap): void {
+  addPlate(map, "ta-routes-width", { border: RESTRICTION_RED, dashed: true, glyph: "width" });
+  addPlate(map, "ta-routes-length", { border: RESTRICTION_RED, dashed: true, glyph: "length" });
+  addPlate(map, "ta-routes-hgv-access", { border: RESTRICTION_RED, dashed: true, glyph: "no-lorry" });
+  const speedCamera = draw(26, 26, (ctx) => {
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.roundRect(0.5, 0.5, 25, 25, 5);
+    ctx.fill();
+    ctx.fillStyle = COLOURS.ink;
+    ctx.beginPath();
+    ctx.roundRect(2, 2, 22, 22, 4);
+    ctx.fill();
+    // Camera body and lens.
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.roundRect(5, 8, 13, 10, 2);
+    ctx.fill();
+    ctx.fillRect(8, 6, 5, 2.5);
+    ctx.fillStyle = COLOURS.ink;
+    ctx.beginPath();
+    ctx.arc(11.5, 13, 3, 0, Math.PI * 2);
+    ctx.fill();
+    // A flash.
+    ctx.fillStyle = "#ffd200";
+    ctx.beginPath();
+    ctx.moveTo(19, 7);
+    ctx.lineTo(22, 7);
+    ctx.lineTo(20.5, 11);
+    ctx.lineTo(22.5, 11);
+    ctx.lineTo(18.5, 18);
+    ctx.lineTo(19.5, 12.5);
+    ctx.lineTo(18, 12.5);
+    ctx.closePath();
+    ctx.fill();
+  });
+  const redLightCamera = draw(18, 32, (ctx) => {
+    // A tall signal housing: white edge, dark body, three lights, and a small white camera at the foot.
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.roundRect(0.5, 0.5, 17, 31, 5);
+    ctx.fill();
+    ctx.fillStyle = COLOURS.ink;
+    ctx.beginPath();
+    ctx.roundRect(2, 2, 14, 28, 4);
+    ctx.fill();
+    for (const [y, colour] of [
+      [6.5, "#e5322d"],
+      [12, "#f6b100"],
+      [17.5, "#1fa34a"],
+    ] as const) {
+      ctx.fillStyle = colour;
+      ctx.beginPath();
+      ctx.arc(9, y, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.roundRect(4.5, 22, 9, 6, 1.5);
+    ctx.fill();
+    ctx.fillStyle = COLOURS.ink;
+    ctx.beginPath();
+    ctx.arc(9, 25, 1.7, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  map.addImage("ta-routes-speed-camera", speedCamera, { pixelRatio: RATIO });
+  map.addImage("ta-routes-red-light-camera", redLightCamera, { pixelRatio: RATIO });
+}
+
 export function addMapImages(map: MapLibreMap): void {
   if (map.hasImage("ta-arrow")) return;
   addShield(map, "ta-shield-blue", "#0b4f9c", "#ffffff");
@@ -152,4 +268,5 @@ export function addMapImages(map: MapLibreMap): void {
   addShield(map, "ta-junction", COLOURS.ink, "#ffffff");
   addArrow(map);
   addRestrictionPlates(map);
+  addRoutesImages(map);
 }
