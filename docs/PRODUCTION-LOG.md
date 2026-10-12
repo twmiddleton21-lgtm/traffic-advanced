@@ -99,6 +99,7 @@ version: `npx wrangler rollback <version-id>`. Only on the owner's instruction.
 | `d5dae9fe-0916-4a47-9f33-d9df9f890484` | 2026-10-08 22:02:34 | `bb29aec` | Traffic Advanced brand identity (PR #13) |
 | `f7a9a816-42d6-4588-8723-c16d28d63d9a` | 2026-10-09 03:23:32 | not recorded | Not recorded at the time; found afterwards (see below) |
 | `4d03b164-0dc7-4e01-b496-314a9a37abe9` | 2026-10-12 16:43:34 | `82020c7` | Routes view, settings, app updates (service worker), restriction layers (PR #16); live traffic deferred |
+| `42808e9d-7954-49c9-bae6-93c898205a99` | 2026-10-12 17:41:04 | `0df5aff` | Compact map keys and the Routes Layers button (PR #18) |
 
 ### 2026-10-06 16:46 UTC: map location control
 
@@ -302,6 +303,37 @@ removal of TfL website rule text from the zone files. Live TomTom traffic is def
 - **Rollback:** this is the first deploy with the service worker. Don't use `wrangler rollback` to `f7a9a816` or any earlier
   version; follow `docs/APP-UPDATES.md`, "Rollback".
 - **Not yet checked:** real phones and tablets, Safari and Firefox, and the update prompt on the next deploy (open follow-ups).
+
+### 2026-10-12 17:41 UTC: compact map keys and the Routes Layers button (PR #18)
+
+PR #18 merged 2026-10-12 17:38:51 UTC with a normal merge commit, `0df5affc37ecfd2e4accc246d5eda92a96293da4` (parents `82020c7`
+and `697e101`), approved by the owner. Web UI only (11 files: components, App, tests, docs): one map key per view, folding to a 48 px
+line; in Closures it carries the restriction key and disclaimer (behaviour unchanged: hidden visually but described when folded,
+on the page once); in Routes a 56 px square "Layers" button at the top left and the map key at the bottom left. No Worker, Wrangler,
+data, ingestion, schedule, matcher or security-header change.
+
+- Deployed 2026-10-12 17:41:04 UTC (Wrangler's timestamp; 18:41 UK time) as Worker version `42808e9d-7954-49c9-bae6-93c898205a99`,
+  from a clean worktree of `main` `0df5aff`. Bindings `ASSETS` and `SNAPSHOTS` only, compatibility date 2026-10-01. Wrangler
+  uploaded 4 changed static files (`/sw.js`, `/index.html`, the app script and stylesheet).
+- Before deploying, on `0df5aff` in the clean worktree: `npm ci`, `npm run check` (703/703 tests in 58 files), the rules-freeze test
+  (15/15), `npm audit` (0 vulnerabilities) and `npm run worker:check` all passed; the build identity reads `0df5affc37ec`, not dirty.
+  CI passed on the PR head (`697e101`).
+- The R2 `current.json` pointer was byte-identical before and after (SHA-256 `661a7657…`); the live snapshot stayed
+  `20261012T091216Z-ea6ca93a797f` (726 closures). No ingestion run, capture or upload was triggered by the release.
+- Checked live on both hosts (plain and conditional GET requests): `/`, `/sw.js`, the Workbox files, app script and stylesheet and the
+  four restriction files byte-identical to the release build, with the security headers; `/api/version`, `/api/closures` (726) and
+  `/api/junctions` (596) 200 with matching SHA-256 and 304 on conditional requests; `/api/traffic/status` 404; zone files without
+  `rules`.
+- Checked live in desktop Chrome (2560 px wide): Routes showed the 56x56 Layers button at the top left and the map key at the bottom
+  left; Layers and the key opened and closed independently, and the Layers panel kept the junction switch and both notes. Closures
+  with height, weight and LEZ on: the combined key with the restriction section and the disclaimer once (hidden visually and
+  described when folded), the Restrictions list (51 in view, with the disclaimer) and the LEZ details' TfL note and link. No console
+  errors after load. The test browser's layer setting was restored afterwards.
+- **Not checked live:** narrow screens. The browser window couldn't be resized and the production page can't be framed
+  (`X-Frame-Options: DENY`); phone portrait and landscape were checked on the local preview of the same source before merging.
+- Worker log during the checks (`wrangler tail`): 20 API requests, all `ok`, no exceptions or error logs; CPU at most 10 ms (one
+  request at the Workers Free limit, none over it). Worth watching.
+- The live data was still the 09:12 UTC capture (stale banner), as before this release; not investigated.
 
 ## Scheduled ingestion
 
