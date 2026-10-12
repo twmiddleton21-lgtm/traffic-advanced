@@ -3,7 +3,7 @@ import { mapControlsState, zoomMessage } from "../restrictions/mapControls.ts";
 import type { LayerStatus } from "../restrictions/useRestrictionData.ts";
 import type { AppView } from "../routemap/view.ts";
 import { GroupDot, Plate, ZoneLine } from "./RestrictionGlyphs.tsx";
-import { DISCLAIMER_ID, LayerChip } from "./RestrictionMapControls.tsx";
+import { DISCLAIMER_ID } from "./RestrictionMapControls.tsx";
 
 /**
  * The map's one key, for the view that's shown. It folds to a single 48 px "Map key" line, so on phones it takes about as little of
@@ -11,8 +11,9 @@ import { DISCLAIMER_ID, LayerChip } from "./RestrictionMapControls.tsx";
  * keeps the choice across view and layer switches.
  *
  * In Closures it also carries the restriction key while any restriction layer has loaded: the restriction symbols, the zoom hint and
- * the full restrictions disclaimer (SPECIFICATION §7.1). Folded, the summary shows the restriction symbols that are on, so it's clear
- * the key includes them; the disclaimer is then hidden visually only (owner decision, 2026-10-12): it stays in the page, word for
+ * the full restrictions disclaimer (SPECIFICATION §7.1). Folded, it looks the same whatever is switched on (owner decision,
+ * 2026-10-12: no restriction symbols in the folded line); screen readers hear that it includes restrictions. The disclaimer is then
+ * hidden visually only (owner decision, 2026-10-12): it stays in the page, word for
  * word, outside the fold, as the folded control's description for screen readers. While restriction layers are on but none has
  * loaded, the disclaimer is shown with their loading and failure messages instead (RestrictionMapControls), so it is always on the
  * page exactly once.
@@ -44,16 +45,7 @@ export function MapKey({
           className="flex min-h-12 cursor-pointer select-none items-center gap-1.5 px-2.5 font-bold focus-visible:-outline-offset-3!"
         >
           Map key
-          {withRestrictions && (
-            <>
-              <span className="flex items-center gap-1" aria-hidden="true">
-                {state.active.map((l) => (
-                  <LayerChip key={l} layer={l} />
-                ))}
-              </span>
-              <span className="sr-only">, including restrictions</span>
-            </>
-          )}
+          {withRestrictions && <span className="sr-only">, including restrictions</span>}
           <Chevron />
         </summary>
         {view === "routes" ? <RoutesKey /> : <ClosuresKey />}

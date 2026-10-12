@@ -107,8 +107,8 @@ describe("the restriction key is part of the map's one key, which folds to a com
     const html = render(both, grouped, false);
     expect(isOpen(html)).toBe(false);
     expect(keyPart(html)).toMatch(/<summary[^>]*>Map key/);
-    // Folded, the summary shows which restriction symbols are inside (visually) and says so (screen readers).
-    expect(keyPart(html)).toMatch(/<summary[^>]*>Map key<span class="flex items-center gap-1" aria-hidden="true">[\s\S]*?<\/span><span class="sr-only">, including restrictions<\/span>/);
+    // Folded, the line is just "Map key", the same whatever is on (no restriction symbols); screen readers hear what it includes.
+    expect(keyPart(html)).toMatch(/<summary[^>]*>Map key<span class="sr-only">, including restrictions<\/span><svg/);
     expect(restrictionSection(html)).not.toBe("");
     // The guidance is still there, inside the folded key: reopening shows it again.
     expect(keyPart(html)).toContain("Circles group nearby height and weight restrictions.");
@@ -129,6 +129,17 @@ describe("the restriction key is part of the map's one key, which folds to a com
     expect(disclaimer(html)?.[1]).toMatch(/\bborder-sign\b/);
     expect(disclaimer(html)?.[2]).toBe(RESTRICTIONS_DISCLAIMER);
     expect(html.split(RESTRICTIONS_DISCLAIMER).length - 1).toBe(1);
+  });
+
+  it("folded, the key line looks the same with no, one or several restriction layers on (no restriction symbols in it)", () => {
+    const foldedLine = (statuses: LayerStatus[]) => {
+      const summary = /<summary[^>]*>([\s\S]*?)<\/summary>/.exec(render(statuses, grouped, false))?.[1] ?? "";
+      return summary.replace(/<span class="sr-only">[^<]*<\/span>/g, "");
+    };
+    const none = foldedLine([off("height"), off("weight"), off("lez"), off("ulez")]);
+    expect(none).toMatch(/^Map key<svg/);
+    expect(foldedLine([ready("height"), off("weight"), off("lez"), off("ulez")])).toBe(none);
+    expect(foldedLine([ready("height"), ready("weight"), status("lez", "ready", null), status("ulez", "ready", null)])).toBe(none);
   });
 
   it("the disclaimer is exactly the approved wording", () => {

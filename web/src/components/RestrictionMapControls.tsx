@@ -76,7 +76,7 @@ export function RestrictionMapControls({
 /** The one restrictions disclaimer element's id (here or in MapKey.tsx, never both). */
 export const DISCLAIMER_ID = "restrictions-disclaimer";
 
-/** Which layers are on, at a glance, on the button and the folded map key: the same symbols as the map. */
+/** Which layers are on, at a glance, on the button: the same symbols as the map. */
 export function LayerChip({ layer }: { layer: RestrictionLayer }) {
   if (layer === "height") return <Plate kind="height" text="" />;
   if (layer === "weight") return <Plate kind="weight-unrecorded-type" text="" />;

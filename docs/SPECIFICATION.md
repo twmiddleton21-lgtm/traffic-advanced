@@ -41,7 +41,7 @@ wearing gloves, short on time. They need fast answers: *is my road shut, when, w
        panel and list. Routes-only: the "Layers" button and panel (junction numbers, the data's state, scope and no-traffic notes).
      - One map key, with each view's own rows. It folds to a single 48 px "Map key" line (open on desktop, folded on phones and
        tablets at first; the choice holds across view and layer switches). Closures: bottom left; while restriction layers are on
-       it also carries the restriction key, and folded it shows their symbols. Routes: bottom left too; the "Layers" control is
+       it also carries the restriction key, shown when opened (the folded line never changes). Routes: bottom left too; the "Layers" control is
        a separate square map button at the top left whose panel opens under it.
    - **Road selector**: search/pick a road (e.g. M6, A14), optional direction, My Roads shortcuts.
    - A status chip, "Last updated 14:05", turns amber/red when delayed/stale.
